@@ -1,0 +1,12 @@
+# ignore everything
+*
+
+# allow traversing directories
+!*/
+
+# allow BIA folder and its contents
+!BIA/
+!BIA/**
+
+# allow gitignore itself
+!.gitignore
