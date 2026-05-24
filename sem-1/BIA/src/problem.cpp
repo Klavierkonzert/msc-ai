@@ -7,6 +7,9 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <iostream>
+#include <fstream>
+#include <string>
 
 #include "dataloaders.cpp"
 #include "matrix.cpp"
@@ -130,11 +133,17 @@ public:
     // this status is not provided in the data files, but provided in the library of instances and thus should be set after loading the problem using `set_reference_solution_proven_optimal()` method
     bool get_reference_solution_proven_optimal() const { return is_reference_solution_proven_optimal; }
 
+
+    // @brief Prints the properties of the problem instance, including the properties of the matrices and the best known solution. The level of detail of the printed information can be controlled by the parameters.
+    // @param print_properties (by default false) if true, prints the properties of the problem instance, including whether the problem is flat, whether the reference solution is proven optimal, and the properties of the matrices (symmetry, zero diagonality, norms, coefficient of variation, skewness).
+    // @param print_matrices (by default false) if true, prints the matrices of the problem instance.
+    // @param print_reference_solution (by default false) if true, prints the best known solution and its cost.
     void print(bool print_properties = false, bool print_matrices = false, bool print_reference_solution = false) const {
+        #define colored(color, text) (std::string(Colors::color)  + std::string(text) + std::string(Colors::RESET)).c_str()
+       
         printf("\n%sProblem: %s%s\n", Colors::GREEN, name.c_str(), Colors::RESET);
         printf("Problem size: %d\n", size);
         if (print_properties) {
-            #define colored(color, text) (std::string(Colors::color) + std::string(text) + std::string(Colors::RESET)).c_str()
             printf("Problem properties:\n");
             printf(" - Flat problem: %s\n", is_flat ? colored(ORANGE, "Yes") : "No");
             printf(" - Asymmetric problem: %s\n", is_asymmetric_problem() ?  colored(ORANGE, "Yes")  : "No");
@@ -144,13 +153,14 @@ public:
             printf(" - Norms of matrices:                    %f, %f \n", matrices.first.norm(), matrices.second.norm());
             printf(" - Coefficient of variation of matrices: %f, %f \n", matrices.first.cv(), matrices.second.cv());
             printf(" - Skewness of matrices:              %s%f%s, %s%f%s \n",(get_skewness()==matrices.first.skewness())? Colors::ORANGE: Colors::RESET, 
-                                                                            matrices.first.skewness(), Colors::RESET,
-                                                                        (get_skewness()==matrices.second.skewness())? Colors::ORANGE: Colors::RESET, 
-                                                                            matrices.second.skewness(), Colors::RESET);
+                                                                                matrices.first.skewness(), Colors::RESET,
+                                                                            (get_skewness()==matrices.second.skewness())? Colors::ORANGE: Colors::RESET, 
+                                                                                matrices.second.skewness(), Colors::RESET);
             printf("Solution properties:\n");
             printf(" - Reference solution is proven optimal: %s\n", is_reference_solution_proven_optimal ? colored(GREEN, "Yes") : "No");
             printf(" - Best known cost: %" PRId64 "\n", best_cost);
         }
+
         if (print_matrices) {
             printf("Matrix A:\n");
             matrices.first.print();
@@ -163,6 +173,42 @@ public:
             printf("Best known solution (%s):\n", is_reference_solution_proven_optimal ? "proven optimal" : "not proven optimal");
             best_solution.print();
             printf("Best known cost: %" PRId64 "\n\n", best_cost);
+        }
+    }
+
+    // @brief Prints a markdown report with the properties of the problem instance, including the properties of the matrices and the best known solution. The report is appended to the specified file path.
+    // 
+    // Call `std::filesystem::remove(report_path)` before calling this method for the first time to remove any existing report file, if you want to start with a clean report.
+    void print_markdown_report(const char* report_path) const {
+        #define md_colored(color, text) "<span style=\"color:" + std::string(color) + "\">" + std::string(text) + "</span>"
+        #define md_colored_nums(color, text) "<span style=\"color:" + std::string(color) + "\">" + std::to_string(text) + "</span>"
+        std::ofstream outFile(report_path, std::ios_base::app);
+
+        if (!outFile) {
+            std::cerr << Colors::RED << " ERROR: Could not open file " << report_path << " for writing the markdown report." << Colors::RESET << std::endl;
+            return;
+        }
+        else {
+            outFile << "\n### Problem: " << name.c_str() << "\n"
+                        << "Problem size: " << size << "\n"
+
+                        << "#### Problem properties:\n"
+                            << " * Flat problem: " << (is_flat ? md_colored("ORANGE", "Yes") : "No") << "\n"
+                            << " * Asymmetric problem: " << (is_asymmetric_problem() ? md_colored("ORANGE", "Yes") : "No") << "\n"
+
+                        << "#### Matrices properties:\n|Property|Matrix A| Matrix B<br />|\n|---|---|---|\n"
+                            << "|Symmetry        |" << (matrices.first.is_symmetric() ? "Symmetric" : md_colored("ORANGE", "Asymmetric")) << "|" << (matrices.second.is_symmetric() ? "Symmetric" : md_colored("ORANGE", "Asymmetric")) << "|\n"
+                            << "|Zero diagonality|" << (matrices.first.is_zero_diagonal() ? "Zero diag" : md_colored("ORANGE", "Non-zero diag")) << "|" << (matrices.second.is_zero_diagonal() ? "Zero diag" : md_colored("ORANGE", "Non-zero diag")) << "|\n"
+                            << "|Frobenius norm|" << matrices.first.norm() << "|" << matrices.second.norm() << "|\n"
+                            << "|Coefficient of variation <br> of the elements|" << matrices.first.cv() << "|" << matrices.second.cv() << "|\n"
+                            << "|Skewness|" << ((get_skewness()==matrices.first.skewness() )? md_colored_nums("ORANGE", matrices.first.skewness() ) : std::to_string(matrices.first.skewness()))
+                                            << "|" << ((get_skewness()==matrices.second.skewness())? md_colored_nums("ORANGE", matrices.second.skewness()) : std::to_string(matrices.second.skewness()))
+                                    << "| \n"
+                        << "#### Solution properties:\n"
+                            << "* Reference solution is proven optimal: " << (is_reference_solution_proven_optimal ? md_colored("GREEN", "Yes") : "No") << "\n"
+                            << "* Best known cost: " << best_cost << "\n";
+            
+            outFile.close();
         }
     }
 };

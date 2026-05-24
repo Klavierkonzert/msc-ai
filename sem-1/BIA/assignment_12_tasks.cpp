@@ -162,9 +162,18 @@ int main(int argc, char* argv[]) {
         best_known_costs_sorted_by_problem_size.push_back(problem.get_best_cost());
 
 
-
+    // Brief summary of each QAP instance, including the properties of the matrices and the best known solution, printed to the console and saved to a markdown report file for better readability and sharing. 
+    //The markdown report file is created at `report_path`, and if a file already exists at that path, it is removed before creating the new report to ensure that the report contains only the information from the current run of the program.                                                           
+    const char report_path[] = "./QAP data/Properties of the selected QAP instances.md";
+    if (std::filesystem::remove(report_path)) 
+        cout << Colors::GREEN << "Existing markdown report file removed successfully." << Colors::RESET << endl;
+    else
+        cout << Colors::YELLOW << "No existing markdown report file to remove or failed to remove. Continuing..." << Colors::RESET << endl;
+        
     for (const auto& problem : problems) {
-        problem.print(true);
+        problem.print(true,false, false);
+    
+        problem.print_markdown_report(report_path);
     }
 
 
