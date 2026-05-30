@@ -64,13 +64,10 @@ public:
         this ->is_flat = is_sparse || is_mostly_const || is_low_variance;
         if (this->is_flat) {
             std::cerr << Colors::ORANGE << " WARNING: Problem " << name << " is flat. " << Colors::RESET;
-            if (is_sparse) 
-                std::cerr << "One of the matrices is sparse." <<  std::endl;
-            if (is_mostly_const)
-                std::cerr << "One of the matrices is mostly constant." <<  std::endl;
-            if (is_low_variance) 
-                std::cerr << "One of the matrices has low variance." << std::endl;
-            printf("Norms of matrices: %f, %f\n", matrices.first.norm(), matrices.second.norm());
+            if (is_sparse)       std::cerr << "One of the matrices is sparse. ";
+            if (is_mostly_const) std::cerr << "One of the matrices is mostly constant. ";
+            if (is_low_variance) std::cerr << "One of the matrices has low variance. ";
+            printf("\nNorms of matrices: %f, %f\n", matrices.first.norm(), matrices.second.norm());
         }
         double norm_best_cost = static_cast<double>(best_cost) / (matrices.first.norm() * matrices.second.norm());
         if (norm_best_cost < 1e-6)
