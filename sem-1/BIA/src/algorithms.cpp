@@ -731,6 +731,7 @@ template <typename Tprecision>
     Tprecision  alpha = static_cast<Tprecision> (hyperparameters.at("initial_cooling_rate"));
     const Tprecision T0 = eval_temperature<Tprecision>(avg_init_bad_delta, hyperparameters.at("initial_acceptance_rate"));
     Tprecision temperature = T0;
+    Tprecision final_acceptance_rate = static_cast<Tprecision> (hyperparameters.at("final_acceptance_rate"));
     
     int L = eval_markov_chain_length(problem, run_config);
 
@@ -748,12 +749,12 @@ template <typename Tprecision>
     //if time budget is provided, number of steps will be determined based on the overall time budget `max_time_seconds` and recalculated average time per step `avg_time_per_step`
     long num_steps = static_cast<long>(std::max(2, max_iterations / L)); // "max_iterations" must be sufficiently high to have sufficiently many steps (num_steps)! 
     double avg_time_per_step=0; // recalculated every schedule step and is used to determine `num_steps` on the go
-    const Tprecision  acceptance_rate_target_decrease = static_cast<Tprecision> (hyperparameters.at("initial_acceptance_rate")/hyperparameters.at("final_acceptance_rate"));
+    const Tprecision  acceptance_rate_target_decrease = static_cast<Tprecision> (hyperparameters.at("initial_acceptance_rate")/final_acceptance_rate);
 
     // Main loop
     while (!((max_time_seconds > 0 && algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_seconds) ||
             (max_iterations > 0 && iter >= max_iterations) ||
-            (max_non_improving_moves>0 && no_improvements && prob_accept_deteriorating_move<hyperparameters.at("final_acceptance_rate") )
+            (max_non_improving_moves>0 && no_improvements && prob_accept_deteriorating_move< final_acceptance_rate )
         )) 
     {
         auto pr = random::get_random_pair(n); // get a random pair of indices to swap in the permutation
@@ -1032,7 +1033,7 @@ int eval_elite_candidate_list_size(int elite_candidate_list_lifespan, const Prob
 
 // @brief Evaluates the tabu tenure, i.e. number of iterations for which a move is considered tabu after being added to the tabu list.
 //
-// Heuristically set to `sqrt(problem.get_size())*f`, where factor `f` is given by from the `run_config.hyperparameters["tabu_tenure_factor"]`. By default `f=
+// Heuristically set to `sqrt(problem.get_size())*f`, where factor `f` is given by from the `run_config.hyperparameters["tabu_tenure_factor"]`. By default `f=1.0`
 // @note Tabu tenure is the hyperparameter that is specific to the tabu search algorithm, and it defines how many iterations we consider a move to be tabu after it has been added to the tabu list. If the tenure is too short, we may allow moves that lead to cycling back to recently visited solutions, and if it is too long, we may miss out on good candidate moves that could be added to the list. So, it is important to find a good balance between these two extremes.
 int eval_tabu_tenure(const Problem<int>& problem, const AlgorithmRunConfig& run_config)
 {   
@@ -1116,11 +1117,9 @@ public:
 //
 // [OPTIONAL mechanics]: If the actual delta of an elite move drifts too far from the stale delta calculated  when the list was formed (e.g., exceeding a configured relative threshold), the elite list will immediately  be invalidated and reconstructed.
 //
-// Although this algorithm is fully deterministic, there are a few sources of randomness:
+// Although this algorithm is fully deterministic, there is one source randomness:
 //
 // - The initial permutation `p` is randomized prior to invocation.
-//
-// - Running time (not the number of iterations) is used to determine the total number of "steps" when operating on a time budget, though small micro-fluctuations in running time are heavily absorbed by integer rounding.
 //
 // The algorithm terminates gracefully if any of the following criteria are met:
 //
@@ -1140,7 +1139,7 @@ public:
 // 
 //   - `"tabu_tenure_factor"`: Defines the factor `ft` used in the heuristic calculation of the tabu tenure (the number of iterations an accepted move's inverse is banned), set as: `ft * sqrt(problem.get_size())`. Default value is 1.0.
 //
-//   - `"delta_drift_relative_threshold"`: [Optional] Defines how far an actual delta cost can drift from its stale estimate (computed when the elite list was formed) before forcing an early list rebuild. Set to 0.0 (default) to disable this check.
+//   - `"delta_drift_relative_threshold"`: [Optional] Defines how far an actual delta cost can drift from its stale estimate (computed when the elite list was formed) before forcing an early list rebuild. Set to 0.0 (default) to disable this check. This condition will trigger in the cases where heuristically defined `L` is set too optimistic.
 // 
 //   - `"max_non_improving_moves_factor"`: Used in the stopping criteria to define the multiplier for the maximum consecutive swaps allowed without a global cost improvement. Recommended value is 2.0.
 //
@@ -1174,6 +1173,9 @@ AlgorithmRunMetrics tabu_search_qap(
 
     int iter=0, total_n_eval_solutions=0;
 
+    // One of the stopping criteria: 
+    int num_globally_non_improving_moves=0, max_non_improving_moves= problem_size* run_config.hyperparameters.at("max_non_improving_moves_factor") ;
+    
     // Hyperparameters:
     // Number of iterations per elite candidate list                                        
     int L = eval_elite_candidate_list_lifespan(problem, run_config);
@@ -1183,8 +1185,8 @@ AlgorithmRunMetrics tabu_search_qap(
     auto delta_drift_relative_threshold = (run_config.hyperparameters.find("delta_drift_relative_threshold")!= run_config.hyperparameters.end()? 
                                             static_cast<float> (run_config.hyperparameters.at("delta_drift_relative_threshold")) : 0.0);
 
-    if (verbose>=0.5) printf("%sTS%s::NOTE: the following hyperparameters are set for problem %s: elite candidates list lifespan=%d and size=%d, tabu tenure=%d, delta_drift_relative_threshold=%f", 
-        TS_COLOR, Colors::RESET, name.c_str(), L, elite_candidate_list_size, tabu_tenure, delta_drift_relative_threshold);
+    if (verbose>=0.5) printf("%sTS%s::NOTE: the following hyperparameters are set for problem %s: elite candidates list lifespan=%d and size=%d, tabu tenure=%d, delta_drift_relative_threshold=%f, max_non_improving_moves=%d \n", 
+        TS_COLOR, Colors::RESET, name.c_str(), L, elite_candidate_list_size, tabu_tenure, delta_drift_relative_threshold, max_non_improving_moves);
 
     //if time budget is provided, number of steps will be determined based on the overall time budget `max_time_seconds` and recalculated average time per step `avg_time_per_step`
     int num_steps = std::max(2, int(max_iterations / L)); // "max_iterations" must be sufficiently high to have sufficiently many steps (num_steps)
@@ -1199,12 +1201,11 @@ AlgorithmRunMetrics tabu_search_qap(
     // tabu list should map Hash(i,j) -> tabu tenure (i, j)
     int nbits = (problem_size > 1) ? static_cast<int>(std::ceil(std::log2(problem_size))) : 1; // number of bits needed to represent the indices of the permutation, used for hashing moves in the tabu list
 
-    // One of the stopping criteria: 
-    int num_globally_non_improving_moves=0, max_non_improving_moves= problem_size* run_config.hyperparameters.at("max_non_improving_moves_factor") ;
-    
-
-    // each step is a sequence of L iterations over elite candidate moves, where we keep track of the best move in the neighborhood (the one with the lowest delta cost) and accept it if it is not tabu, or if it is tabu but leads to a solution better than the best known solution (aspiration criterion), or if its tabu tenure has expired. After each step, we update the elite candidate list and tabu list for the next step. We also recalculate number of steps based on the time budget and average time per step.
-    for (int step=0; step<num_steps; step++) // T is constant during a single step
+    // each iter in this outer loop is a sequence of L iterations over elite candidate moves, where we keep track of the best move in the neighborhood (the one with the lowest delta cost) and accept it if it is not tabu, or if it is tabu but leads to a solution better than the best known solution (aspiration criterion), or if its tabu tenure has expired. After each step, we update the elite candidate list and tabu list for the next step. We also recalculate number of steps based on the time budget and average time per step.
+    while (!((max_time_seconds > 0 && algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_seconds) ||
+            (max_iterations > 0 && iter >= max_iterations) ||
+            (num_globally_non_improving_moves >= max_non_improving_moves)
+        )) 
     {
         // Scanning the neighbourhood of the current solution and forming the elite candidate list for the next L iterations.
         for (int i = 0; i < problem_size - 1 ; i++){
@@ -1234,10 +1235,10 @@ AlgorithmRunMetrics tabu_search_qap(
             // This section was actually not triggered,
             // OPTIONAL: QUALITY THRESHOLD FILTER: Reject if intermediate swaps corrupted this elite move
             if (delta_drift_relative_threshold >0 && updated_delta - stale_delta>delta_drift_relative_threshold* abs(stale_delta) ) {
-                if (verbose>=2) printf("%sTS%s:: NOTE: Quality of the elite candidate degraded more than %f. The elite candidate list will be recreated.", TS_COLOR, Colors::RESET, delta_drift_relative_threshold);
+                if (verbose>=2) printf("%sTS%s:: iter %d:%d NOTE: Quality of the elite candidate degraded more than %f. The elite candidate list will be recreated.\n", TS_COLOR, Colors::RESET, iter, local_iter, delta_drift_relative_threshold);
                 elite_candidate_moves.erase(it);
                 it = elite_candidate_moves.begin();
-                continue;
+                break;
             }
 
             // if the move (the best currently available in the elite list):
@@ -1278,47 +1279,27 @@ AlgorithmRunMetrics tabu_search_qap(
                 local_iter++;
                 iter++;
 
-
-
-                // EARLY TERMINATION TRIGGER: Stagnation limit reached
-                if (num_globally_non_improving_moves >= max_non_improving_moves) {
-                    if (verbose>1.5) {
-                        std::printf("%sTS%s:: NOTE: Stagnation limit hit. No improvements for %d iterations. Exiting early.\n", TS_COLOR, Colors::RESET, num_globally_non_improving_moves);
-                    }
-                    // Force the loops to break out elegantly
-                    step = num_steps; // Forces outer loop termination on next iteration sequence
-                    break;            // Breaks current while loop immediately
-                }
-
                 // Reset back to the fresh absolute best option at the front
                 it = elite_candidate_moves.begin();
             }
             else
             {
                 if (elite_candidate_moves.empty() && local_iter < L)
-                    if (verbose>=2) std::printf("%sTS%s:: NOTE: Neighborhood exhausted early at step %d. Consider diversifying...\n", TS_COLOR, Colors::RESET, step);
+                    if (verbose>=1) std::printf("%sTS%s:: NOTE: Neighborhood exhausted early at iter %d:%d. Consider diversifying...\n", TS_COLOR, Colors::RESET, iter, local_iter);
                 it ++;
             }
         }
-
-
-        // if (accepted_bad_moves > 5) 
-        //    tabu_tenure *= run_config.hyperparameters["tabu_tenure_factor"];
-        
         // Clear the elite candidate list and tabu list for the next step
         elite_candidate_moves.clear();
 
         // tabu list is not cleared, as it operates independently from the elite candidates list, as both represent different aspects of the memory
-
-        // Recalculating number of steps 
-        if (max_iterations==0)
-        {    
-            avg_time_per_step = algorithm_time_now() - efficiency_stats_acc.start_time;
-            if (step>0) 
-                avg_time_per_step/=(step+1); // recalc average
-            num_steps = std::max(2.0, round(max_time_seconds/avg_time_per_step)); 
-        }
     }
+
+    // EARLY TERMINATION WAS TRIGGERED: Stagnation limit reached
+    if (num_globally_non_improving_moves >= max_non_improving_moves)
+        if (verbose>=1) 
+            std::printf("%sTS%s:: problem %s NOTE: Stagnation limit hit. No improvements for %d iterations. Exiting early.\n", TS_COLOR, Colors::RESET, problem.get_name().c_str(), num_globally_non_improving_moves);
+
 
     efficiency_stats_acc.finish(best_cost);
     auto[_, rel_eff, norm_eff, total_time] = efficiency_stats_acc.get_metrics();
