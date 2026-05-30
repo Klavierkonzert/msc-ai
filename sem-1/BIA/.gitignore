@@ -23,7 +23,7 @@
 !src/**/*.h
 
 # Allow QAP files
-!QAP data/README.md
+!QAP data/*.md
 
 # except these files
 !.gitignore

@@ -571,17 +571,20 @@ static RunsStatistics<> get_runs_statistics(const MethodFunction& method,
                         const Problem<int>& problem,
                         int n_runs = 10,
                         const AlgorithmRunConfig& run_config = {},
-                        std::vector<Permutation<int>>* out_final_permutations = nullptr);
+                        std::vector<Permutation<int>>* out_final_permutations = nullptr,
+                        int verbose = 1);
 static ProblemsRunsStatistics<> get_problems_runs_statistics(const MethodFunction& method,
                                                 const std::vector<Problem<int>>& problems,
                                                 int n_runs = 10,
                                                 const AlgorithmRunConfig& run_config = {},
                                                 const std::function<AlgorithmRunConfig(const Problem<int>&)>& run_config_for_problem = nullptr,
-                                                ProblemsRunsSolutions* out_problems_runs_solutions = nullptr);
+                                                ProblemsRunsSolutions* out_problems_runs_solutions = nullptr,
+                                                int verbose = 1);
 static MethodsProblemsRunsStatistics<> get_methods_problems_runs_statistics(const std::vector<MethodDefinition>& methods,
                                         const std::vector<Problem<int>>& problems,
                                         int n_runs = 10,
-                                        MethodsProblemsRunsSolutions* out_methods_runs_solutions = nullptr);
+                                        MethodsProblemsRunsSolutions* out_methods_runs_solutions = nullptr,
+                                        int verbose = 1);
 ExperimentResults<>
     collect_experiment_results(const std::vector<MethodDefinition>& methods,
                                const std::vector<Problem<int>>& problems,
@@ -713,13 +716,22 @@ RunStatisticsPoint<> static get_statistics(const MethodFunction& method,
         }
 
 
-        if (verbose >= 1){
-            if ( time_taken - total_time_run>= 0.01)
-                std::cerr <<'\n' << Colors::YELLOW << "get_statistics:: WARNING: "<<Colors::RESET<<"Problem "<< problem.get_name()<<": Time taken for the method run (" << total_time_run << "s) is significantly less than the total time measured for the statistics gathering (" << time_taken << "s). This may indicate that the method is not properly measuring its execution time or that there are significant overheads in the statistics gathering process." << Colors::RESET << std::endl;
+    // Check whether time measurement has some inconsistencies (actual time taken by the algorithm can be lower than timer resolution (0.001s))
+    if (verbose >= 1){
+            if ( time_taken - total_time_run>= get_time_resolution())
+                std::cerr <<'\n' << Colors::YELLOW << "get_statistics:: WARNING: "<<Colors::RESET<<"Problem "<< problem.get_name()<<": Time taken for the method run (" << total_time_run << "s) is significantly less than the total time measured for the statistics gathering (" << time_taken << "s). This may indicate that the method is not properly measuring its execution time or that there are significant overheads in the statistics gathering process." << Colors::RESET;
             if (time_taken<get_time_resolution())
             {
-                std::cerr <<'\n' << Colors::YELLOW << "get_statistics:: WARNING: "<<Colors::RESET<<"Problem "<< problem.get_name()<<": Time taken for the method run (" << time_taken << "s) is very close to or less than the timer resolution (" << get_time_resolution() << "s). Setting to time resolution to avoid unreliable measurements." << Colors::RESET << std::endl;
+                std::cerr <<'\n' <<(time_taken==0 && total_time_run==0? Colors::RED: Colors::YELLOW) << "get_statistics:: WARNING: "<<Colors::RESET<<"Problem "<< problem.get_name()
+                <<": [External] time taken for the method run (" << time_taken << "s) is very close to or less than the timer resolution (" << get_time_resolution() << "s)" 
+                    // << "(Internal time taken on the dedicated core, if any, is: "<<total_time_run <<")"
+                <<" Setting to time resolution to avoid unreliable measurements." << Colors::RESET;
+                
                 time_taken = get_time_resolution();
+
+                if (verbose>=2)
+                    std::cerr <<'\n' << Colors::YELLOW << "get_statistics:: WARNING (time inconsistency) details:"<<Colors::RESET<< "Problem: "<< problem.get_name()<<". Total time run: "<<total_time_run<<". Method performed "<<total_n_swaps<<" swaps, evaluated "<< total_n_eval_solutions<<" solutions. Efficiency (relative, normalized): "<<rel_eff<<", "<< norm_eff;
+
             }
         }
 
@@ -762,7 +774,8 @@ RunsStatistics<>
                         const Problem<int>& problem,
                         int n_runs,
                         const AlgorithmRunConfig& run_config,
-                        std::vector<Permutation<int>>* out_final_permutations)
+                        std::vector<Permutation<int>>* out_final_permutations,
+                        int verbose)
 {
     RunsStatistics<> runs_statistics;
     runs_statistics.reserve(n_runs);
@@ -776,7 +789,7 @@ RunsStatistics<>
 
 
     auto run_single = [&](Permutation<int>& permutation) {
-        run_points.push_back(get_statistics(method, problem, permutation, run_config));
+        run_points.push_back(get_statistics(method, problem, permutation, run_config, verbose));
         local_optima.push_back(permutation);
     };
 
@@ -809,7 +822,8 @@ static ProblemsRunsStatistics<> get_problems_runs_statistics(const MethodFunctio
                                                     int n_runs,
                                                     const AlgorithmRunConfig& run_config,
                                                     const std::function<AlgorithmRunConfig(const Problem<int>&)>& run_config_for_problem,
-                                                    ProblemsRunsSolutions* out_problems_runs_solutions)
+                                                    ProblemsRunsSolutions* out_problems_runs_solutions, 
+                                                    int verbose)
 {
     ProblemsRunsStatistics<> problems_runs_statistics;
 
@@ -822,7 +836,7 @@ static ProblemsRunsStatistics<> get_problems_runs_statistics(const MethodFunctio
         for (const auto& problem : problems) {
             const AlgorithmRunConfig resolved_run_config = run_config_for_problem ? run_config_for_problem(problem) : run_config;
             std::vector<Permutation<int>> final_permutations;
-            problems_runs_statistics[problem.get_name()] = get_runs_statistics(method, problem, n_runs, resolved_run_config, &final_permutations);
+            problems_runs_statistics[problem.get_name()] = get_runs_statistics(method, problem, n_runs, resolved_run_config, &final_permutations, verbose);
             if (out_problems_runs_solutions) {
                 (*out_problems_runs_solutions)[problem.get_name()] = std::move(final_permutations);
             }
@@ -830,14 +844,8 @@ static ProblemsRunsStatistics<> get_problems_runs_statistics(const MethodFunctio
         return problems_runs_statistics;
     }
 
-    std::vector<std::vector<RunStatisticsPoint<>>> run_points_by_problem(
-        problems.size(),
-        std::vector<RunStatisticsPoint<>>(n_runs)
-    );
-    std::vector<std::vector<Permutation<int>>> solutions_by_problem(
-        problems.size(),
-        std::vector<Permutation<int>>(n_runs)
-    );
+    std::vector<std::vector<RunStatisticsPoint<>>> run_points_by_problem(problems.size(), std::vector<RunStatisticsPoint<>>(n_runs));
+    std::vector<std::vector<Permutation<int>>> solutions_by_problem(problems.size(),std::vector<Permutation<int>>(n_runs));
 
     // Parallelize by run index so each worker evaluates one run across all problems.
     #pragma omp parallel for default(none) shared(problems, n_runs, method, run_points_by_problem, solutions_by_problem, run_config, run_config_for_problem)
@@ -849,7 +857,7 @@ static ProblemsRunsStatistics<> get_problems_runs_statistics(const MethodFunctio
             Permutation<int> permutation(problem.get_size());
             permutation.reshuffle();
 
-            run_points_by_problem[problem_i][run_i] = get_statistics(method, problem, permutation, resolved_run_config);
+            run_points_by_problem[problem_i][run_i] = get_statistics(method, problem, permutation, resolved_run_config, verbose);
 
             solutions_by_problem[problem_i][run_i] = std::move(permutation);
         }
@@ -879,7 +887,8 @@ static ProblemsRunsStatistics<> get_problems_runs_statistics(const MethodFunctio
 static MethodsProblemsRunsStatistics<> get_methods_problems_runs_statistics(const std::vector<MethodDefinition>& methods,
                                                                    const std::vector<Problem<int>>& problems,
                                                                    int n_runs,
-                                                                   MethodsProblemsRunsSolutions* out_methods_runs_solutions)
+                                                                   MethodsProblemsRunsSolutions* out_methods_runs_solutions,
+                                                                int verbose)
 {
     // Check duplicates:
     std::set<std::string> unique_problem_names;
@@ -899,7 +908,8 @@ static MethodsProblemsRunsStatistics<> get_methods_problems_runs_statistics(cons
                                                                                        n_runs,
                                                                                        method_definition.run_config,
                                                                                        method_definition.run_config_for_problem,
-                                                                                       &problems_runs_solutions);
+                                                                                       &problems_runs_solutions,
+                                                                                    verbose);
         if (out_methods_runs_solutions) {
             (*out_methods_runs_solutions)[method_definition.name] = std::move(problems_runs_solutions);
         }
@@ -915,14 +925,12 @@ ExperimentResults<> collect_experiment_results(const std::vector<MethodDefinitio
 {
     MethodsProblemsRunsSolutions methods_runs_solutions;
     MethodsProblemsRunsStatistics<> methods_runs_statistics =
-        get_methods_problems_runs_statistics(methods, problems, n_runs, &methods_runs_solutions);
+        get_methods_problems_runs_statistics(methods, problems, n_runs, &methods_runs_solutions, verbose);
 
     if (verbose > 0) {
-        std::cout << "[debug] collect_experiment_results: stats methods=" << methods_runs_statistics.size()
-              << ", solutions methods=" << methods_runs_solutions.size() << std::endl;
+        std::cout << "\n[debug] collect_experiment_results: stats methods=" << methods_runs_statistics.size()  << ", solutions methods=" << methods_runs_solutions.size() << std::endl;
         for (const auto& [method_name, problem_solutions] : methods_runs_solutions) 
-            std::cout << "[debug] collect_experiment_results: " << method_name
-                    << " solution-problem entries=" << problem_solutions.size() << std::endl;
+            std::cout << "[debug] collect_experiment_results: " << method_name << " solution-problem entries=" << problem_solutions.size() << std::endl;
     }
 
     return ExperimentResults<>(std::move(methods_runs_statistics), std::move(methods_runs_solutions));

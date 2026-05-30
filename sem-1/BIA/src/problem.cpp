@@ -180,8 +180,8 @@ public:
     // 
     // Call `std::filesystem::remove(report_path)` before calling this method for the first time to remove any existing report file, if you want to start with a clean report.
     void print_markdown_report(const char* report_path) const {
-        #define md_colored(color, text) "<span style=\"color:" + std::string(color) + "\">" + std::string(text) + "</span>"
-        #define md_colored_nums(color, text) "<span style=\"color:" + std::string(color) + "\">" + std::to_string(text) + "</span>"
+        #define md_colored(color, text) "**<span style=\"color:" + std::string(color) + "\">" + std::string(text) + "</span>**"
+        #define md_colored_nums(color, text) "**<span style=\"color:" + std::string(color) + "\">" + std::to_string(text) + "</span>**"
         std::ofstream outFile(report_path, std::ios_base::app);
 
         if (!outFile) {
@@ -200,8 +200,8 @@ public:
                             << "|Symmetry        |" << (matrices.first.is_symmetric() ? "Symmetric" : md_colored("ORANGE", "Asymmetric")) << "|" << (matrices.second.is_symmetric() ? "Symmetric" : md_colored("ORANGE", "Asymmetric")) << "|\n"
                             << "|Zero diagonality|" << (matrices.first.is_zero_diagonal() ? "Zero diag" : md_colored("ORANGE", "Non-zero diag")) << "|" << (matrices.second.is_zero_diagonal() ? "Zero diag" : md_colored("ORANGE", "Non-zero diag")) << "|\n"
                             << "|Frobenius norm|" << matrices.first.norm() << "|" << matrices.second.norm() << "|\n"
-                            << "|Coefficient of variation <br> of the elements|" << matrices.first.cv() << "|" << matrices.second.cv() << "|\n"
-                            << "|Skewness|" << ((get_skewness()==matrices.first.skewness() )? md_colored_nums("ORANGE", matrices.first.skewness() ) : std::to_string(matrices.first.skewness()))
+                            << "|Coefficient of variation <br> of the data|" << matrices.first.cv() << "|" << matrices.second.cv() << "|\n"
+                            << "|Skewness<br> _(Fisher-Pearson)_|" << ((get_skewness()==matrices.first.skewness() )? md_colored_nums("ORANGE", matrices.first.skewness() ) : std::to_string(matrices.first.skewness()))
                                             << "|" << ((get_skewness()==matrices.second.skewness())? md_colored_nums("ORANGE", matrices.second.skewness()) : std::to_string(matrices.second.skewness()))
                                     << "| \n"
                         << "#### Solution properties:\n"

@@ -36,6 +36,8 @@
 // @param plot_marker  the marker style for the plot (by default is empty, different markers will be used)
 // @param plot_linestyle  the linestyle for the plot (by default is empty, different linestyles will be used)
 // @param scale pair of scales for `x` and `y` axis (by default is empty. Possible options for each axis are: 'linear' (default), 'log', 'asinh', 'symlog', or 'logit')
+// @param connect_medians connects series of medians across different problems with a polygonal curve, `false` by default
+// @param img_ext - extension in which the figure will be saved. Common values: `".svg"`, `".png"`
 struct PlotConfig {
     std::string title = "Boxplot of statistics by method and problem instance";
     SortingCriterion sorting_criterion = SortingCriterion::SIZE;
@@ -51,6 +53,7 @@ struct PlotConfig {
     std::string plot_linestyle = "";// if empty, different linestyles will be used
     std::pair <std::string, std::string> scale ={};
     bool connect_medians = false;
+    std::string img_ext = ".svg";
 };
 
 
@@ -150,13 +153,16 @@ static std::string adjust_color_opacity(const std::string&hex_color, double fact
     return (hex_color.size() < 8) ? (hex_color + std::format("{:x}", int(round(255*factor)))) : hex_color.substr(0, hex_color.size() - 2) + std::format("{:x}", int(std::stoul(hex_color.substr(hex_color.size() - 2, 2), nullptr, 16)*factor)); // add 50% opacity to the color
 }
 // Save the current figure using global figure counter `g_next_boxplot_figure_number`
-inline void save_figure(const std::string& output_dir) {
+inline void save_figure(const std::string& output_dir, std::string img_ext=".svg") {
     const long figure_number = g_next_boxplot_figure_number - 1;
-    const std::string filename = "Figure_" + std::to_string(figure_number) + ".png";
+    const std::string filename = "Figure_" + std::to_string(figure_number) + img_ext;
     const char sep = (output_dir.back() == '/' || output_dir.back() == '\\') ? '\0' : '/';
     const std::string full_path = sep == '\0' ? output_dir + filename : output_dir + sep + filename;
     plt::save(full_path);
 }
+// @brief Save the current figure using global figure conuter `g_next_boxplot_figure_number`.
+// Expects `plot_config.output_dir` and `plot_config.img_ext` to be provided
+inline void save_figure(const PlotConfig plot_config){save_figure(plot_config.output_dir, plot_config.img_ext);}
 
 // Allocate a Run N subfolder under plots_dir for this execution.
 std::string prepare_plots_output_dir(const std::string& plots_dir)
@@ -309,7 +315,8 @@ void forest_plot(const std::map<std::string, std::tuple<std::vector<std::tuple<d
                                 std::vector<std::tuple<double, double, double>>,
                                 std::vector<double>
                                 >
-                >& problems_runs_statistics)
+                >& problems_runs_statistics,
+                PlotConfig config)
 {
     // implementation of the forest plot using matplotlib-cpp library
 }
@@ -318,16 +325,15 @@ void forest_plot(const std::map<std::string, std::tuple<std::vector<std::tuple<d
 // `boxplot_data` is data to be plotted along horizontal axis, on which `problems` are sorted by `sorting_criterion`.
 void boxplot(std::vector<std::vector<double>>& boxplot_data,
              std::vector<Problem<int>> problems,
-             std::string title = "Boxplot of costs relative to best known solution by problem instance",
-             std::pair<double, double> y_limits = std::pair<double, double>(),
-             SortingCriterion sorting_criterion=SortingCriterion::SIZE,
-             std::string output_dir = "")
+             PlotConfig config
+             //std::string title = "Boxplot of costs relative to best known solution by problem instance",
+            )
 {
     if (boxplot_data.empty() || problems.empty()) {
         return;
     }
 
-    sort_data(boxplot_data, problems, sorting_criterion);
+    sort_data(boxplot_data, problems, config.sorting_criterion);
     printf("Stats size per problem: %zu\n", boxplot_data.size());
 
     auto x_labels = std::vector<std::string>();
@@ -350,12 +356,12 @@ void boxplot(std::vector<std::vector<double>>& boxplot_data,
     }
     //plt::xticks(x_positions, x_labels);
     plt::xlabel("QAP problem instance");
-    if (y_limits.first != y_limits.second) {
-        plt::ylim(y_limits.first, y_limits.second);
+    if (config.y_limits.first != config.y_limits.second) {
+        plt::ylim(config.y_limits.first, config.y_limits.second);
     }
-    plt::title(title);
-    if (!output_dir.empty())
-        save_figure(output_dir);
+    plt::title(config.title);
+    if (!config.output_dir.empty())
+        save_figure(config);
     plt::show();
 }
 
@@ -384,7 +390,7 @@ void boxplot(std::vector<std::vector<double>>& boxplot_data,
 //
 // 6. 'rel_eff', 'norm_eff' - measures of the method's efficiency in finding good solutions relative to the search effort, which can provide insights into the method's ability to effectively navigate the solution space and find high-quality solutions with less effort.            
 //
-// Most useful
+// #### Most useful config
 // @param statistic_name the name of the statistic to be plotted, which should be one of the keys in the PlottingStatisticsByProblem structure.
 // @param sorting_criterion (`SIZE`, `OPTIMUM_PROXIMITY`, or `NONE`) the criterion by which the problems should be sorted along the x-axis of the plot, which can be by problem size, optimum proximity, or left unsorted (original order). Sorting by optimum proximity can help reveal trends in how the method's performance varies with landscape geometry, while sorting by size can show how performance scales with problem size. The choice of sorting criterion can affect the interpretability of the plot and should be chosen based on the specific insights one wants to gain from the visualization.
 // @param y_limits a pair of doubles specifying the limits of the y-axis for the plot. If the first and second values are equal or default value (`std::pair<double, double>()`) is used, the y-axis limits will be automatically determined based on the data being plotted.
@@ -733,7 +739,7 @@ void methods_boxplot(const ExperimentResults<>& results,
     // Title
     plt::title(config.title);
     if (!config.output_dir.empty())
-        save_figure(config.output_dir);
+        save_figure(config);
     plt::show();
 }
 
@@ -1113,7 +1119,7 @@ void plot_position_match_quality_heatmaps(const ExperimentResults<>& results,
         draw_heatmap(method_corrs, x_labels, y_labels);
         // plt::draw();
         // if (!config.output_dir.empty()) 
-        //     save_figure(config.output_dir);
+        //     save_figure(config);
         // saving before plt::show() breaks ticks in the figure
     }
 }
@@ -1194,7 +1200,7 @@ void methods_scatterplot(const ExperimentResults<>& results,
         PyErr_Clear();
         std::fprintf(stderr, "[plotting] Warning: legend() failed; continuing without legend for this figure.\n");
     }
-    if (!config.output_dir.empty()) save_figure(config.output_dir);
+    if (!config.output_dir.empty()) save_figure(config);
     plt::show();
 }
 
@@ -1326,7 +1332,7 @@ void plot_similarity_vs_quality(const ExperimentResults<>& results,
         std::fprintf(stderr, "[plotting] Warning: legend() failed; continuing without legend for this figure.\n");
     }
 
-    if (!config.output_dir.empty()) save_figure(config.output_dir);
+    if (!config.output_dir.empty()) save_figure(config);
     plt::show();
 }
 
@@ -1441,6 +1447,6 @@ void plot_restarts_vs_quality(const ExperimentResults<>& results,
         PyErr_Clear();
         std::fprintf(stderr, "[plotting] Warning: legend() failed; continuing without legend for this figure.\n");
     }
-    if (!config.output_dir.empty()) save_figure(config.output_dir);
+    if (!config.output_dir.empty()) save_figure(config);
     plt::show();
 }
