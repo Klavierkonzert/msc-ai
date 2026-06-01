@@ -44,3 +44,7 @@
 
 # Track gitignore itself
 !.gitignore
+
+# allow VS C++ config
+!.vscode/launch.json
+!.vscode/tasks.json

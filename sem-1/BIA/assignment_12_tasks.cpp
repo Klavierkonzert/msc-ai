@@ -29,7 +29,10 @@
 #include "./src/colors.h"
 
 
-int parse_args(char *argv[], std::vector<std::string> &args, int &N_RUNS_PER_PROBLEM, bool &RUN_PARALLEL, std::string &data_dir, std::string &plots_dir, std::pair<int, int> &fig_size, std::set<std::string> &problem_names, bool &retFlag);
+int parse_args(char *argv[], std::vector<std::string> &args, int &num_cores, int &N_RUNS_PER_PROBLEM, bool &RUN_PARALLEL, 
+                std::string &data_dir, std::string &plots_dir, std::pair<int, int> &fig_size, bool &open_windows,
+                 std::set<std::string> &problem_names, std::set<int>& tasks, bool &retFlag);
+
 std::vector<Problem<int>> load_problems(std::string data_dir, std::set<std::string>user_problem_names);
 
 namespace plt = matplotlibcpp;
@@ -41,24 +44,26 @@ using namespace std;
 void task2(const std::vector<Problem<int>> &problems,
            int n_runs_per_problem, int default_max_iters, float default_time_budget_seconds,
            int algorithm_verbosity,
-           const std::string &plots_output_dir, const std::pair<int, int> &fig_size,
+           const std::string &plots_output_dir, const std::pair<int, int> &fig_size, bool show_plots=true,
             int verbose=1);
 
-void efficiency_plots(const std::map<std::string, double> &strict_time_budgets_by_problem, float default_time_budget_seconds, int algorithm_verbosity, const std::vector<Problem<int>> &problems, int n_runs_per_problem, const std::string &plots_output_dir, std::map<std::string, double> &norm_best_known_costs, const std::pair<int, int> &fig_size, const std::string subtitle="");
+void efficiency_plots(const std::map<std::string, double> &strict_time_budgets_by_problem, float default_time_budget_seconds, 
+                        const int algorithm_verbosity, const int verbose,
+                        const std::vector<Problem<int>> &problems, int n_runs_per_problem, const std::string &plots_output_dir, std::map<std::string, double> &norm_best_known_costs, const std::pair<int, int> &fig_size, const std::string subtitle="", const bool show_plots = true);
 
 void task345(const std::vector<Problem<int>>& problems, 
                 int n_runs_per_problem, int default_max_iters, float default_time_budget_seconds, 
-                int algorithm_verbosity,
-                const std::string& plots_output_dir, const std::pair<int, int>& fig_size);
+                int algorithm_verbosity, int verbose,
+                const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots=true);
 void task3(const ExperimentResults<>& results,  const std::vector<MethodDefinition>& methods,
                 const std::vector<Problem<int>>& problems,            
-                const std::string& plots_output_dir, const std::pair<int, int>& fig_size);
+                const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots=true);
 void task4(const ExperimentResults<>& results,  const std::vector<MethodDefinition>& methods,
                 const std::vector<Problem<int>>& problems,            
-                const std::string& plots_output_dir, const std::pair<int, int>& fig_size);
+                const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots=true);
 void task5(const ExperimentResults<>& results,  const std::vector<MethodDefinition>& methods,
                 const std::vector<Problem<int>>& problems,            
-                const std::string& plots_output_dir, const std::pair<int, int>& fig_size);
+                const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots=true);
 
 std::function<AlgorithmRunConfig(const Problem<int>&)> make_time_budget_resolver(
     const std::map<std::string, double>& budgets_by_problem,
@@ -99,10 +104,10 @@ const set<string> DEFAULT_NONOPT_PROBLEMS = { "wil100","tho150","tai100b","tai80
 
 
 
-// Configure OpenMP parallelization and timer selection based on requested runs and available cores.
-inline void configure_parallelization(int max_cores_available, int n_runs_per_problem, bool run_parallel) 
+// Configure OpenMP parallelization and timer selection based on requested runs,specified number of cores and available cores/threads.
+inline void configure_parallelization(int num_cores, int n_runs_per_problem, bool run_parallel) 
 {
-    const int N_CORES = std::min(max_cores_available, n_runs_per_problem);
+    const int N_CORES = std::max(std::min(num_cores, n_runs_per_problem), omp_get_max_threads());
 
     omp_set_dynamic(0);
     if (run_parallel && N_CORES > 1 && n_runs_per_problem > 1)
@@ -117,6 +122,8 @@ inline void configure_parallelization(int max_cores_available, int n_runs_per_pr
     std::cout << Colors::GREEN << "Timer resolution: " << Colors::RESET << get_time_resolution() << " seconds"  << std::endl;
 }
 
+
+
 int main(int argc, char* argv[]) {
     try {
     const int ALGORITHM_VERBOSITY = 0; // 0 - no output, 1 - basic output, 2 - detailed output
@@ -126,10 +133,12 @@ int main(int argc, char* argv[]) {
     string data_dir = DATA_DIR;
     string plots_dir = "./Figures";
     std::pair<int, int> fig_size{1700, 900};
-    const int N_RUNS_PER_PROBLEM = 10;
-    const int MAX_CORES = omp_get_max_threads();
-    int n_runs_per_problem = N_RUNS_PER_PROBLEM;
+    bool show_plots = true;
+    std::set<int> task_nums;
 
+    const int N_RUNS_PER_PROBLEM = 10;
+    int num_cores;
+    int n_runs_per_problem = N_RUNS_PER_PROBLEM;
     bool run_parallel = false;
 
 
@@ -138,7 +147,9 @@ int main(int argc, char* argv[]) {
     std::set<std::string> user_problem_names;
     if (argc > 1){
         bool retFlag;
-        int retVal = parse_args(argv, args, n_runs_per_problem, run_parallel, data_dir, plots_dir, fig_size, user_problem_names, retFlag);
+        int retVal = parse_args(argv, args, num_cores, n_runs_per_problem, run_parallel,
+                                data_dir, plots_dir, fig_size, show_plots, 
+                                user_problem_names, task_nums, retFlag);
         if (retFlag)
             return retVal;
     }
@@ -147,7 +158,7 @@ int main(int argc, char* argv[]) {
 
     /*********************************** STEP 0: parallelization of runs of algorithms on problem instances using OpenMP ***********************************/
     // configure OpenMP parallelization and timer selection
-    configure_parallelization(MAX_CORES, n_runs_per_problem, run_parallel);
+    configure_parallelization(num_cores, n_runs_per_problem, run_parallel);
 
 
     constexpr unsigned int GLOBAL_SEED = 234567890u;
@@ -186,26 +197,36 @@ int main(int argc, char* argv[]) {
 
 
 
-    
-    task2(problems, n_runs_per_problem, MAX_ITERS, TIME_BUDGET_SECONDS
-        , 0// ALGORITHM_VERBOSITY
-        ,plots_output_dir, fig_size, 
-        0// Statistics etc verbosity
-    );
+    if (task_nums.find(2)!=task_nums.end())
+    {
+        cout<<"\nTask2...\n";
+        task2(problems, n_runs_per_problem, MAX_ITERS, TIME_BUDGET_SECONDS
+            , 0// ALGORITHM_VERBOSITY
+            ,plots_output_dir, fig_size, show_plots,
+            0// Statistics etc verbosity
+        );
+    }
  
 
-    // omp_set_num_threads(30);
-    // vector<Problem<int>> interesting_problems{d_problems["lipa80b"], d_problems["tai100b"]
-    //         //,d_problems["tai256c"]// d_problems["tai80b"],// these 2 are less interesting
-    //         //,d_problems["esc16d"]// this is very boring one
-    //     };
-    // sort(interesting_problems.begin(), interesting_problems.end(), [](const Problem<int>& a, const Problem<int>& b) {
-    //     return a.get_size() < b.get_size();
-    // });
-    // task345(interesting_problems, 
-    //         1000, MAX_ITERS, TIME_BUDGET_SECONDS, ALGORITHM_VERBOSITY, plots_output_dir, fig_size);
+    // Running tasks 3, 4, 5 on a set of two specific problems: lipa80b, tai100b
+    if (task_nums.find(345)!=task_nums.end()){
+        cout<<"\nTask345...\n";
+        //// omp_set_num_threads(30);
+        vector<Problem<int>> interesting_problems{d_problems["lipa80b"], d_problems["tai100b"]
+                //,d_problems["tai256c"]// d_problems["tai80b"],// these 2 are less interesting
+                //,d_problems["esc16d"]// this is very boring one
+            };
+        sort(interesting_problems.begin(), interesting_problems.end(), [](const Problem<int>& a, const Problem<int>& b) {
+            return a.get_size() < b.get_size();
+        });
+        task345(interesting_problems, 
+                1000, MAX_ITERS, TIME_BUDGET_SECONDS,
+                 ALGORITHM_VERBOSITY,0,
+                 plots_output_dir, fig_size, show_plots);
+    }
 
 
+    /**************************************************END************************************************** */ 
     return 0;
     } catch (const std::runtime_error& e) {
         std::cerr << Colors::RED << "Runtime error: " << Colors::RESET << e.what() << std::endl;
@@ -272,11 +293,12 @@ const map<string, double> TS_HYPERPARAMETERS  = {{"elite_candidate_list_size_fac
 // @param algorithm_verbosity defines how much details an algorithm messages to the console
 // @param plots_output_dir directory where plots should be saved
 // @param fig_size size of figures (important to fit in the report)
+// @param show_plots defines whether plots will be shown in dedicated windows. Consider setting this param to `false` to speedup experiments - plots will be saved to the specified directory anyway.
 // @param verbose defines how much details user sees outside the scope of an algorithm work, such as warnings about time measurements, statistics gathered, etc.
 void task2(const std::vector<Problem<int>>& problems, 
             int n_runs_per_problem, int default_max_iters, float default_time_budget_seconds, 
             int algorithm_verbosity,
-            const std::string& plots_output_dir, const std::pair<int, int>& fig_size,
+            const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots,
             int verbose)
 {
            
@@ -393,6 +415,7 @@ void task2(const std::vector<Problem<int>>& problems,
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
             .legend_loc = "upper right"
+            ,.show = show_plots
         }
     );
     // Quality (secondary quality metric - Normalized Cost = cost / frobenius_norms_product):
@@ -407,8 +430,8 @@ void task2(const std::vector<Problem<int>>& problems,
             .output_dir = plots_output_dir,
             .draw_random_solution_reference = true,
             .legend_loc = "upper left"
-        }
-    );
+            ,.show = show_plots
+        });;
 
 
 
@@ -424,8 +447,8 @@ void task2(const std::vector<Problem<int>>& problems,
             .output_dir = plots_output_dir,
             .legend_loc = "upper left"
             // , .scale = {"", "log"}
-        }
-    );
+            , .show = show_plots
+        });
     methods_boxplot(
         results, problems, local_search_methods,
         "time",
@@ -435,8 +458,8 @@ void task2(const std::vector<Problem<int>>& problems,
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
             .legend_loc = "upper left"
-        }
-    );
+            , .show = show_plots
+        });
         methods_boxplot(
         results, problems, all_methods,
         "time",
@@ -448,8 +471,8 @@ void task2(const std::vector<Problem<int>>& problems,
             .legend_loc = "upper left"
             , .scale = {"", "linear"}
             , .connect_medians=true
-        }
-    );
+            , .show = show_plots
+        });
     methods_boxplot(
         results, problems, all_methods,
         "time",
@@ -461,7 +484,8 @@ void task2(const std::vector<Problem<int>>& problems,
             .legend_loc = "upper left"
             , .scale = {"", "log"}
             , .connect_medians=true
-        }
+            , .show = show_plots
+        }	
     );
 
     
@@ -477,17 +501,17 @@ void task2(const std::vector<Problem<int>>& problems,
     const std::map<std::string, double> strict_time_budgets_by_problem =
         results.aggregate_by_problem("Heuristic", "time", AggregationType::MEDIAN
         );
-    efficiency_plots(strict_time_budgets_by_problem, default_time_budget_seconds, algorithm_verbosity, problems, n_runs_per_problem, plots_output_dir, norm_best_known_costs, fig_size, " given minimal time budgets determined by the Heuristic local search");
+    efficiency_plots(strict_time_budgets_by_problem, default_time_budget_seconds, algorithm_verbosity, verbose, problems, n_runs_per_problem, plots_output_dir, norm_best_known_costs, fig_size, " given minimal time budgets determined by the Heuristic local search", show_plots);
 
     // Medium time - time budgets determined by MEDIAN time taken by GREEDY local search. Steepest local search is not given enough time in this setting 
     const std::map<std::string, double> medium_time_budgets_by_problem =
         results.aggregate_by_problem("Greedy LS", "time", AggregationType::MEDIAN);
-    efficiency_plots(medium_time_budgets_by_problem, default_time_budget_seconds, algorithm_verbosity, problems, n_runs_per_problem, plots_output_dir, norm_best_known_costs, fig_size, " given medium time budgets");
+    efficiency_plots(medium_time_budgets_by_problem, default_time_budget_seconds, algorithm_verbosity, verbose, problems, n_runs_per_problem, plots_output_dir, norm_best_known_costs, fig_size, " given medium time budgets", show_plots);
 
     // generous time - time budgets determined by MEDIAN time taken by STEEPEST local search. Steepest local search is not given enough time in this setting 
     const std::map<std::string, double> generous_time_budgets_by_problem =
         results.aggregate_by_problem("Steepest LS", "time", AggregationType::MEDIAN);
-    efficiency_plots(generous_time_budgets_by_problem, default_time_budget_seconds, algorithm_verbosity, problems, n_runs_per_problem, plots_output_dir, norm_best_known_costs, fig_size, " given generous time budgets");
+    efficiency_plots(generous_time_budgets_by_problem, default_time_budget_seconds, algorithm_verbosity, verbose, problems, n_runs_per_problem, plots_output_dir, norm_best_known_costs, fig_size, " given generous time budgets", show_plots);
 
 
 
@@ -504,8 +528,9 @@ void task2(const std::vector<Problem<int>>& problems,
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
             .legend_loc = "upper right"
+        	, .show = show_plots
         }
-    );
+	);
     methods_boxplot(
         results, problems, GS_methods,
         "total_n_swaps",
@@ -517,8 +542,9 @@ void task2(const std::vector<Problem<int>>& problems,
             .legend_loc = "upper right"
             , .scale = {"", "log"}
             , .connect_medians = true
+        	, .show = show_plots
         }
-    );
+	);
         vector<MethodDefinition> RWGSATS_methods (all_methods.begin()+4, all_methods.end()); // Steepest LS and Greedy LS
     methods_boxplot(
         results, problems, RWGSATS_methods,
@@ -528,11 +554,12 @@ void task2(const std::vector<Problem<int>>& problems,
             .xy_labels = {"Problem instance", "Total number of swaps per run"},
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
-            .legend_loc = "upper right"
+            .legend_loc = "upper left"
             , .scale = {"", "log"}
             , .connect_medians = true
+        	, .show = show_plots
         }
-    );
+	);
     
     
 
@@ -550,8 +577,9 @@ void task2(const std::vector<Problem<int>>& problems,
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
             .legend_loc = "upper right"
+        	, .show = show_plots
         }
-    );
+	);
     methods_boxplot(
         results, problems, GSR_methods,
         "total_n_eval_solutions",
@@ -563,8 +591,9 @@ void task2(const std::vector<Problem<int>>& problems,
             .legend_loc = "upper right"
             , .scale = {"", "log"}
             , .connect_medians = true
+        	, .show = show_plots
         }
-    );
+	);
 
     vector<MethodDefinition> GSRSATS_methods (all_methods.begin()+1, all_methods.end()); // Steepest LS, Greedy LS, Random Search, Random Walk
     methods_boxplot(
@@ -575,11 +604,12 @@ void task2(const std::vector<Problem<int>>& problems,
             .xy_labels = {"Problem instance", "Number of evaluated solutions per run"},
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
-            .legend_loc = "upper right"
+            .legend_loc = "lower right"
             , .scale = {"", "log"}
             , .connect_medians = true
+        	, .show = show_plots
         }
-    );
+	);
     methods_boxplot(
         results, problems, GSRSATS_methods,
         "total_n_eval_solutions",
@@ -588,11 +618,12 @@ void task2(const std::vector<Problem<int>>& problems,
             .xy_labels = {"Problem instance", "Number of evaluated solutions per run"},
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
-            .legend_loc = "upper right"
+            .legend_loc = "upper left"
             , .scale = {"", "linear"}
             , .connect_medians = true
+        	, .show = show_plots
         }
-    );
+	);
 
     //vector<MethodDefinition> GSR_methods = {local_search_methods[1], local_search_methods[2], 
     //                                        random_methods[0], random_methods[1]}; // Steepest LS, Greedy LS, Random Search, Random Walk
@@ -604,9 +635,10 @@ void task2(const std::vector<Problem<int>>& problems,
             .xy_labels = {"Problem instance", "Number of evaluated solutions per run"},
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
-            .legend_loc = "upper right"
+            .legend_loc = "upper left"
+        	, .show = show_plots
         }
-    );
+	);
 
 
 
@@ -626,8 +658,9 @@ void task2(const std::vector<Problem<int>>& problems,
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
             .legend_loc = "lower right"
+        	, .show = show_plots
         }
-    );
+	);
     // cayley_distance (normalized): number of swaps between the found solution and the best known solution, normalized by problem size
     methods_boxplot(
         results, problems, all_methods,
@@ -638,8 +671,9 @@ void task2(const std::vector<Problem<int>>& problems,
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
             .legend_loc = "lower right"
+        	, .show = show_plots
         }
-    );
+	);
 
 
 
@@ -660,8 +694,9 @@ void task2(const std::vector<Problem<int>>& problems,
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
             .legend_loc = "upper right"
+        	, .show = show_plots
         }
-    );
+	);
 
     // Distribution of COS quality of solutions found by different methods, by problem instance, sorted by optimum proximity and with guides for the normalized angular quality of the best known solutions
     methods_boxplot(
@@ -676,20 +711,23 @@ void task2(const std::vector<Problem<int>>& problems,
             .figure_size = fig_size,
             .output_dir = plots_output_dir,
             .legend_loc = "upper right"
+        	, .show = show_plots
         }
-    );
+	);
 }
 
 // plots efficiency graphs for the following algorithms:
 // - `heuristic_local_search_qap`, `steepest_local_search_qap`, `greedy_local_search_qap`, `random_search_qap`, `random_walk_qap`
 // - `simulated_annealing_qap`, `adaptive_simulated_annealing_qap` with the following hyperparameters: see `SA_HYPERPARAMETERS`
 // - `tabu_search_qap` with the following hyperparameters: see `TS_HYPERPARAMETERS`
-void efficiency_plots(const std::map<std::string, double> &time_budgets_by_problem, float default_time_budget_seconds, int algorithm_verbosity, const std::vector<Problem<int>> &problems, int n_runs_per_problem, const std::string &plots_output_dir, std::map<std::string, double> &norm_best_known_costs, const std::pair<int, int> &fig_size, const std::string subtitle)
+void efficiency_plots(const std::map<std::string, double> &time_budgets_by_problem, float default_time_budget_seconds, 
+                        const int algorithm_verbosity, const int verbose, 
+                        const std::vector<Problem<int>> &problems, int n_runs_per_problem, const std::string &plots_output_dir, std::map<std::string, double> &norm_best_known_costs, const std::pair<int, int> &fig_size, const std::string subtitle, const bool show_plots)
 {
     vector<MethodDefinition> methods = make_time_constrained_methods(
         vector<AlgorithmRunMetrics (*)(const Problem<int> &, Permutation<int> &, const AlgorithmRunConfig &)>{heuristic_local_search_qap, steepest_local_search_qap, greedy_local_search_qap, random_search_qap, random_walk_qap},
         "", time_budgets_by_problem, default_time_budget_seconds, algorithm_verbosity);
-    ExperimentResults results = collect_experiment_results(methods, problems, n_runs_per_problem);
+    ExperimentResults results = collect_experiment_results(methods, problems, n_runs_per_problem, verbose);
     // Simulated annealing:
     vector<MethodDefinition> sa_methods = make_time_constrained_methods(
         vector<AlgorithmRunMetrics (*)(const Problem<int> &, Permutation<int> &, const AlgorithmRunConfig &)>{simulated_annealing_qap, adaptive_simulated_annealing_qap},
@@ -697,7 +735,7 @@ void efficiency_plots(const std::map<std::string, double> &time_budgets_by_probl
         0,
         SA_HYPERPARAMETERS
     );
-    ExperimentResults sa_results = collect_experiment_results(sa_methods, problems, n_runs_per_problem);
+    ExperimentResults sa_results = collect_experiment_results(sa_methods, problems, n_runs_per_problem, verbose);
     // Tabu search:
     vector<MethodDefinition> ts_methods = make_time_constrained_methods(
         vector<AlgorithmRunMetrics (*)(const Problem<int> &, Permutation<int> &, const AlgorithmRunConfig &)>{tabu_search_qap},
@@ -705,7 +743,7 @@ void efficiency_plots(const std::map<std::string, double> &time_budgets_by_probl
         0,
         TS_HYPERPARAMETERS
     );
-    ExperimentResults ts_results = collect_experiment_results(ts_methods, problems, n_runs_per_problem);
+    ExperimentResults ts_results = collect_experiment_results(ts_methods, problems, n_runs_per_problem, verbose);
 
     methods.insert(methods.end(), sa_methods.begin(), sa_methods.end());
     methods.insert(methods.end(), ts_methods.begin(), ts_methods.end());
@@ -715,7 +753,7 @@ void efficiency_plots(const std::map<std::string, double> &time_budgets_by_probl
 
 
 
-    // strict time: rel_eff - relative efficiency [AUC] - the time-weighted average cost of the incumbent solution during the run, divided by the best known cost, minus 1. This metric captures how efficiently the algorithm improves the solution over time, with lower values indicating more efficient improvement.
+    // strict/mean/generous time: rel_eff - relative efficiency [AUC] - the time-weighted average cost of the incumbent solution during the run, divided by the best known cost, minus 1. This metric captures how efficiently the algorithm improves the solution over time, with lower values indicating more efficient improvement.
     methods_boxplot(
         results, problems, methods,
         "rel_eff",
@@ -723,8 +761,11 @@ void efficiency_plots(const std::map<std::string, double> &time_budgets_by_probl
          .xy_labels = {"Problem instance", "Relative Efficiency [AUC], the lower the better"},
          .figure_size = fig_size,
          .output_dir = plots_output_dir,
-         .legend_loc = "upper right"});
-    // strict time: norm_eff - normalized efficiency [AUC] - the time-weighted average cost of the incumbent solution during the run, divided by the Frobenius product of the problem matrices, minus normalized best known cost. This metric captures how efficiently the algorithm improves the solution relative to the problem's scale, with lower values indicating more efficient improvement.
+         .legend_loc = "upper right"	,
+        .show = show_plots
+        }
+	);
+    // strict/mean/generous time: norm_eff - normalized efficiency [AUC] - the time-weighted average cost of the incumbent solution during the run, divided by the Frobenius product of the problem matrices, minus normalized best known cost. This metric captures how efficiently the algorithm improves the solution relative to the problem's scale, with lower values indicating more efficient improvement.
     methods_boxplot(
         results, problems, methods,
         "norm_eff",
@@ -732,7 +773,10 @@ void efficiency_plots(const std::map<std::string, double> &time_budgets_by_probl
          .xy_labels = {"Problem instance", "Normalized Efficiency [AUC], the lower the better"},
          .figure_size = fig_size,
          .output_dir = plots_output_dir,
-         .legend_loc = "upper right"});
+         .legend_loc = "upper right"	, 
+         .show = show_plots
+        }
+	);
     // Quality (primary quality metric is relative cost = (cost - best_cost) / best_cost):
     methods_boxplot(
         results, problems, methods,
@@ -741,7 +785,10 @@ void efficiency_plots(const std::map<std::string, double> &time_budgets_by_probl
          .xy_labels = {"Problem instance", "Relative Cost of solution, the lower the better"},
          .figure_size = fig_size,
          .output_dir = plots_output_dir,
-         .legend_loc = "upper right"});
+         .legend_loc = "upper right"
+         , .show = show_plots
+        }
+	);
     // Quality (secondary quality metric - Normalized Cost = cost / frobenius_norms_product):
     methods_boxplot(
         results, problems, methods,
@@ -752,13 +799,17 @@ void efficiency_plots(const std::map<std::string, double> &time_budgets_by_probl
          .figure_size = fig_size,
          .output_dir = plots_output_dir,
          .draw_random_solution_reference = true,
-         .legend_loc = "upper left"});
+         .legend_loc = "upper left"	
+         , .show = show_plots
+        }
+	);
 }
 
+// Exploring solution space
 void task345(const std::vector<Problem<int>>& problems, 
                 int n_runs_per_problem, int default_max_iters, float default_time_budget_seconds, 
-                int algorithm_verbosity,
-                const std::string& plots_output_dir, const std::pair<int, int>& fig_size)
+                int algorithm_verbosity, int verbose,
+                const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots)
 {
     double t = 0.0;
     clock_t start = clock();
@@ -778,21 +829,23 @@ void task345(const std::vector<Problem<int>>& problems,
     ExperimentResults results = collect_experiment_results(
         local_search_methods,
         problems,
-        n_runs_per_problem
+        n_runs_per_problem,
+        verbose
     );
     t = clock() - start;
     printf("Time taken to run %i iterations of %zu local search methods: %.2f seconds\n", n_runs_per_problem, local_search_methods.size(), t / CLOCKS_PER_SEC);
     
-    task3(results, local_search_methods, problems, plots_output_dir, fig_size);
-    task4(results, local_search_methods, problems, plots_output_dir, fig_size);
-    task5(results, local_search_methods, problems, plots_output_dir, fig_size);
+    task3(results, local_search_methods, problems, plots_output_dir, fig_size, show_plots);
+    task4(results, local_search_methods, problems, plots_output_dir, fig_size, show_plots);
+    task5(results, local_search_methods, problems, plots_output_dir, fig_size, show_plots);
 
 }
 
 
 void task3(const ExperimentResults<>& results,  const std::vector<MethodDefinition>& methods,
                 const std::vector<Problem<int>>& problems,            
-                const std::string& plots_output_dir, const std::pair<int, int>& fig_size)
+                const std::string& plots_output_dir, const std::pair<int, int>& fig_size,
+            bool show_plots)
 {
     const std::vector<std::string> markers = { "o", "s", "^", "D", "x", "P", "v", "*", "h", "H", "X" };
     int n_runs_per_problem = std::get<2>(results.get_dimensions());
@@ -802,6 +855,8 @@ void task3(const ExperimentResults<>& results,  const std::vector<MethodDefiniti
     plot_cfg.output_dir = plots_output_dir;
     plot_cfg.figure_size = fig_size;
     plot_cfg.xy_labels = {"Initial normalized cost", "Final normalized cost"};
+    plot_cfg.show = show_plots;
+    // plot_cfg.scale = {"log", "log"};
     methods_scatterplot(results,
                         problems,
                         methods,
@@ -837,7 +892,7 @@ void task3(const ExperimentResults<>& results,  const std::vector<MethodDefiniti
 
 void task4(const ExperimentResults<>& results,  const std::vector<MethodDefinition>& methods,
                 const std::vector<Problem<int>>& problems,            
-                const std::string& plots_output_dir, const std::pair<int, int>& fig_size)
+                const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots)
 {
     const std::vector<std::string> markers = { "o", "s", "^", "D", "x", "P", "v", "*", "h", "H", "X" };
     int n_runs_per_problem = std::get<2>(results.get_dimensions());
@@ -846,6 +901,7 @@ void task4(const ExperimentResults<>& results,  const std::vector<MethodDefiniti
     PlotConfig plot_cfg;
     plot_cfg.output_dir = plots_output_dir;
     plot_cfg.figure_size = fig_size;
+    plot_cfg.show = show_plots;
     plot_cfg.xy_labels = {"Number of starts", "Relative cost quality"};
     plot_cfg.title = "Multi-start Greedy LS and Steepest LS: best and average relative cost quality vs number of starts\n(" + std::to_string(n_runs_per_problem) + " runs per problem instance)";
     plot_restarts_vs_quality(results, problems, methods,
@@ -880,7 +936,7 @@ void task4(const ExperimentResults<>& results,  const std::vector<MethodDefiniti
 // Analysis of found local optima
 void task5(const ExperimentResults<>& results,  const std::vector<MethodDefinition>& methods,
                 const std::vector<Problem<int>>& problems,            
-                const std::string& plots_output_dir, const std::pair<int, int>& fig_size)
+                const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots)
 {
     const std::vector<std::string> markers = { "o", "s", "^", "D", "x", "P", "v", "*", "h", "H", "X" };
     const int n_runs_per_problem = std::get<2>(results.get_dimensions());
@@ -888,7 +944,7 @@ void task5(const ExperimentResults<>& results,  const std::vector<MethodDefiniti
     PlotConfig plot_cfg;
     plot_cfg.output_dir = plots_output_dir;
     plot_cfg.figure_size = fig_size;
-    
+    plot_cfg.show = show_plots;
     
     
     plot_cfg.xy_labels = {"Cayley similarity", "Relative cost quality"};
@@ -1058,18 +1114,27 @@ std::vector<MethodDefinition> make_time_constrained_methods(
 
 
 
-int parse_args(char *argv[], std::vector<std::string> &args, int &N_RUNS_PER_PROBLEM, bool &RUN_PARALLEL, std::string &data_dir, std::string &plots_dir, std::pair<int, int> &fig_size, std::set<std::string> &problem_names, bool &retFlag)
+int parse_args(char *argv[], std::vector<std::string> &args, int &num_cores, int &N_RUNS_PER_PROBLEM, bool &RUN_PARALLEL, 
+                std::string &data_dir, std::string &plots_dir, std::pair<int, int> &fig_size, bool &open_windows,
+                 std::set<std::string> &problem_names, std::set<int> &tasks, bool &retFlag)
 {
+    #define _NOTE std::cout<< Colors::GREEN<<"NOTE: "<<Colors::RESET
+    #define _WARNING std::cerr<< Colors::YELLOW<<"WARNING: "<<Colors::RESET
+
     retFlag = true;
     string arg1(argv[1]);
     if (arg1 == "--help")
     {
-        cout << "Usage: " << argv[0] << " [--dir <data_directory>] [--plots-dir <plots_directory>] [--fig-size <width> <height>] [--runs-per-problem <n>] [--no-parallel] [--parallel] [--problems <problem_names>]" << endl
+        cout << "Usage: " << argv[0] << " [--dir <data_directory>] [--plots-dir <plots_directory>] [--fig-size <width> <height>] [--runs-per-problem <n>] [--no-parallel] [--parallel] [--problems <problem_names>] [--no-windows]" << endl
         << "If --dir is not provided, the program will look for data files in the default directory './QAP data/'." << endl
         << "If --plots-dir is not provided, plots will be saved to './Figures/Run N/'." << endl
         << "If --fig-size is not provided, the default figure size from main is used." << endl
-        << "If --fig-size is not provided, the default figure size from main is used." << endl
-        << "If --no-parallel or --parallel not provided, default value will be used." << endl;
+        << "If --no-parallel (sequential execution using only one cpu) or --parallel (parallel execution) not provided, default value will be used." << endl
+        << "In case of parallel execution, --cores specifies number of cores/threads will be used for parallelization. If not provided, max number of available cores will be used, where necessary" <<endl
+        << "If --no-windows, plots and all the other reporting analytics will not pe opened in dedicated windows, e.g. Matplotlib window." <<endl
+        << "If --tasks is not provided, all the tasks will be performed: task2, task345"
+        // << "If --tasks is not provided, all the tasks (2, 3, 4, 5) will be performed."
+        << endl;
 
         cout<< "If --problems is not provided, the default problems will be analyzed: " << endl;
         for (auto sp: DEFAULT_OPT_PROBLEMS) cout<< sp<< ", ";
@@ -1078,65 +1143,80 @@ int parse_args(char *argv[], std::vector<std::string> &args, int &N_RUNS_PER_PRO
 
         return 0;
     }
+    
 
-    if (find(args.begin(), args.end(), "--runs-per-problem") != args.end())
+    std::vector<std::string>::iterator it;
+
+    it = find(args.begin(), args.end(), "--runs-per-problem");
+    if (it != args.end())
     {
-        auto it = find(args.begin(), args.end(), "--runs-per-problem");
         if (it != args.end() && it + 1 != args.end())
         {
             N_RUNS_PER_PROBLEM = stoi(*(it + 1));
-            cout << "Number of runs per problem set to: " << N_RUNS_PER_PROBLEM << endl;
+            _NOTE<< "Number of runs per problem set to: " << N_RUNS_PER_PROBLEM << endl;
         }
         else
         {
-            cerr << Colors::YELLOW << " WARNING: --runs-per-problem flag provided without a valid integer value. Using default value: " << N_RUNS_PER_PROBLEM << Colors::RESET << endl;
+            _WARNING<<"--runs-per-problem flag provided without a valid integer value. Using default value: " << N_RUNS_PER_PROBLEM << Colors::RESET << endl;
         }
     }
 
-    // Parallelization arg:
+    // Parallelization args
     if (find(args.begin(), args.end(), "--no-parallel") != args.end())
     {
         RUN_PARALLEL = false;
-        cout << "Parallel execution disabled. Running in sequential mode." << endl;
+        _NOTE << "Parallel execution disabled. Running in sequential mode." << endl;
     }
     else if (find(args.begin(), args.end(), "--parallel") != args.end())
     {
         RUN_PARALLEL = true;
-        cout << "Parallel execution enabled. Running in parallel mode." << endl;
+        _NOTE<< "Parallel execution enabled. Running in parallel mode." << endl;
+    }
+    // Num of cores 
+    it = find(args.begin(), args.end(), "--cores") ;
+    if (it != args.end()){
+        try {
+            num_cores = std::stoi(*(it + 1));
+        } catch (...){
+            num_cores = omp_get_max_threads();
+            _WARNING <<"--cores argument is invalid. Max number of available cores will be used: "<< num_cores << endl;   
+        }  
     }
 
+
     // assigning data directory from command line argument if provided, or default
-    if (find(args.begin(), args.end(), "--dir") != args.end())
-    {
-        auto it = find(args.begin(), args.end(), "--dir");
+    it = find(args.begin(), args.end(), "--dir");
+    if (it != args.end()){
         if (it != args.end() && it + 1 != args.end())
         {
             data_dir = *(it + 1);
-            cout << "Data directory set to: " << data_dir << endl;
+            _WARNING << "Data directory set to: " << data_dir << endl;
         }
         else
-            cerr << Colors::YELLOW << " WARNING: --dir flag provided without a valid directory path. Using default directory: './QAP data/'." << Colors::RESET << endl;
+            _WARNING<< "--dir flag provided without a valid directory path. Using default directory: './QAP data/'." << Colors::RESET << endl;
     }
 
 
+
+    /**************************************** Args for plotting config ************************************************/
     // Plots directory
-    if (find(args.begin(), args.end(), "--plots-dir") != args.end())
+    it = find(args.begin(), args.end(), "--plots-dir");
+    if (it != args.end())
     {
-        auto it = find(args.begin(), args.end(), "--plots-dir");
         if (it != args.end() && it + 1 != args.end())
         {
             plots_dir = *(it + 1);
-            cout << "Plots base directory set to: " << plots_dir << endl;
+            _NOTE << "Plots base directory set to: " << plots_dir << endl;
         }
         else
-            cerr << Colors::YELLOW << " WARNING: --plots-dir flag provided without a valid directory path. Using default: './Figures'." << Colors::RESET << endl;
+            _WARNING << "--plots-dir flag provided without a valid directory path. Using default: './Figures'." << Colors::RESET << endl;
     }
 
 
     // Figure size
-    if (find(args.begin(), args.end(), "--fig-size") != args.end())
+    it = find(args.begin(), args.end(), "--fig-size");
+    if ( it != args.end())
     {
-        auto it = find(args.begin(), args.end(), "--fig-size");
         if (it != args.end() && it + 1 != args.end())
         {
             // Preferred style: --fig-size <width> <height>
@@ -1146,9 +1226,9 @@ int parse_args(char *argv[], std::vector<std::string> &args, int &N_RUNS_PER_PRO
                     const int height = std::stoi(*(it + 2));
                     if (width > 0 && height > 0) {
                         fig_size = {width, height};
-                        cout << "Figure size set to: " << width << "x" << height << endl;
+                        _NOTE << "Figure size set to: " << width << "x" << height << endl;
                     } else
-                        cerr << Colors::YELLOW << " WARNING: --fig-size values must be positive. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
+                        _WARNING << "--fig-size values must be positive. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
                 }
                 catch (...) {
                     // Backward-compatible fallback: --fig-size <width>x<height>
@@ -1164,28 +1244,35 @@ int parse_args(char *argv[], std::vector<std::string> &args, int &N_RUNS_PER_PRO
                         const int height = std::stoi(value.substr(sep_pos + 1));
                         if (width > 0 && height > 0) {
                             fig_size = {width, height};
-                            cout << "Figure size set to: " << width << "x" << height << endl;
+                            _NOTE << "Figure size set to: " << width << "x" << height << endl;
                         } else
-                            cerr << Colors::YELLOW << " WARNING: --fig-size values must be positive. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
+                            _WARNING <<"--fig-size values must be positive. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
                     }
                     catch (...) {
-                        cerr << Colors::YELLOW << " WARNING: Invalid --fig-size format. Use either <width> <height> or <width>x<height>. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
+                        _WARNING << "Invalid --fig-size format. Use either <width> <height> or <width>x<height>. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
                     }
                 } else
-                    cerr << Colors::YELLOW << " WARNING: --fig-size expects two integers. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
+                    _WARNING << "--fig-size expects two integers. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
             }
         }
         else
-            cerr << Colors::YELLOW << " WARNING: --fig-size flag provided without a value. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
+            _WARNING << "--fig-size flag provided without a value. Keeping current figure size: " << fig_size.first << "x" << fig_size.second << "." << Colors::RESET << endl;
+    }
+    // Whether windows with Matplotlib plots etc. will be opened
+    if (find(args.begin(), args.end(), "--no-windows") != args.end())
+    {
+        open_windows = false;
+        _NOTE << "No windows will be opened with plots, statistics and reports." << endl;
     }
 
 
-
+    /****************************************** List of problems ***********************************************************/
     // Parse user-provided problem names via --problems or -p (comma-separated or space-separated)
     problem_names.clear();
     auto itp = find(args.begin(), args.end(), "--problems");
     if (itp == args.end()) itp = find(args.begin(), args.end(), "-p");
-    if (itp != args.end()) {
+    if (itp != args.end()) 
+    {
         auto cur = itp + 1;
         while (cur != args.end() && !cur->empty() && (*cur)[0] != '-') {
             std::string token = *cur;
@@ -1200,6 +1287,50 @@ int parse_args(char *argv[], std::vector<std::string> &args, int &N_RUNS_PER_PRO
             ++cur;
         }
     }
+
+
+    /***************************************** List of tasks to be executed ************************************************/
+    tasks.clear();
+    int itasknum ;
+    const std::set<int> VALID_TASKS = {2, 345, 3, 4, 5};
+    it = find(args.begin(), args.end(), "--tasks");
+    if (it != args.end()) {
+        auto cur = it + 1;
+        while (cur != args.end() && !cur->empty() && (*cur)[0] != '-') {
+            std::string token = *cur;
+            size_t pos = 0;
+            while (pos < token.size()) {
+                size_t comma = token.find(',', pos);
+                std::string tasknum = (comma == std::string::npos) ? token.substr(pos) : token.substr(pos, comma - pos);
+                try {
+                    itasknum = std::stoi(tasknum);
+                }
+                catch(...){
+                    _WARNING << " Incorrect task number value. Valid values are: 2, 345, 3, 4, 5";
+                    goto next_value;
+                }
+
+                if (VALID_TASKS.find(itasknum)!=VALID_TASKS.end())
+                    tasks.insert(itasknum);
+                else {
+                    _WARNING << " Incorrect task number value. Valid values are: 2, 345, 3, 4, 5";
+                }
+
+                next_value:
+                    if (comma == std::string::npos) break;
+                    pos = comma + 1;
+            }
+            ++cur;
+        }
+    }
+    if (tasks.empty())
+        tasks = VALID_TASKS;
+    _NOTE << "The following tasks will be run: "; for (auto task: tasks) std::cout << "task"<< Colors::CYAN<<std::to_string(task)<<Colors::RESET<<", ";
+    std::cout<<endl;
+
+
+
+
     retFlag = false;
     return {};
 }

@@ -37,7 +37,8 @@
 // @param plot_linestyle  the linestyle for the plot (by default is empty, different linestyles will be used)
 // @param scale pair of scales for `x` and `y` axis (by default is empty. Possible options for each axis are: 'linear' (default), 'log', 'asinh', 'symlog', or 'logit')
 // @param connect_medians connects series of medians across different problems with a polygonal curve, `false` by default
-// @param img_ext - extension in which the figure will be saved. Common values: `".svg"`, `".png"`
+// @param img_ext  extension in which the figure will be saved. Common values: `".svg"`, `".png"`
+// @param show  defines whether a plot will be shown (`matplotlib.show()` method call)
 struct PlotConfig {
     std::string title = "Boxplot of statistics by method and problem instance";
     SortingCriterion sorting_criterion = SortingCriterion::SIZE;
@@ -53,7 +54,9 @@ struct PlotConfig {
     std::string plot_linestyle = "";// if empty, different linestyles will be used
     std::pair <std::string, std::string> scale ={};
     bool connect_medians = false;
-    std::string img_ext = ".svg";
+    std::string img_ext = ".pdf";
+
+    bool show=true;
 };
 
 
@@ -362,7 +365,8 @@ void boxplot(std::vector<std::vector<double>>& boxplot_data,
     plt::title(config.title);
     if (!config.output_dir.empty())
         save_figure(config);
-    plt::show();
+    if (config.show) plt::show();
+    else plt::close();
 }
 
 
@@ -396,6 +400,7 @@ void boxplot(std::vector<std::vector<double>>& boxplot_data,
 // @param y_limits a pair of doubles specifying the limits of the y-axis for the plot. If the first and second values are equal or default value (`std::pair<double, double>()`) is used, the y-axis limits will be automatically determined based on the data being plotted.
 // @param aggregated_values_for_statistic contains a map <label, map <problem names,  aggregated values (e.g. max, mean, median) for the statistic being plotted>>, which can be used to add reference lines to the plot for comparison. For example, if plotting cost statistics, the aggregated values could be the best known costs for each problem instance, allowing for a visual comparison of the methods' performance against the best known solutions.
 // @param xy_labels a pair of strings specifying the labels for the x and y axes of the plot. If not provided, the label "QAP problem instances" will be used for x-axis and a label corresponding to the statistic name will be used for y-axis.
+// @param scale pair of scales for `x` and `y` axis (by default is empty. Possible options for each axis are: 'linear' (default), 'log', 'asinh', 'symlog', or 'logit')
 void methods_boxplot(const ExperimentResults<>& results,
                      std::vector<Problem<int>> problems, 
         const std::vector<MethodDefinition>& methods, 
@@ -740,7 +745,8 @@ void methods_boxplot(const ExperimentResults<>& results,
     plt::title(config.title);
     if (!config.output_dir.empty())
         save_figure(config);
-    plt::show();
+    if (config.show) plt::show();
+    else plt::close();
 }
 
 
@@ -767,7 +773,8 @@ void methods_boxplot(const ExperimentResults<>& results,
 //     plt::title("Distribution of costs for " + problem_name);
 //     plt::xlabel("Cost");
 //     plt::ylabel("Frequency");
-//     plt::show();
+//     if (config.show) plt::show();
+//    else plt::close;
 // }
 
 
@@ -912,7 +919,8 @@ static std::vector<size_t> select_interesting_x_ticks(
 
 static bool draw_heatmap(const std::vector<std::vector<double>>& matrix,
                          const std::vector<std::string>& x_labels,
-                         const std::vector<std::string>& y_labels)
+                         const std::vector<std::string>& y_labels,
+                        const PlotConfig& config)
 {
     if (matrix.empty() || matrix[0].empty()) {
         return false;
@@ -969,7 +977,10 @@ static bool draw_heatmap(const std::vector<std::vector<double>>& matrix,
     matplotlibcpp::text(legend_x - 1 , legend_y1+0.1, "Correlation");
     matplotlibcpp::text(legend_x + 0.7, legend_y0, "-1.0");
     matplotlibcpp::text(legend_x + 0.7, legend_y1, "+1.0");
+    //conditional logic below breaks plotting
+    //if (config.show) 
     plt::show();
+    // else plt::close();
     return true;
 }
 
@@ -1116,10 +1127,11 @@ void plot_position_match_quality_heatmaps(const ExperimentResults<>& results,
         plt::title(!config.title.empty() ?  problem_name + ": " + config.title : problem_name + ": position-match correlation with quality");
             
         set_active_figure_size(config.figure_size.first, config.figure_size.second);
-        draw_heatmap(method_corrs, x_labels, y_labels);
+        draw_heatmap(method_corrs, x_labels, y_labels, config);
         // plt::draw();
         // if (!config.output_dir.empty()) 
         //     save_figure(config);
+        //// else plt::close();
         // saving before plt::show() breaks ticks in the figure
     }
 }
@@ -1187,6 +1199,13 @@ void methods_scatterplot(const ExperimentResults<>& results,
         }
     }
 
+    // Scale (log, linear, etc.)
+    if (!config.scale.first.empty())
+        plt::set_yscale(config.scale.first);
+    if (!config.scale.second.empty())
+        plt::set_yscale(config.scale.second);
+
+
     std::string x_label = !config.xy_labels.first.empty() ? config.xy_labels.first : statistics.first;
     std::string y_label = !config.xy_labels.second.empty() ? config.xy_labels.second : statistics.second;
     plt::xlabel(replace_underscores(x_label));
@@ -1201,7 +1220,8 @@ void methods_scatterplot(const ExperimentResults<>& results,
         std::fprintf(stderr, "[plotting] Warning: legend() failed; continuing without legend for this figure.\n");
     }
     if (!config.output_dir.empty()) save_figure(config);
-    plt::show();
+    if (config.show) plt::show();
+    else plt::close();
 }
 
 // Plot similarity trends vs. a selected quality metric.
@@ -1333,7 +1353,8 @@ void plot_similarity_vs_quality(const ExperimentResults<>& results,
     }
 
     if (!config.output_dir.empty()) save_figure(config);
-    plt::show();
+    if (config.show) plt::show();
+    else plt::close();
 }
 
 
@@ -1448,5 +1469,6 @@ void plot_restarts_vs_quality(const ExperimentResults<>& results,
         std::fprintf(stderr, "[plotting] Warning: legend() failed; continuing without legend for this figure.\n");
     }
     if (!config.output_dir.empty()) save_figure(config);
-    plt::show();
+    if (config.show) plt::show();
+    else plt::close();
 }

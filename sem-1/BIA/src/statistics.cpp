@@ -718,7 +718,7 @@ RunStatisticsPoint<> static get_statistics(const MethodFunction& method,
 
     // Check whether time measurement has some inconsistencies (actual time taken by the algorithm can be lower than timer resolution (0.001s))
     if (verbose >= 1){
-            if ( time_taken - total_time_run>= get_time_resolution())
+            if ( time_taken - total_time_run>= 2.0* get_time_resolution())
                 std::cerr <<'\n' << Colors::YELLOW << "get_statistics:: WARNING: "<<Colors::RESET<<"Problem "<< problem.get_name()<<": Time taken for the method run (" << total_time_run << "s) is significantly less than the total time measured for the statistics gathering (" << time_taken << "s). This may indicate that the method is not properly measuring its execution time or that there are significant overheads in the statistics gathering process." << Colors::RESET;
             if (time_taken<get_time_resolution())
             {
@@ -848,7 +848,7 @@ static ProblemsRunsStatistics<> get_problems_runs_statistics(const MethodFunctio
     std::vector<std::vector<Permutation<int>>> solutions_by_problem(problems.size(),std::vector<Permutation<int>>(n_runs));
 
     // Parallelize by run index so each worker evaluates one run across all problems.
-    #pragma omp parallel for default(none) shared(problems, n_runs, method, run_points_by_problem, solutions_by_problem, run_config, run_config_for_problem)
+    #pragma omp parallel for default(none) shared(problems, n_runs, method, run_points_by_problem, solutions_by_problem, run_config, run_config_for_problem, verbose)
     for (int run_i = 0; run_i < n_runs; ++run_i) {
         for (int problem_i = 0; problem_i < static_cast<int>(problems.size()); ++problem_i) {
             const auto& problem = problems[problem_i];
