@@ -3,7 +3,7 @@
 This project implements and compares heuristic/metaheuristic algorithms for the Quadratic Assignment Problem (QAP). It loads QAPLIB-style `.dat` and `.sln` instances, runs multiple algorithms across selected benchmark problems, collects quality/time/efficiency statistics, and generates plots for analysis, which are used in `assignments/Assignment 2 - SA + TS in QAP/....pdf` report.
 
 ### Main results
-See `assignments/Assignment 2 - SA + TS in QAP/....pdf` report for results and conclusions.
+See [`assignments/Assignment 2 - SA + TS in QAP/....pdf`](./assignments/Assignment%202%20-%20SA%20+TS%20in%20QAP/QAP_extended_report.pdf) report for results and conclusions.
 
 
 ## Requirements
@@ -19,7 +19,7 @@ See `assignments/Assignment 2 - SA + TS in QAP/....pdf` report for results and c
 pip install matplotlib numpy
 
 ## Implemented algorithms for QAP
-See `\src\algorithms.cpp`:
+See  [`src/algorithms.cpp`](src/algorithms.cpp):
 - Heuristic local search
 - Steepest local search
 - Greedy local search
@@ -32,18 +32,19 @@ See `\src\algorithms.cpp`:
 ## Project structure
 | Path | Purpose |
 |---|---|
-| `assignment_12_tasks.cpp` | Main entry point, CLI parsing, task orchestration |
-| `src/algorithms.cpp` | QAP optimization algorithms |
-| `src/cost.cpp` | QAP cost and swap-delta evaluation |
-| `src/statistics.cpp` | Experiment result collection and aggregation |
-| `src/plotting.cpp` | Matplotlib-based plots |
-| `src/problem.cpp` | QAP problem abstraction |
-| `src/matrix.cpp` | Matrix container and cached matrix properties |
-| `src/permutation.cpp` | Permutation representation and distance metrics |
-| `src/dataloaders.cpp` | `.dat` / `.sln` loading |
-| `QAP data/` | Benchmark instances from QAPLIB |
-| `Figures/` | Generated experiment plots |
-| `assignments/` | Reports and assignment deliverables |
+| [`assignment_12_tasks.cpp`](assignment_12_tasks.cpp) | Main entry point, CLI parsing, task orchestration |
+| [`src/algorithms.cpp`](src/algorithms.cpp) | QAP optimization algorithms |
+| [`src/cost.cpp`](src/cost.cpp) | QAP cost and swap-delta evaluation |
+| [`src/statistics.cpp`](src/statistics.cpp) | Experiment result collection and aggregation |
+| [`src/plotting.cpp`](src/plotting.cpp) | Matplotlib-based plots |
+| [`src/problem.cpp`](src/problem.cpp) | QAP problem abstraction |
+| [`src/matrix.cpp`](src/matrix.cpp) | Matrix container and cached matrix properties |
+| [`src/permutation.cpp`](src/permutation.cpp) | Permutation representation and distance metrics |
+| [`src/random.cpp`](src/random.cpp) | Contains random generators used, for example, for reshuffling a permutation. Each cpu used during experiments will run independent random generators, which will be reused until problem size changes (i.e. a new problem will be processed)|
+| [`src/dataloaders.cpp`](src/dataloaders.cpp) | `.dat` / `.sln` loading |
+| [`QAP data/`](./QAP%20data/) | Benchmark instances from QAPLIB |
+| [`Figures/`](./Figures/) | Generated experiment plots |
+| [`assignments/`](./assignments/) | Reports and assignment deliverables |
 
 
 ## QAP Data
@@ -53,6 +54,8 @@ QAP instances are expected in `QAP data/` as matching `.dat` and `.sln` files. T
 Default benchmark set:
 - Proven optimum: `esc16d`, `bur26h`, `esc32e`, `lipa80b`, `lipa40a`
 - Best-known solution: `wil100`, `tho150`, `tai100b`, `tai80b`, `tai150b`, `tai256c`
+
+Some mathematical properties of these problems can be found here: [`QAP data/Properties of the selected QAP instances.md`](./QAP%20data/Properties%20of%20the%20selected%20QAP%20instances.md).
 
 ## Build With CMake
 
@@ -106,11 +109,11 @@ The repository also contains VS Code build configurations in `.vscode/tasks.json
 ## Experiment tasks
  | Task | Description |
 |---|---|
-| `2` | Compare local search, random methods, simulated annealing, adaptive SA, and tabu search across selected QAP instances |
-| `345` | Run tasks 3, 4, and 5 on selected interesting problems |
-| `3` | Initial vs final quality analysis |
-| `4` | Multi-start behavior and restart analysis |
-| `5` | Local optima similarity, Hamming/Cayley similarity, and position-match correlation analysis |
+| [`2`](assignment_12_tasks.cpp#L298) | Compare local search, random methods, simulated annealing, adaptive SA, and tabu search across selected QAP instances |
+| [`345`](assignment_12_tasks.cpp#L809) | Run tasks 3, 4, and 5 on selected interesting problems |
+| [`3`](assignment_12_tasks.cpp#L845) | Initial vs final quality analysis |
+| [`4`](assignment_12_tasks.cpp#L893) | Multi-start behavior and restart analysis |
+| [`5`](assignment_12_tasks.cpp#L937) | Local optima similarity, Hamming/Cayley similarity, and position-match correlation analysis |
 
 ## Metrics 
 Collected metrics include:
@@ -131,13 +134,10 @@ Collected metrics include:
 This would be a nice place to document your matrix benchmark conclusion:
 
 The `Matrix` class uses row-pointer based storage (`T**`) because QAP delta evaluation performs many irregular row accesses such as `B[p[k]][p[i]]`. A contiguous array representation was tested, but row-allocated storage performed better on the benchmark set used in this project.
-That is actually good README material: it shows you made a measured engineering decision.
 
 ### Outputs
 
 Generated plots are saved under `Figures/Run N/`. Reports and assignment write-ups are stored in `assignments/`.
-Known Limitations
-Useful and honest:
 
 ### Minor issues or limitations
 - Source files are included directly as `.cpp` files rather than separated into headers and translation units.

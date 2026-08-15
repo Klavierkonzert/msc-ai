@@ -835,7 +835,7 @@ template <typename Tprecision>
 //
 //Sources of randomness: 
 //
-// 1. initial permutation `p` is randomized
+// 1. Initial permutation `p` is randomized
 //
 // 2. Hyperparameter `run_config.hyperparameters["initial_acceptance_rate"]` define initial probability of accepting worsening moves at the beginning.
 //
