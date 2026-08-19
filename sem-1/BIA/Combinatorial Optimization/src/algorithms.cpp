@@ -1,3 +1,4 @@
+
 // algorithms.cpp
 // all the algorithms accept `Problem` (as a container for a QAP problem instance: 2x`Matrix`, size, name of the problem) and `Permutation` (as a container for a solution to the QAP problem instance) as arguments, and modify the `Permutation` in place to find a better solution to the QAP problem instance.
 // The algorithms can be called with different levels of verbosity, which can be used for debugging and understanding the behavior of the algorithms. The algorithms can also be modified to accept additional parameters, such as a maximum number of iterations or a time limit, to control the stopping criteria of the algorithms.
@@ -30,12 +31,14 @@
 // If both `max_iterations` and `max_time_seconds` are provided, the algorithm will stop when either of the limits is reached.
 // - `hyperparameters` (map<string, double>) (optional): a map of hyperparameter names to their values, which can be used to pass additional parameters specific to certain algorithms (e.g. cooling schedule parameters for simulated annealing). This allows for flexibility in configuring the algorithms without changing the function signatures.
 struct AlgorithmRunConfig {
-    int verbose = 0;
-    int max_iterations = 1000;
-    double max_time_seconds = 60.0;
-    std::map<std::string, double> hyperparameters = {};
+    int verbose = 0; // Verbosity level for the algorithm run, where higher values indicate more output for debugging
+    int max_iterations = 1000; //  Maximum number of iterations for the algorithm run. If 0, there is no limit on the number of iterations. 
+    double max_time_seconds = 60.0; // Maximum time in seconds for the algorithm run. If 0.0, there is no time limit.
+    std::map<std::string, double> hyperparameters = {{"n_restarts",1}// Number of times an algorithm is run with a new permutation, aggregating all the statistics and stopping criteria over all the restarts
+                                    }; //  a map of hyperparameter names to their values, which can be used to pass additional parameters specific to certain algorithms (e.g. cooling schedule parameters for simulated annealing). This allows for flexibility in configuring the algorithms without changing the function signatures.
     AlgorithmRunConfig() = default;
-    AlgorithmRunConfig(const int verbose, const int max_iterations, const double max_time_seconds, const std::map<std::string, double> hyperparameters=std::map<std::string, double>()) : verbose(verbose), max_iterations(max_iterations), max_time_seconds(max_time_seconds), hyperparameters(hyperparameters)
+    AlgorithmRunConfig(const int verbose, const int max_iterations, const double max_time_seconds, const std::map<std::string, double> hyperparameters=std::map<std::string, double>()
+        ) : verbose(verbose), max_iterations(max_iterations), max_time_seconds(max_time_seconds), hyperparameters(hyperparameters)
     {
         if (max_iterations < 0 || max_time_seconds < 0.0 || (max_iterations == 0 && max_time_seconds == 0.0)) {
             throw std::invalid_argument("Invalid AlgorithmRunConfig: max_iterations and max_time_seconds must be non-negative, and at least one of them must be greater than 0.");
@@ -50,7 +53,6 @@ inline AlgorithmRunConfig iter_cfg(const int max_iterations, const int verbose =
 inline AlgorithmRunConfig time_cfg(const double max_time_seconds, const int verbose = 0, const std::map<std::string, double> hyperparameters = {}) {
     return AlgorithmRunConfig{verbose, 0, max_time_seconds, hyperparameters};
 }
-
 
 
 // Tuple of metrics for a run of an algorithm on a problem instance:
@@ -73,8 +75,8 @@ AlgorithmRunMetrics greedy_local_search_qap(const Problem<int>& problem, Permuta
 AlgorithmRunMetrics random_search_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config = time_cfg(60.0));
 AlgorithmRunMetrics random_walk_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config = time_cfg(60.0));
 
-template <typename Tprecision=float
->AlgorithmRunMetrics simulated_annealing_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config);
+template <typename Tprecision=float>
+    AlgorithmRunMetrics simulated_annealing_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config);
 AlgorithmRunMetrics adaptive_simulated_annealing_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config);
 float GetLamTargetProbability(float progress);
 
@@ -100,20 +102,20 @@ struct StatisticsAccumulator {
     // Run before best cost update
     // Sums up the time elapsed since the last checkpoint, multiplied by the current best cost BEFORE update
     // Increases number of swaps (changed solutions) by 1, as the best cost is updated after a swap is made
-    inline void checkpoint(std::int64_t current_best_cost) {
+    inline void checkpoint(std::int64_t current_best_cost, bool count_swap = true) {
         const double current_time = algorithm_time_now() - start_time;
         const double time_delta = current_time - last_checkpoint_time;
         if (time_delta > 0.0) {
             time_weighted_cost_cum_sum += time_delta * static_cast<double>(current_best_cost);
             last_checkpoint_time = current_time;
         }
-        total_n_swaps++; 
+        if (count_swap)
+            total_n_swaps++; 
     }
 
     // Run after the algorithm finishes to compute the total time of the run and finalize the efficiency metrics. Should be called after the last `checkpoint` call.
     inline void finish(std::int64_t current_best_cost) {
-        checkpoint(current_best_cost); 
-        total_n_swaps --; // since `final` must be called outside the loop
+        checkpoint(current_best_cost, false); 
         total_time = algorithm_time_now() - start_time;
         if (total_time <= 0.0) {
             total_time = use_cpu_time_clock() ? (1.0 / static_cast<double>(CLOCKS_PER_SEC)) : 1e-9;
@@ -144,11 +146,18 @@ struct StatisticsAccumulator {
 /******************************Helper functions for printing algorithm start and finish messages with consistent formatting and colors. 
  * These functions are used in the algorithms to print informative messages about the progress of the algorithms, including the initial permutation, initial cost, best cost found, best permutation found, number of iterations, and total number of swaps (if applicable). 
  * The messages are color-coded based on the algorithm type for better visualization in the console output. 
- ***********************************************************************************************************************************************************************************************/
+***********************************************************************************************************************************************************************************************/
 
 void print_start_message(const char* color, const char* tag, const char* algorithm_name,
-                  const std::string& problem_name, const Permutation<int>& permutation, std::int64_t initial_cost)
+                  const std::string& problem_name, const Permutation<int>& permutation, std::int64_t initial_cost,
+                AlgorithmRunConfig run_config = AlgorithmRunConfig())
 {
+    if (!run_config.hyperparameters.empty()){
+        printf("%s%s:%s %sStarting with the following hyperparameters: %s");
+        for (const auto& [key, value] : run_config.hyperparameters) {
+            printf("%s=%d", key.c_str(), value);
+        }
+    }
     printf("\n%s%s:%s %sProblem: %s%s\n", color, tag, Colors::RESET, Colors::BOLD, Colors::RESET,
         problem_name.c_str());
     printf("%s%s:%s %s%s starting with initial permutation:%s ", color, tag, Colors::RESET,
@@ -200,111 +209,168 @@ void print_finish_message(const char* color, const char* tag, const char* algori
 /****************************************************************************************************************************/
 
 
-// @brief Heuristics algorithm for QAP.
+// @brief Heuristic Local Search algorithm for QAP.
 //
-// Idea: match the largest and the smallest elements in the matrices, and then make a swap and recalculate cost
+// Idea: match the largest and the smallest elements in the matrices, and then make a swap and recalculate cost. 
+// In the main loop, the algorithm searches for the largest element in the first matrix and the smallest element in the second matrix, and if they are not matched in the current permutation, it modifies the permutation by swapping the elements at the indices of the largest element in the first matrix and the smallest element in the second matrix. The main loop stops when no improving swaps are found in an iteration or when a maximum number of iterations is reached. The main loop is repeated with a new permutation if `run_config.hyperparameters.n_restarts` is provided, as described below.
+// 
 // An alternative idea could be to match the largest and the lowest (in terms of euclidean norm) rows or columns 
 // 
 // Permutation will be modified in place, so it is passed by reference. The initial permutation should be randomized or given as is before calling this function.
-// Searches for the largest element in the first matrix and the smallest element in the second matrix, and if they are not matched in the current permutation, it modifies the permutation by swapping the elements at the indices of the largest element in the first matrix and the smallest element in the second matrix. The algorithm stops when no improving swaps are found in an iteration or when a maximum number of iterations is reached.
 //
 // Sources of randomness: 
 //
-// -initial permutation `p` is randomized
+// - initial permutation `p` is randomized (each subsequent restart as well if any)
 //
 // @param problem       the QAP problem instance
 // @param p             initial permutation. Will be modified in place, so it is passed by reference. Should be randomized or given as is before calling this function.
 // @param run_config    configuration for the algorithm run, including `max_iterations`, optional `max_time_seconds`, and `verbosity`.
+//
+// @note Multi-start implementation:
+//
+// 1) The main loop is repeated if N:=`run_config.hyperparameters.n_restarts==0` or `>1`. 
+//
+// 2) Stopping criteria:
+//      a) if N==0, then the main loop is repeated if `run_config.max_iterations` or `run_config.max_time_seconds` are provided and max num of iterations or time has not elapsed.
+//      b) if N>1, then the main loop is repeated specified number of times (N), or until the other conditions are not satisfied (as described in (a))
 AlgorithmRunMetrics heuristic_local_search_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config){
-    const auto& [verbose, max_iterations, max_time_seconds,    _] = run_config;
+    const auto& [verbose, max_iterations, max_time_seconds,    hyperparameters] = run_config;
     const auto& [name, n, matrices, best_permutation, known_best_cost] = problem.get_attributes();
-    const auto& A = matrices.first;
-    const auto& B = matrices.second;
+    const auto& [A, B] = matrices;
 
-    std::int64_t delta, best_cost = cost_function(A, B, p);
+    auto& COLOR = Colors::BLUE;
+
+    std::int64_t delta;
+    // Current best cost (within main loop), which is recalculated incrementally with use of `delta`
+    std::int64_t current_cost = cost_function(A, B, p);
+    // The best cost achieved so far (across all restarts of the main loop)
+    std::int64_t best_cost = current_cost;
+    Permutation<int> best_p = p;
+
     int total_n_eval_solutions = 0;
     StatisticsAccumulator efficiency_stats_acc(problem);
 
-    if (verbose) print_start_message(Colors::BLUE, "H", "Heuristic", name, p, best_cost);
+    if (verbose) print_start_message(COLOR, "H", "Heuristic", name, p, best_cost);
 
     bool no_improving_swaps = false;
     int it = 0;
 
-    // it is possible that after the first iteration of matching the largest and the smallest elements in the matrices, the new permutation still has the same largest element in A and the same smallest element in B unmatched, thus we can have multiple improving swaps in a row, so we continue iterating until no improving swaps are found, or until we reach the maximum number of iterations, or until the optional time limit is reached
-    while (true) {
-        if ((max_iterations > 0 && it >= max_iterations) || no_improving_swaps)
-            break;
-        else if ((max_time_seconds > 0 && algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_seconds)) {
-            if (verbose) printf("%sH: iteration %d:%s Time limit %f reached, stopping early.\n", Colors::BLUE, it, Colors::RESET, max_time_seconds);
-            break;
-        }
 
-        if (verbose) printf("%sH: iteration %d:%s\n", Colors::BLUE, it, Colors::RESET);
-        no_improving_swaps = true;
-
-        for (int i = 0; i < n-1; i++) {
-            // Matrix A is fixed, permutation affects matrix B
-            // find max element in the i-th row of A and min el in the i-th row of B:
-            auto [maxA_val, maxA_i, maxA_j] = A.find_max_element(i, i); // O(n-i)
-            auto [minB_val, minB_i, minB_j] = B.find_min_element(i, i); // O(n-i)
-
-            // If ||row or col||_F is used as a min/max search crit:
-            // auto [maxA_val, maxA_i] = A.find_max_row(i);
-            // auto [minB_val,minB_j ]= B.find_min_col(i);
-
-            // it was a partial evaluation of the solution, thus
-            total_n_eval_solutions ++;
-
-           if (verbose>2) 
-            printf("H: Iteration %d: row %d: maxA_val: %d at (%d, %d), minB_val: %d at (%d, %d)\n", it, i, maxA_val, maxA_i, maxA_j, minB_val, minB_i, minB_j);
-
-           //if (maxA_i==minB_j){
-            if (maxA_i == minB_i && maxA_j == minB_j) {
-                if (verbose > 2) printf("H: The largest element in A and the lowest element in B are already matched in the permutation.\n");
+    // Multi-run loop (not parallelized):
+    // Every restart, a new initial solution (permutation) is generated
+    // Statitstics are aggregated across all the restarts:
+    // - Best solution so far is determined across all the restarts
+    // - Efficiency is defined as time-weighted best cost achieved so far
+    int  n_restarts = hyperparameters.find("n_restarts")!=hyperparameters.end()? (static_cast<int> ( hyperparameters.at("n_restarts") )): 1;
+    if (n_restarts < 0)
+        throw std::invalid_argument("heuristic_local_search_qap: n_restarts must be non-negative.");
+    //if n_restarts is provided, then condition on restarts. If time is provided,then condition on time. 
+    // By default n_restarts is passed as 1, thus only one restart of the algorithm
+    // If n_restarts==0, then the loop is repeated until time or mab_iterations is reached (should be provided, otherwise only one iteration)
+    for (int restart=0; restart<n_restarts || !n_restarts && (max_iterations > 0 || max_time_seconds > 0); restart++)
+    {
+        // Randomizing inititial permutation for a new start;
+        if (restart) {
+            p.reshuffle();
+            current_cost = cost_function(A, B, p);
+            no_improving_swaps = false;
+            if (current_cost < best_cost) {
+                efficiency_stats_acc.checkpoint(best_cost, false);
+                best_cost = current_cost;
+                best_p = p;
             }
-            else //else modify the permutation by swapping the elements at the indices of the largest element in A and the lowest element in B
-            {
-                // delta calculation for single elements matching:
-                delta = delta_cost(A, B, p, maxA_j, minB_j);
-                ////std::swap(p[maxA_j], p[minB_j]);
-                //// delta += delta_cost(A, B, p, maxA_i, minB_i);
-                //// if (delta>=0) // if no effect or it's worse, then redo swap // if single elements are matched
-                ////     std::swap(p[maxA_j], p[minB_j]);
+        }
+        
+        // Main loop (one restart) of the Heuristic algorithm. A given permutation is transformed as described above.
+        // Note: it is possible that after the first iteration of matching the largest and the smallest elements in the matrices, the new permutation still has the same largest element in A and the same smallest element in B unmatched, thus we can have multiple improving swaps in a row, so we continue iterating until no improving swaps are found, or until we reach the maximum number of iterations, or until the optional time limit is reached
+        while (true) {
+            // Stopping criteria:
+            // Multi-loop is terminated when the maximum number of iterations is reached, or when the time limit is reached IF PROVIDED, whichever comes first
+            if (no_improving_swaps)
+                break;
+            else if (max_iterations > 0 && it >= max_iterations)
+                goto finish;
+            else if ((max_time_seconds > 0 && algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_seconds)) {
+                if (verbose) printf("%sH: iteration %d:%s Time limit %f reached, stopping early.\n", COLOR, it, Colors::RESET, max_time_seconds);
+                goto finish;
+            }
 
-                // if rows/cols are matched:
-                //delta = delta_cost(A, B, p, maxA_j, minB_j); 
-                //// delta = delta_cost(A, B, p, maxA_i, minB_j);
+            if (verbose) printf("%sH: iteration %d:%s\n", COLOR, it, Colors::RESET);
+            
+            no_improving_swaps = true;
 
-                if (verbose > 2) {
-                    printf("H: Swapping elements at indices %d and %d in the permutation.\n", maxA_j, minB_j);
-                    printf("H: Cost change: %" PRId64 "\n", delta);
+            for (int i = 0; i < n-1; i++) {
+                // Matrix A is fixed, permutation affects matrix B
+                // find max element in the i-th row of A and min el in the i-th row of B:
+                auto [maxA_val, maxA_i, maxA_j] = A.find_max_element(i, i); // O(n-i)
+                auto [minB_val, minB_i, minB_j] = B.find_min_element(i, i); // O(n-i)
+
+                // If ||row or col||_F is used as a min/max search crit:
+                // auto [maxA_val, maxA_i] = A.find_max_row(i);
+                // auto [minB_val,minB_j ]= B.find_min_col(i);
+
+                // it was a partial evaluation of the solution, thus
+                total_n_eval_solutions ++;
+
+            if (verbose>2) 
+                printf("H: Iteration %d: row %d: maxA_val: %d at (%d, %d), minB_val: %d at (%d, %d)\n", it, i, maxA_val, maxA_i, maxA_j, minB_val, minB_i, minB_j);
+
+            //if (maxA_i==minB_j){
+                if (maxA_i == minB_i && maxA_j == minB_j) {
+                    if (verbose > 2) printf("H: The largest element in A and the lowest element in B are already matched in the permutation.\n");
                 }
+                else //else modify the permutation by swapping the elements at the indices of the largest element in A and the lowest element in B
+                {
+                    // delta calculation for single elements matching:
+                    delta = delta_cost(A, B, p, maxA_j, minB_j);
+                    ////std::swap(p[maxA_j], p[minB_j]);
+                    //// delta += delta_cost(A, B, p, maxA_i, minB_i);
+                    //// if (delta>=0) // if no effect or it's worse, then redo swap // if single elements are matched
+                    ////     std::swap(p[maxA_j], p[minB_j]);
 
-                if (delta < 0) {
-                    efficiency_stats_acc.checkpoint(best_cost);
-                    // swaps if single elements are matched
-                    std::swap(p[maxA_j], p[minB_j]); // already done
-                    ////std::swap(p[maxA_i], p[minB_i]); 
+                    // if rows/cols are matched:
+                    //delta = delta_cost(A, B, p, maxA_j, minB_j); 
+                    //// delta = delta_cost(A, B, p, maxA_i, minB_j);
 
-                    // swaps if rows/cols are matched instead of single elements:
-                    // std::swap(p[maxA_i], p[minB_j]); 
+                    if (verbose > 2) {
+                        printf("H: Swapping elements at indices %d and %d in the permutation.\n", maxA_j, minB_j);
+                        printf("H: Cost change: %" PRId64 "\n", delta);
+                    }
 
-                    best_cost += delta;
-                    no_improving_swaps = false;
+                    if (delta < 0) {
+                        efficiency_stats_acc.checkpoint(best_cost);
+                        // swaps if single elements are matched
+                        std::swap(p[maxA_j], p[minB_j]); // already done
+                        ////std::swap(p[maxA_i], p[minB_i]); 
 
-                    if (verbose > 1) {
-                        printf("%sH: iteration %d: row %d:%s Permutation after swap: ", Colors::BLUE, it, i, Colors::RESET);
-                        p.print();
-                        printf("%sH: iteration %d: row %d:%s Cost after swap: %" PRId64 "\n", Colors::BLUE, it, i, Colors::RESET, best_cost);
+                        // swaps if rows/cols are matched instead of single elements:
+                        // std::swap(p[maxA_i], p[minB_j]); 
+
+                        current_cost += delta;
+                        if (current_cost < best_cost) {
+                            best_cost = current_cost;
+                            best_p = p;
+                        }
+                        no_improving_swaps = false;
+
+                        if (verbose > 1) {
+                            printf("%sH: iteration %d: row %d:%s Permutation after swap: ", COLOR, it, i, Colors::RESET);
+                            p.print();
+                            printf("%sH: iteration %d: row %d:%s Cost after swap: %" PRId64 "\n", COLOR, it, i, Colors::RESET, best_cost);
+                        }
                     }
                 }
             }
+            if (verbose && no_improving_swaps) printf("%sH: iteration %d:%s No improving swaps found, stopping early.\n", COLOR, it+1, Colors::RESET);
+            it++;
         }
-        if (verbose && no_improving_swaps) printf("%sH: iteration %d:%s No improving swaps found, stopping early.\n", Colors::BLUE, it+1, Colors::RESET);
-        it++;
     }
+
+    finish:
+
     efficiency_stats_acc.finish(best_cost);
     auto [total_n_swaps, rel_eff, norm_eff, total_time] = efficiency_stats_acc.get_metrics();
+    p = best_p;
     AlgorithmRunMetrics metrics = {best_cost, total_n_swaps, total_n_eval_solutions, rel_eff, norm_eff, total_time};
     if (verbose) print_finish_message(Colors::BLUE, "H", "Heuristic", p, metrics, it);
     return metrics;
@@ -313,161 +379,284 @@ AlgorithmRunMetrics heuristic_local_search_qap(const Problem<int>& problem, Perm
 
 // @brief Steepest local search algorithm for QAP.
 //
-// Explores the whole neighborhood of the current solution and moves to the best solution in the neighborhood, if it is better than the current solution. The neighborhood is defined as all permutations that can be obtained by swapping two elements in the current permutation. The algorithm stops when no improvement is found in the neighborhood or when a maximum number of iterations is reached.
+// Explores the whole neighborhood of the current solution and moves to the best solution in the neighborhood if it is better than the current solution, in the main loop. The neighborhood is defined as all permutations that can be obtained by swapping two elements in the current permutation. The main loop of the algorithm stops when no improvement is found in the neighborhood or when a maximum number of iterations is reached. The main loop is repeated with a new permutation if `run_config.hyperparameters.n_restarts` is provided, as described below.
 //
 // Sources of randomness:
 // 
-// - initial permutation `p` is randomized, 
+// - initial permutation `p` is randomized (each subsequent restart as well if any), 
 //
 // - the order of the neighborhood exploration is NOT randomized, since the algorithm explores the whole neighborhood to select the best solution.
 //
 // @param problem       the QAP problem instance
 // @param p             initial permutation. Will be modified in place, so it is passed by reference. Should be randomized or given as is before calling this function.
-// @param run_config    configuration for the algorithm run, including `max_iterations` and `verbosity`. Max time `max_time_seconds` can be provided. If `max_time_seconds` is provided, the algorithm will stop when the time limit is reached, in addition to the other stopping criteria.
+// @param run_config    configuration for the algorithm run, including `max_iterations` and `verbosity`. Max time `max_time_seconds` can be provided. If `max_time_seconds` is provided, the algorithm will stop when the time limit is reached, in addition to the other stopping criteria. Optionally contains 'hyperparameters' map with "n_restarts" value indicating the number of times an algorithm is run with a new permutation, aggregating all the statistics and stopping criteria over all the restarts.
+//
+// @note Multi-start implementation:
+//
+// 1) The main loop is repeated if N:=`run_config.hyperparameters.n_restarts==0` or `>1`. 
+//
+// 2) Stopping criteria:
+//      a) if N==0, then the main loop is repeated if `run_config.max_iterations` or `run_config.max_time_seconds` are provided and max num of iterations or time has not elapsed.
+//      b) if N>1, then the main loop is repeated specified number of times (N), or until the other conditions are not satisfied (as described in (a))
 AlgorithmRunMetrics steepest_local_search_qap(const Problem<int>& problem, Permutation<int> &p, const AlgorithmRunConfig& run_config) 
 {
-    const auto& [verbose, max_iterations, max_time_seconds, _] = run_config;
+    const auto& [verbose, max_iterations, max_time_seconds, hyperparameters] = run_config;
     const auto& [name, problem_size, matrices, best_permutation, known_best_cost] = problem.get_attributes();
     const auto&[A, B] = matrices;
 
-    std::int64_t delta, best_delta_in_neighborhood, best_cost = cost_function(A, B, p);
+    
+    auto& COLOR = Colors::MAGENTA;
+
+    std::int64_t delta, best_delta_in_neighborhood;
+    // Current best (within a neighbourhood) cost (within main loop), which is recalculated incrementally with use of `delta`
+    std::int64_t current_cost = cost_function(A, B, p);
+    // The best cost achieved so far (across all restarts of the main loop)
+    std::int64_t best_cost = current_cost;
+    Permutation<int> best_p = p;
+
     int best_i, best_j;
     int total_n_eval_solutions = 0;
     bool improved = true;
     StatisticsAccumulator efficiency_stats_acc(problem);
 
-    if (verbose) print_start_message(Colors::MAGENTA, "S", "Steepest LS", name, p, best_cost);
+    if (verbose) print_start_message(COLOR, "S", "Steepest LS", name, p, current_cost);
 
     int iter = 0;
 
-    // terminated when no improvements are found (local minimum is reached), or when the maximum number of iterations is reached, or when the time limit is reached IF PROVIDED, whichever comes first
-    while (true) 
+    // Multi-run loop (not parallelized):
+    // Every restart, a new initial solution (permutation) is generated
+    // Statitstics are aggregated across all the restarts:
+    // - Best solution so far is determined across all the restarts
+    // - Efficiency is defined as time-weighted best cost achieved so far
+    int  n_restarts = hyperparameters.find("n_restarts")!=hyperparameters.end()? (static_cast<int> ( hyperparameters.at("n_restarts") )): 1;
+    if (n_restarts < 0)
+        throw std::invalid_argument("steepest_local_search_qap: n_restarts must be non-negative.");
+    //if n_restarts is provided, then condition on restarts. If time is provided,then condition on time. 
+    // By default n_restarts is passed as 1, thus only one restart of the algorithm
+    // If n_restarts==0, then the loop is repeated until time or mab_iterations is reached (should be provided, otherwise only one iteration)
+    for (int restart=0; restart<n_restarts || !n_restarts && (max_iterations > 0 || max_time_seconds > 0); restart++)
     {
-        if ((max_iterations > 0 && iter >= max_iterations) || !improved )
-            break;
-        else if (max_time_seconds > 0 && (algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_seconds))
-        {
-            if (verbose) printf("%sS: iteration %d:%s Time limit %f reached, stopping early.\n", Colors::MAGENTA, iter+1, Colors::RESET, max_time_seconds);
-            break;
-        }
-        
-        // Exploring the neighborhood of the current solution by swapping each pair of elements in the permutation and calculating the cost change (delta) for each swap. If a swap results in a better solution (delta < 0), we perform the swap and update the best cost. We continue exploring the neighborhood until we have explored all pairs of elements or until we find an improvement. If we find an improvement, we set improved to true and continue to the next iteration of the local search. If we do not find any improvement after exploring the entire neighborhood, we set improved to false and exit the loop.
-        best_delta_in_neighborhood = 0;
-        best_i = -1; best_j = -1; // indices of the best swap in the neighborhood
-        improved = false;
-        
-        for (int i = 0; i < problem_size - 1 ; i++) {
-            for (int j = i+1; j < problem_size ; j++) {
-                delta = delta_cost(A, B, p, i, j);
-                total_n_eval_solutions++; // partial evaluation of the solution
-                if (verbose > 2) {
-                    printf("S: Evaluating swap of elements at indices %d and %d in the permutation.\n", i, j);
-                    printf("S: Cost change for this swap: %" PRId64 "\n", delta);
-                }
-                if (delta < 0 && delta < best_delta_in_neighborhood) {
-                    best_delta_in_neighborhood = delta;
-                    best_i = i ;
-                    best_j = j ;
-                }
+        // Randomizing inititial permutation for a new start
+        if (restart) {
+            p.reshuffle();
+            current_cost = cost_function(A, B, p);
+            improved = true;
+            if (current_cost < best_cost) {
+                efficiency_stats_acc.checkpoint(best_cost, false);
+                best_cost = current_cost;
+                best_p = p;
             }
         }
 
-        if (best_i != -1 && best_j != -1) {
-            efficiency_stats_acc.checkpoint(best_cost);
-            p.swap(best_i, best_j);
-            best_cost += best_delta_in_neighborhood;
-            improved = true;
-        }
+        // Main loop (one restart with a fresh initial permutation) of the Steepest Local Search algorithm
+        while (true) 
+        {   
+            // No improvements are found (local minimum is reached)
+            if (!improved)
+                break;
+            // Stopping criteria:
+            // Multi-loop is terminated when the maximum number of iterations is reached, or when the time limit is reached IF PROVIDED, whichever comes first
+            else if ((max_iterations > 0 && iter >= max_iterations) )
+                goto finish;
+            else if (max_time_seconds > 0 && (algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_seconds))
+            {
+                if (verbose) printf("%sS: iteration %d:%s Time limit %f reached, stopping early.\n", COLOR, iter+1, Colors::RESET, max_time_seconds);
+                goto finish;
+            }
 
-        iter++;
+            if (verbose) printf("%sS: restart %d%s\n", COLOR, restart, Colors::RESET);
+
+            // Exploring the neighborhood of the current solution by swapping each pair of elements in the permutation and calculating the cost change (delta) for each swap. If a swap results in a better solution (delta < 0), we perform the swap and update the best cost. We continue exploring the neighborhood until we have explored all pairs of elements or until we find an improvement. If we find an improvement, we set improved to true and continue to the next iteration of the local search. If we do not find any improvement after exploring the entire neighborhood, we set improved to false and exit the loop.
+            best_delta_in_neighborhood = 0;
+            best_i = -1; best_j = -1; // indices of the best swap in the neighborhood
+            improved = false;
+            
+            for (int i = 0; i < problem_size - 1 ; i++) {
+                for (int j = i+1; j < problem_size ; j++) {
+                    delta = delta_cost(A, B, p, i, j);
+                    total_n_eval_solutions++; // partial evaluation of the solution
+                    if (verbose > 2) {
+                        printf("S: Evaluating swap of elements at indices %d and %d in the permutation.\n", i, j);
+                        printf("S: Cost change for this swap: %" PRId64 "\n", delta);
+                    }
+                    if (delta < 0 && delta < best_delta_in_neighborhood) {
+                        best_delta_in_neighborhood = delta;
+                        best_i = i ;
+                        best_j = j ;
+                    }
+                }
+            }
+
+            if (best_i != -1 && best_j != -1) {
+                efficiency_stats_acc.checkpoint(best_cost);
+                p.swap(best_i, best_j);
+                current_cost += best_delta_in_neighborhood;
+                if (current_cost < best_cost) {
+                    best_cost = current_cost;
+                    best_p = p;
+                }
+                improved = true;
+            }
+
+            iter++;
+        }
     }
+
+    finish:
+
+    // Gathering statistics:
     efficiency_stats_acc.finish(best_cost);
     auto[total_n_swaps, rel_eff, norm_eff, total_time] = efficiency_stats_acc.get_metrics();
+    p = best_p;
     AlgorithmRunMetrics metrics = {best_cost, total_n_swaps, total_n_eval_solutions, rel_eff, norm_eff, total_time};
-    if (verbose) print_finish_message(Colors::MAGENTA, "S", "Steepest LS", p, metrics, iter);
+
+    if (verbose) print_finish_message(COLOR, "S", "Steepest LS", p, metrics, iter);
+
     return metrics;
 }
 
 // @brief Greedy local search algorithm for QAP.
 //
-// Explores the neighborhood of the current solution and moves to the first solution in the neighborhood that is better than the current solution. The neighborhood is defined as all permutations that can be obtained by swapping two elements in the current permutation. The algorithm stops when no improvement is found in the neighborhood or when a maximum number of iterations is reached.
+// Explores the neighborhood of the current solution and moves to the first solution in the neighborhood that is better than the current solution, in the main loop. The neighborhood is defined as all permutations that can be obtained by swapping two elements in the current permutation. The main loop of the algorithm stops when no improvement is found in the neighborhood or when a maximum number of iterations is reached. The main loop is repeated with a new permutation if `run_config.hyperparameters.n_restarts` is provided, as described below.
 //
 //
 // Sources of randomness: 
 //
-// 1) initial permutation `p` is randomized, 
+// - initial permutation `p` is randomized (each subsequent restart as well if any), 
 //
-// 2) the order of the neighborhood exploration is randomized by randomly selecting the first element to be swapped and then randomly selecting the second element to be swapped from the remaining elements. 
+// - the order of the neighborhood exploration is randomized by randomly selecting the first element to be swapped and then randomly selecting the second element to be swapped from the remaining elements. 
 //     Then the first improving solution in the generated random neighborhood is selected as the new solution.
-//
-//
 //
 //
 // @param problem       the QAP problem instance
 // @param p             initial permutation. Will be modified in place, so it is passed by reference. Should be randomized or given as is before calling this function.
-// @param run_config    configuration for the algorithm run, including `max_time_seconds` and `verbosity`.
+// @param run_config    configuration for the algorithm run, including `max_time_seconds` and `verbosity`. Optionally contains 'hyperparameters' map with "n_restarts" value indicating the number of times an algorithm is run with a new permutation, aggregating all the statistics and stopping criteria over all the restarts.
+//
+// @note Multi-start implementation:
+//
+// 1) The main loop is repeated if N=`run_config.hyperparameters.n_restarts==0` or `>1`. 
+//
+// 2) Stopping criteria:
+//      a) if N==0, then the main loop is repeated if `run_config.max_iterations` or `run_config.max_time_seconds` are provided and max num of iterations or time has not elapsed.
+//      b) if N>1, then the main loop is repeated specified number of times (N), or until the other conditions are not satisfied (as described in (a))
 AlgorithmRunMetrics greedy_local_search_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config) 
 { 
-    const auto& [verbose, max_iterations, max_time_seconds, _] = run_config;
+    const auto& [verbose, max_iterations, max_time_seconds, hyperparameters] = run_config;
     const auto& [name, problem_size, matrices, best_permutation, known_best_cost] = problem.get_attributes();
     const auto&[A, B] = matrices;
 
-    std::int64_t delta, best_cost = cost_function(A, B, p);
+    auto& COLOR = Colors::CYAN;
+
+    std::int64_t delta;
+    // Current 'better' cost (within main loop), which is recalculated incrementally with use of `delta`
+    std::int64_t current_cost = cost_function(A, B, p);
+    // The best cost achieved so far (across all restarts of the main loop)
+    std::int64_t best_cost = current_cost;
+    Permutation<int> best_p = p;
     int improved_i, improved_j;
     int total_n_eval_solutions = 0;
     bool improved = true;
     StatisticsAccumulator efficiency_stats_acc(problem);
 
     int first_i, first_j;
-    if (verbose) print_start_message(Colors::CYAN, "G", "Greedy LS", name, p, best_cost);
+    if (verbose) print_start_message(COLOR, "G", "Greedy LS", name, p, current_cost);
 
     int iter = 0;
-    while (true) {
-        if ((max_iterations > 0 && iter >= max_iterations) || !improved ||
-            (max_time_seconds > 0 && algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_seconds)) {
-            break;
-        }
-        // exploring the neighborhood of the current solution by swapping each pair of elements in the permutation and calculating the cost change (delta) for each swap. If a swap results in a better solution (delta < 0), we perform the swap and update the best cost. We continue exploring the neighborhood until we have explored all pairs of elements or until we find an improvement. If we find an improvement, we set improved to true and continue to the next iteration of the local search. If we do not find any improvement after exploring the entire neighborhood, we set improved to false and exit the loop.
-        improved = false;
-        improved_i = -1; improved_j = -1;
-        auto [first_i, first_j] = random::get_random_pair(problem_size); // get a random pair of indices to start the neighborhood exploration from, to ensure that the order of the neighborhood exploration is randomized in each iteration of the local search, which can help to escape local minima.
-        for (int i = first_i; i < problem_size - 1 + first_i; i++) {
-            for (int j = first_j; j < problem_size + first_j; j++) {
-                delta = delta_cost(A, B, p, i % problem_size, j % problem_size);
-                total_n_eval_solutions++; // partial evaluation of the solution
-                if (verbose > 2) {
-                    printf("G: Evaluating swap of elements at indices %d and %d in the permutation.\n", i % problem_size, j % problem_size);
-                    printf("G: Cost change for this swap: %" PRId64 "\n", delta);
-                }
-                if (delta < 0) {
-                    efficiency_stats_acc.checkpoint(best_cost);
-                    p.swap(i % problem_size, j % problem_size);
-                    best_cost += delta;
-                    improved = true;
-                    
-                    goto next_iteration; // break out of both loops and accept the first improving solution found
-                }
+
+    // Multi-run loop (not parallelized):
+    // Every restart, a new initial solution (permutation) is generated
+    // Statitstics are aggregated across all the restarts:
+    // - Best solution so far is determined across all the restarts
+    // - Efficiency is defined as time-weighted best cost achieved so far
+    int n_restarts = hyperparameters.find("n_restarts") != hyperparameters.end() ? static_cast<int>(hyperparameters.at("n_restarts")) : 1;
+    if (n_restarts < 0)
+        throw std::invalid_argument("greedy_local_search_qap: n_restarts must be non-negative.");
+    //if n_restarts is provided, then condition on restarts. If time is provided,then condition on time. 
+    // By default n_restarts is passed as 1, thus only one restart of the algorithm
+    // If n_restarts==0, then the loop is repeated until time or mab_iterations is reached (should be provided, otherwise only one iteration)
+    for (int restart=0; restart<n_restarts || !n_restarts && (max_iterations > 0 || max_time_seconds > 0); restart++)
+    {
+        // Randomizing inititial permutation for a new start
+        if (restart) {
+            p.reshuffle();
+            current_cost = cost_function(A, B, p);
+            improved = true;
+            if (current_cost < best_cost) {
+                efficiency_stats_acc.checkpoint(best_cost, false);
+                best_cost = current_cost;
+                best_p = p;
             }
         }
-        next_iteration:;
-        iter++;
+
+        // Main loop (one restart with a fresh initial permutation) of the Greedy Local Search algorithm
+        while (true) {
+            // No improvements are found (local minimum is reached)
+            if (!improved)
+                break;
+            // Stopping criteria:
+            // Multi-loop is terminated when the maximum number of iterations is reached, or when the time limit is reached IF PROVIDED, whichever comes first
+            else if (max_iterations > 0 && iter >= max_iterations)
+                goto finish;
+            else if (max_time_seconds > 0 && algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_seconds) {
+                if (verbose) printf("%sG: iteration %d:%s Time limit %f reached, stopping early.\n", COLOR, iter+1, Colors::RESET, max_time_seconds);
+                goto finish;
+            }
+
+            if (verbose)
+                printf("%sG: restart %d%s\n", COLOR, restart, Colors::RESET);
+
+            // Exploring the neighborhood of the current solution by swapping each pair of elements in the permutation and calculating the cost change (delta) for each swap. If a swap results in a better solution (delta < 0), we perform the swap and update the best cost. We continue exploring the neighborhood until we have explored all pairs of elements or until we find an improvement. If we find an improvement, we set improved to true and continue to the next iteration of the local search. If we do not find any improvement after exploring the entire neighborhood, we set improved to false and exit the loop.
+            improved = false;
+            improved_i = -1; improved_j = -1;
+            auto [first_i, first_j] = random::get_random_pair(problem_size); // get a random pair of indices to start the neighborhood exploration from, to ensure that the order of the neighborhood exploration is randomized in each iteration of the local search, which can help to escape local minima.
+            for (int i = first_i; i < problem_size - 1 + first_i; i++) {
+                for (int j = first_j; j < problem_size + first_j; j++) {
+                    delta = delta_cost(A, B, p, i % problem_size, j % problem_size);
+                    total_n_eval_solutions++; // partial evaluation of the solution
+                    if (verbose > 2) {
+                        printf("G: Evaluating swap of elements at indices %d and %d in the permutation.\n", i % problem_size, j % problem_size);
+                        printf("G: Cost change for this swap: %" PRId64 "\n", delta);
+                    }
+                    if (delta < 0) {
+                        efficiency_stats_acc.checkpoint(best_cost);
+                        p.swap(i % problem_size, j % problem_size);
+                        current_cost += delta;
+                        if (current_cost < best_cost) {
+                            best_cost = current_cost;
+                            best_p = p;
+                        }
+                        improved = true;
+                        
+                        goto next_iteration; // break out of both loops and accept the first improving solution found
+                    }
+                }
+            }
+            next_iteration:;
+            iter++;
+        }
     }
+
+    finish:
+
     efficiency_stats_acc.finish(best_cost);
     auto[total_n_swaps, rel_eff, norm_eff, total_time] = efficiency_stats_acc.get_metrics();
+    p = best_p;
     AlgorithmRunMetrics metrics = {best_cost, total_n_swaps, total_n_eval_solutions, rel_eff, norm_eff, total_time};
-    if (verbose) print_finish_message(Colors::CYAN, "G", "Greedy LS", p, metrics, iter);
+    if (verbose) print_finish_message(COLOR, "G", "Greedy LS", p, metrics, iter);
     return metrics;
 }
 
 
+// @brief Random search algorithm for QAP.
+//
 // Generates a series of random solutions and picks the best one among them. 
 // Random solutions are generated by performing a number of random shuffling using the `reshuffle()` method of the `Permutation` class. Experiments show that setting `NUM_RESHUFFLE_CYCLES` (internal function constant) to 2 is beneficial for random properties of a newly generated solution.
 // 
-//Sources of randomness: 
+// Sources of randomness: 
 //
-// 1. initial permutation `p` is randomized
+// - initial permutation `p` is randomized 
 //
-// 2. this permutation is reshuffled each iteration (Fisher-Yates algorithm, see `Permutation::reshuffle()` method), which generates a new random solution far from the current solution in the solution space.
+// - this permutation is reshuffled each iteration (Fisher-Yates algorithm, see `Permutation::reshuffle()` method), which generates a new random solution far from the current solution in the solution space.
 //
 // @param problem       the QAP problem instance
 // @param p             initial permutation. Will be modified in place, so it is passed by reference. Should be randomized or given as is before calling this function.
@@ -478,12 +667,14 @@ AlgorithmRunMetrics random_search_qap(const Problem<int>& problem, Permutation<i
     const auto& [name, n, matrices, best_permutation, known_best_cost] = problem.get_attributes();
     const auto&[A, B] = matrices;
 
+    auto& COLOR = Colors::YELLOW;
+
     std::int64_t cost, best_cost = cost_function(A, B, p);
 
     Permutation<int> best_p = p;
     StatisticsAccumulator efficiency_stats_acc(problem);
 
-    if (verbose) print_start_message(Colors::YELLOW, "RS", "Random Search", name, p, best_cost);
+    if (verbose) print_start_message(COLOR, "RS", "Random Search", name, p, best_cost);
     
     int iter = 0;
     while (true) {
@@ -511,7 +702,7 @@ AlgorithmRunMetrics random_search_qap(const Problem<int>& problem, Permutation<i
     p = best_p;
     // Number of evaluated solutions is number of iterations here; number of swaps is irrelevant
     AlgorithmRunMetrics metrics = {best_cost, -1, iter, rel_eff, norm_eff, total_time};
-    if (verbose) print_finish_message(Colors::YELLOW, "RS", "Random Search", best_p, metrics, iter);
+    if (verbose) print_finish_message(COLOR, "RS", "Random Search", best_p, metrics, iter);
     return metrics;
 }
 
@@ -519,52 +710,93 @@ AlgorithmRunMetrics random_search_qap(const Problem<int>& problem, Permutation<i
 //
 // In each iteration, a random pair of indices is selected, and the elements at these indices in the permutation are swapped, which generates the next solution in the neighborhood of the current solution. If the new solution is better than the current solution, it becomes the new best solution. The algorithm stops when a maximum number of iterations is reached or when an optional time limit is reached.
 //
-//Sources of randomness: 
+// Sources of randomness: 
 //
-// 1. initial permutation `p` is to be randomized.
+// - initial permutation `p` is to be randomized (each subsequent restart as well if any), 
 //
-// 2. in each iteration, a random pair of indices is selected [from uniform distribution], and the elements at these indices in the permutation are swapped, which generates the next solution in the neighborhood of the current solution. 
+// - in each iteration, a random pair of indices is selected [from uniform distribution], and the elements at these indices in the permutation are swapped, which generates the next solution in the neighborhood of the current solution. 
 //
 // @param problem   the QAP problem instance
 // @param p         initial permutation; should be randomized or given as is before calling this function.
 // @param run_config      configuration for the algorithm run, including `max_time_seconds` and `verbosity`.
+//
+//
+// @note Multi-start implementation (slightly different from `heuristic_local_search_qap`, `steepest_local_search_qap`, `greedy_local_search_qap`):
+//
+// 1) The main loop is repeated if N:=`run_config.hyperparameters.n_restarts > 1`. 
+//
+// 2) Stopping criterion: if N>1, then the main loop is repeated specified number of times (N), each is stopped once `max_time_seconds`/N seconds (i.e. per restart) or `max_iterations` iters (i.e. in total) elapsed.
 AlgorithmRunMetrics random_walk_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config)
 {
-    const auto& [verbose, max_iterations, max_time_seconds, _] = run_config;
+    const auto& [verbose, max_iterations, max_time_seconds, hyperparameters] = run_config;
     const auto& [name, n, matrices, best_permutation, known_best_cost] = problem.get_attributes();
     const auto&[A, B] = matrices;
 
-    std::int64_t delta, cost, best_cost = cost_function(A, B, p);
-    cost = best_cost;
-    
+    auto& COLOR = Colors::ORANGE;
+
+    std::int64_t delta;
+    // Current cost of the solution, updated incrementally within each iteration of the Random Walk move, using `delta`
+    std::int64_t current_cost = cost_function(A, B, p);
+    // Tho best cost achieved so far (across all restarts of the main loop)
+    std::int64_t best_cost = current_cost;
     Permutation<int> best_p = p;
+
     StatisticsAccumulator efficiency_stats_acc(problem);
 
-    if (verbose) print_start_message(Colors::ORANGE, "RW", "Random Walk", name, p, best_cost);
+    if (verbose) print_start_message(COLOR, "RW", "Random Walk", name, p, best_cost);
 
     int iter = 0;
-    while (!((max_time_seconds > 0 && algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_seconds) ||
-            (max_iterations > 0 && iter >= max_iterations))) 
+
+    // Multi-run loop (not parallelized):
+    // Every restart, a new initial solution (permutation) is generated
+    // Statitstics are aggregated across all the restarts:
+    // - Best solution so far is determined across all the restarts
+    // - Efficiency is defined as time-weighted best cost achieved so far
+    int n_restarts = hyperparameters.find("n_restarts") != hyperparameters.end() ? static_cast<int>(hyperparameters.at("n_restarts")) : 1;
+    // Time budget is split equally between n_restarts iterations of the main loop of Random Walk, if provided.
+    auto max_time_sesconds_restart = max_time_seconds;
+    if (n_restarts < 0)
+        throw std::invalid_argument("random_walk_qap: n_restarts must be non-negative.");
+    else if (max_time_seconds>0)
+        max_time_sesconds_restart /= n_restarts;
+
+    for (int restart=0; restart<n_restarts || !n_restarts && (max_iterations > 0 || max_time_seconds > 0); restart++)
     {
-
-        auto [i, j] = random::get_random_pair(n); // get a random pair of indices to swap in the permutation
-        delta = delta_cost(A, B, p, i, j); // calculate the cost change (delta) for swapping the elements at the randomly selected indices in the permutation
-        cost += delta; // update the cost
-        p.swap(i, j); // perform the swap in the permutation to generate a new solution in the neighborhood of the current solution
-        // total number of swaps is the same as num of evaluated solutions here which is the same as number of iterations
-        
-        if (cost < best_cost) { // if the new solution is better than the current solution, update the best cost and continue to the next iteration of the random walk
-            efficiency_stats_acc.checkpoint(best_cost);
-            best_cost = cost;
-            best_p = p;
-        }
-        if (verbose > 2) {
-            printf("RW: Iteration %d: Swapped elements at indices %d and %d in the permutation.\n", iter+1, i, j);
-            printf("RW: Cost change for this swap: %" PRId64 "\n", delta);
-            printf("RW: Cost after this swap: %" PRId64 "\n", best_cost);
+        // Randomizing inititial permutation for a new start
+        if (restart) {
+            p.reshuffle();
+            current_cost = cost_function(A, B, p);
+            if (current_cost < best_cost) {
+                efficiency_stats_acc.checkpoint(best_cost, false);
+                best_cost = current_cost;
+                best_p = p;
+            }
         }
 
-        iter++;
+        // Main loop (one restart with a fresh initial permutation) of the Random Walk algorithm
+        while (!((max_time_seconds > 0 && algorithm_time_now() - efficiency_stats_acc.start_time >= max_time_sesconds_restart * (restart + 1)) ||
+                (max_iterations > 0 && iter >= max_iterations))) 
+        {
+            auto [i, j] = random::get_random_pair(n); // get a random pair of indices to swap in the permutation
+            delta = delta_cost(A, B, p, i, j); // calculate the cost change (delta) for swapping the elements at the randomly selected indices in the permutation
+            current_cost += delta; // update the cost
+            p.swap(i, j); // perform the swap in the permutation to generate a new solution in the neighborhood of the current solution
+            // total number of swaps is the same as num of evaluated solutions here which is the same as number of iterations
+            
+            if (current_cost < best_cost) { // if the new solution is better than the current solution, update the best cost and continue to the next iteration of the random walk
+                efficiency_stats_acc.checkpoint(best_cost);
+                best_cost = current_cost;
+                best_p = p;
+            }
+            if (verbose > 2) {
+                printf("RW: Iteration %d: Swapped elements at indices %d and %d in the permutation.\n", iter+1, i, j);
+                printf("RW: Cost change for this swap: %" PRId64 "\n", delta);
+                printf("RW: Cost after this swap: %" PRId64 "\n", best_cost);
+            }
+
+            iter++;
+        }
+        if (max_iterations > 0 && iter >= max_iterations) break;
     }
 
 
@@ -572,7 +804,7 @@ AlgorithmRunMetrics random_walk_qap(const Problem<int>& problem, Permutation<int
     auto[ignored, rel_eff, norm_eff, total_time] = efficiency_stats_acc.get_metrics();
     p = best_p;
     AlgorithmRunMetrics metrics = {best_cost, iter, iter, rel_eff, norm_eff, total_time};
-    if (verbose) print_finish_message(Colors::ORANGE, "RW", "Random Walk", best_p, metrics, iter);
+    if (verbose) print_finish_message(COLOR, "RW", "Random Walk", best_p, metrics, iter);
     return metrics;
 }
 
@@ -609,7 +841,7 @@ AlgorithmRunMetrics random_walk_qap(const Problem<int>& problem, Permutation<int
 
 
 /****************************************************************************************************************************/
-/********************************* Part 2: Simulated Annealing and Tabu Search **********************************************/
+/************************** Part 2: Metaheuristics: Simulated Annealing and Tabu Search *************************************/
 /****************************************************************************************************************************/
 
 
@@ -700,10 +932,7 @@ template <typename T=double> inline T eval_temperature(T delta, T target_accepta
 // @param p         initial permutation; should be randomized or given as is before calling this function.
 // @param run_config      configuration for the algorithm run. Must include non-empty`hyperparameters` map with entries `"initial_acceptance_rate"`, `"final_acceptance_rate"` (typically 0.01), `"initial_cooling_rate"` and `"markov_chain_length_factor"` (1.0 by default) for the simulated annealing algorithm. 
 // Also `max_time_seconds` or `max_iterations`, and, optionally, `verbosity` are to be provided.
-template <typename Tprecision> 
-    AlgorithmRunMetrics simulated_annealing_qap(
-        const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config
-)
+template <typename Tprecision> AlgorithmRunMetrics simulated_annealing_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config)
 {
     if (run_config.hyperparameters.find("initial_acceptance_rate")      == run_config.hyperparameters.end() ||
         run_config.hyperparameters.find("final_acceptance_rate")      == run_config.hyperparameters.end() ||
@@ -1144,9 +1373,7 @@ public:
 //   - `"max_non_improving_moves_factor"`: Used in the stopping criteria to define the multiplier for the maximum consecutive swaps allowed without a global cost improvement. Recommended value is 2.0.
 //
 // - Additionally, the configuration must explicitly specify `max_time_seconds` or `max_iterations`, and optionally, `verbosity`.
-AlgorithmRunMetrics tabu_search_qap(
-        const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config
-)
+AlgorithmRunMetrics tabu_search_qap(const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& run_config)
 {
     const auto TS_COLOR =Colors::YELLOW;
 

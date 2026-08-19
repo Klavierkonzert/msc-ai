@@ -11,6 +11,7 @@
 #include <tuple>
 #include <array>
 #include <filesystem>
+#include <fstream>
 #include <omp.h>
 
 #include "./src/timing.h"
@@ -107,7 +108,7 @@ const set<string> DEFAULT_NONOPT_PROBLEMS = { "wil100","tho150","tai100b","tai80
 // Configure OpenMP parallelization and timer selection based on requested runs,specified number of cores and available cores/threads.
 inline void configure_parallelization(int num_cores, int n_runs_per_problem, bool run_parallel) 
 {
-    const int N_CORES = std::max(std::min(num_cores, n_runs_per_problem), omp_get_max_threads());
+    const int N_CORES = std::min(std::min(num_cores, n_runs_per_problem), omp_get_max_threads());
 
     omp_set_dynamic(0);
     if (run_parallel && N_CORES > 1 && n_runs_per_problem > 1)
@@ -115,7 +116,7 @@ inline void configure_parallelization(int num_cores, int n_runs_per_problem, boo
     else
         omp_set_num_threads(1);
 
-    std::cout << Colors::GREEN << "OpenMP max threads: " << omp_get_max_threads() << " (logical cores reported: " << omp_get_num_procs() << ")" << Colors::RESET << std::endl;
+    std::cout << Colors::GREEN << "OpenMP using " << omp_get_max_threads() << " threads (logical cores reported: " << omp_get_num_procs() << ")" << Colors::RESET << std::endl;
 
     set_use_cpu_time_clock(omp_get_max_threads() == 1);
     std::cout << Colors::GREEN << "Using " << (use_cpu_time_clock() ? "CPU time clock" : "wall clock") << " for measuring algorithm run times." << Colors::RESET << std::endl;
@@ -137,7 +138,7 @@ int main(int argc, char* argv[]) {
     std::set<int> task_nums;
 
     const int N_RUNS_PER_PROBLEM = 10;
-    int num_cores;
+    int num_cores=1;
     int n_runs_per_problem = N_RUNS_PER_PROBLEM;
     bool run_parallel = false;
 
@@ -201,7 +202,7 @@ int main(int argc, char* argv[]) {
     {
         cout<<"\nTask2...\n";
         task2(problems, n_runs_per_problem, MAX_ITERS, TIME_BUDGET_SECONDS
-            , 0// ALGORITHM_VERBOSITY
+            ,  ALGORITHM_VERBOSITY
             ,plots_output_dir, fig_size, show_plots,
             0// Statistics etc verbosity
         );
@@ -253,7 +254,7 @@ int main(int argc, char* argv[]) {
 
 
 
-
+const map<string, double> LS_MULTI_START_HYPERPARAMETERS = {{"n_restarts", 10.0}};
 const map<string, double> SA_HYPERPARAMETERS  = {{"initial_acceptance_rate", 0.95},
         {"final_acceptance_rate", 0.001},
          {"max_non_improving_moves_factor", 10.0},
@@ -268,7 +269,7 @@ const map<string, double> TS_HYPERPARAMETERS  = {{"elite_candidate_list_size_fac
     };
 
 
-// @brief Task 2: Solve all the selected QAP instances and plot results.
+// @brief Task 2: Solve all the selected QAP instances and plot results of the comparison metrics: quality, running time, efficiency.
 //
 // The following algorithms are evaluated (see `src/algorithms.cpp` for details):
 //
@@ -295,11 +296,7 @@ const map<string, double> TS_HYPERPARAMETERS  = {{"elite_candidate_list_size_fac
 // @param fig_size size of figures (important to fit in the report)
 // @param show_plots defines whether plots will be shown in dedicated windows. Consider setting this param to `false` to speedup experiments - plots will be saved to the specified directory anyway.
 // @param verbose defines how much details user sees outside the scope of an algorithm work, such as warnings about time measurements, statistics gathered, etc.
-void task2(const std::vector<Problem<int>>& problems, 
-            int n_runs_per_problem, int default_max_iters, float default_time_budget_seconds, 
-            int algorithm_verbosity,
-            const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots,
-            int verbose)
+void task2(const std::vector<Problem<int>>& problems, int n_runs_per_problem, int default_max_iters, float default_time_budget_seconds, int algorithm_verbosity,const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots,int verbose)
 {
            
     /*********************************** STEP 2: Local search algorithms ***********************************/
@@ -311,17 +308,17 @@ void task2(const std::vector<Problem<int>>& problems,
                 [](const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& config) {
                     return heuristic_local_search_qap(problem, p, config);
                 },
-                iter_cfg(default_max_iters, algorithm_verbosity), "#11830080", "o"},
+                iter_cfg(default_max_iters, algorithm_verbosity, {{"n_restarts", 100.0}}), "#11830080", "o"},
                 {"Steepest LS",
                 [](const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& config) {
                     return steepest_local_search_qap(problem, p, config);
                 },
-                iter_cfg(default_max_iters, algorithm_verbosity), "#00438fc3", "s"},
+                iter_cfg(default_max_iters, algorithm_verbosity, LS_MULTI_START_HYPERPARAMETERS), "#00438fc3", "s"},
                 {"Greedy LS",
                 [](const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& config) {
                     return greedy_local_search_qap(problem, p, config);
                 },
-                iter_cfg(default_max_iters, algorithm_verbosity), "#68bbff80", "^"},
+                iter_cfg(default_max_iters, algorithm_verbosity, LS_MULTI_START_HYPERPARAMETERS), "#68bbff80", "^"},
     };
 
     // Obtaining the results
@@ -353,7 +350,8 @@ void task2(const std::vector<Problem<int>>& problems,
                                                                                     "mean",
                                                                                     mean_time_budgets_by_problem,
                                                                                     default_time_budget_seconds,
-                                                                                    algorithm_verbosity
+                                                                                    algorithm_verbosity,
+                                                                                    LS_MULTI_START_HYPERPARAMETERS
                                                                                 );
     std::vector<MethodDefinition> sa_methods =  make_time_constrained_methods(vector<AlgorithmRunMetrics (*)(const Problem<int>&, Permutation<int>&, const AlgorithmRunConfig&)> {simulated_annealing_qap, adaptive_simulated_annealing_qap},
                                                                                     "mean",
@@ -805,7 +803,7 @@ void efficiency_plots(const std::map<std::string, double> &time_budgets_by_probl
 	);
 }
 
-// Exploring solution space
+// Exploring the solution space. 
 void task345(const std::vector<Problem<int>>& problems, 
                 int n_runs_per_problem, int default_max_iters, float default_time_budget_seconds, 
                 int algorithm_verbosity, int verbose,
@@ -841,7 +839,7 @@ void task345(const std::vector<Problem<int>>& problems,
 
 }
 
-
+// @brief Task 3: Discovering the structure of the search space and the optimized function: quality of the initial solution vs. quality of the final solution
 void task3(const ExperimentResults<>& results,  const std::vector<MethodDefinition>& methods,
                 const std::vector<Problem<int>>& problems,            
                 const std::string& plots_output_dir, const std::pair<int, int>& fig_size,
@@ -890,6 +888,7 @@ void task3(const ExperimentResults<>& results,  const std::vector<MethodDefiniti
     }
 }
 
+// @brief Task 4: Discovering the preferred number of repetitions of LS.
 void task4(const ExperimentResults<>& results,  const std::vector<MethodDefinition>& methods,
                 const std::vector<Problem<int>>& problems,            
                 const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots)
@@ -933,7 +932,7 @@ void task4(const ExperimentResults<>& results,  const std::vector<MethodDefiniti
 }
 
 
-// Analysis of found local optima
+// @brief Task 5: Analysis of found local optima
 void task5(const ExperimentResults<>& results,  const std::vector<MethodDefinition>& methods,
                 const std::vector<Problem<int>>& problems,            
                 const std::string& plots_output_dir, const std::pair<int, int>& fig_size, bool show_plots)
@@ -1113,7 +1112,12 @@ std::vector<MethodDefinition> make_time_constrained_methods(
 
 
 
-
+// @param &num_cores `--cores` argument, which determines number of available physical cores/threads for parallel execution. If not provided, considered as maximum number of available cores. Parallel execution is enabled only if `--parallel` flag was used.
+// @param &N_RUNS_PER_PROBLEM `--runs-per-problem` argument, which determines number of independent runs per each algorithm per each problem
+// @param &RUN_PARALLEL binary flag determined based on the presence one of the arguments: `--no-parallel` or ` "--parallel`.
+// @param &problem_names `--problems` argument with the names of the problems to be analyzed. If not provided, default problems will be analyzed (see `DEFAULT_OPT_PROBLEMS`, `DEFAULT_NONOPT_PROBLEMS` defined at the top of this program -> problems "esc16d","bur26h",...)
+// @param &tasks `--tasks` argument which determines which of the tasks will be performed.
+// @note Arguments can be passed via `.vscode/launch.json` configuration:    ```"configurations": [{ ..., "args": [ "--parallel", "--no-windows", "--tasks", "345"],..}]```
 int parse_args(char *argv[], std::vector<std::string> &args, int &num_cores, int &N_RUNS_PER_PROBLEM, bool &RUN_PARALLEL, 
                 std::string &data_dir, std::string &plots_dir, std::pair<int, int> &fig_size, bool &open_windows,
                  std::set<std::string> &problem_names, std::set<int> &tasks, bool &retFlag)
@@ -1173,6 +1177,8 @@ int parse_args(char *argv[], std::vector<std::string> &args, int &num_cores, int
         _NOTE<< "Parallel execution enabled. Running in parallel mode." << endl;
     }
     // Num of cores 
+    //default value 
+    num_cores = omp_get_num_procs();
     it = find(args.begin(), args.end(), "--cores") ;
     if (it != args.end()){
         try {
@@ -1337,7 +1343,7 @@ int parse_args(char *argv[], std::vector<std::string> &args, int &num_cores, int
 
 // @brief Reads problem instances from the folder `data_dir`.
 // Additionally outputs report with QAP instances properties.
-// @param if specified, user-imputed problems will be analysed.
+// @param user_problem_names if specified, user-imputed problems will be analysed.
 vector<Problem<int>> load_problems(string data_dir, set<string>user_problem_names)
 {
     vector<Problem<int>> problems;
@@ -1370,8 +1376,17 @@ vector<Problem<int>> load_problems(string data_dir, set<string>user_problem_name
     else
         cout << Colors::YELLOW << "\nNo existing markdown report file to remove or failed to remove. Continuing... \nProperties of the problems" << Colors::RESET;
         
+    // Adding a header
+    std::ofstream outFile(report_path, std::ios_base::app);
+    if (!outFile) 
+        std::cerr << Colors::RED << " ERROR: Could not open file " << report_path << " for writing the markdown report." << Colors::RESET << std::endl;
+    else{
+        outFile << "\n# Properties of the selected problems" << "\n";
+        outFile.close();
+    }
+
     for (const auto& problem : problems) {
-        problem.print(true,false, false);
+        //problem.print(true,false, false);
     
         problem.print_markdown_report(report_path);
     }
