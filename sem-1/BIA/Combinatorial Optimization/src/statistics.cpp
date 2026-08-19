@@ -52,13 +52,15 @@ namespace plt = matplotlibcpp;
 //                      for each run:
 //                          for each problem:
 //                              call `get_statistics`:
-//                                  costs, qualities, distances from best known solution, time taken for the run of the `method`
+//                                  MAIN measurement and statistics gathering for the method run (costs, qualities, distances from best known solution, time taken for the run of the `method`)
+//                                       method(problem, permutation, run_config);
 //              *else ::sequentially: (no OpenMP or n_runs <= 1)
 //                  for each problem:
 //                      call `get_runs_statistics`:
 //                          for each run:
 //                              call `get_statistics`:
-//                                  costs, qualities, distances from best known solution, time taken for the run of the `method`
+//                                  MAIN measurement and statistics gathering for the method run (costs, qualities, distances from best known solution, time taken for the run of the `method`)
+//                                       method(problem, permutation, run_config);
 //
 // Rearranging for plotting:
 // `get_methods_statistics_for_plotting_by_problem`:

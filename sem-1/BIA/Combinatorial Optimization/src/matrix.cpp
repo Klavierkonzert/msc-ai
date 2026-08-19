@@ -1,5 +1,12 @@
 #pragma once
 
+#include <type_traits>
+#include <cstdint>
+#include <stdexcept>
+
+#include <limits> 
+#include <string>
+
 #include <cmath>
 #include <tuple>
 #include <iostream>
@@ -47,7 +54,7 @@ private:
 
     inline bool compute_zero_diagonality() const;
     inline bool compute_symmetry() const;
-    inline SumType compute_trace() const;
+    inline typename SumType compute_trace() const;
     inline double compute_norm() const;
 
     void recompute_cache() const;
@@ -378,7 +385,7 @@ inline bool Matrix<T>::compute_zero_diagonality() const {
 }
 
 template <typename T>
-inline Matrix<T>::SumType Matrix<T>::compute_trace() const {
+inline typename Matrix<T>::SumType Matrix<T>::compute_trace() const {
     if (nrows != ncols)
         throw std::logic_error("Trace is defined only for square matrices");
 

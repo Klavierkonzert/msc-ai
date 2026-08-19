@@ -1,4 +1,6 @@
+
 # Properties of the selected problems
+
 ### Problem: esc16d
 Problem size: 16
 #### Problem properties:

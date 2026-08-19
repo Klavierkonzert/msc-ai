@@ -1362,8 +1362,15 @@ void plot_similarity_vs_quality(const ExperimentResults<>& results,
 /****************************************Plot for n_runs ~ best_quality ****************************/
 
 // Plots best-so-far and average-so-far solution quality vs. number of independent starts for each method/problem.
+//
+// Difference between restarting an algorithm externally and internally:
+// - This function treats the already collected experiment runs as external restarts: each point `values[i]` is the final quality of one independent call to an algorithm with its own initial permutation. Therefore, for solution quality, the best-so-far curve is equivalent in meaning to an internal multi-start algorithm evaluated at the same number of starts: `best_so_far(k) = min(final_quality_of_start_1, ..., final_quality_of_start_k)`.
+// - The equivalence is only about final/best-so-far quality. This plot does not reconstruct time-weighted efficiency/AUC, because it does not know when improvements happened inside each run or internal restart.
+// - If an algorithm is called with hyperparameters["n_restarts"] > 1, then each stored value is already the best result of a batch of internal starts; in that case the x-axis represents the number of multi-start algorithm calls, not the raw number of individual starts. The true number of starts is approximately x * n_restarts, but intermediate restart-level best-so-far and average-so-far values are not available here unless the algorithm explicitly records that history.
+// - Additionally, the equivalence holds statistically, but exact matching requires the same RNG sequence. Internal restarts and external runs may consume random numbers in a different order, especially with OpenMP.
+//
 // Each method uses a dedicated color, each problem uses a different line style/marker
-// statistic_name: e.g. "cost", "cost_relative_quality", etc.
+// @param statistic_name e.g. "cost", "cost_relative_quality", etc.
 void plot_restarts_vs_quality(const ExperimentResults<>& results,
                              const std::vector<Problem<int>>& problems,
                              const std::vector<MethodDefinition>& methods,
