@@ -11,7 +11,7 @@ See [`assignments/Assignment 2 - SA + TS in QAP/....pdf`](./assignments/Assignme
 | [`2`](assignment_12_tasks.cpp#L299) | Compare local search, random methods, simulated annealing, adaptive SA, and tabu search across selected QAP instances |
 | [`345`](assignment_12_tasks.cpp#L807) | Run tasks 3, 4, and 5 on selected interesting problems |
 | [`3`](assignment_12_tasks.cpp#L843) | Initial vs final quality analysis |
-| [`4`](assignment_12_tasks.cpp#L892) | Multi-start behavior and restart analysis |
+| [`4`](assignment_12_tasks.cpp#L892) | Multi-run behavior and analysis |
 | [`5`](assignment_12_tasks.cpp#L936) | Local optima similarity, Hamming/Cayley similarity, and position-match correlation analysis |
 
 ## Requirements
@@ -137,9 +137,10 @@ Collected metrics include:
   - Limit on time/number of iterations exceeded. Actual for Random Search, Tabu Search and Simulated Annealing
   - Number of restarts exceeded (as described below).
 - **Task 2** performs 10 independent (can be parallelized) runs of the algorithms, meaning statistics are gathered independently. This mainly addresses efficiency calculations only, since the main research question is to measure how well metaheuristics algorithms (Tabu Search and Simulated Annealing) perform with an increased time budget provided, while the other algorithms are just restarted 10 or 100 times each run (not parallelized), as described below.
-- **Multi-start implementation**:
+- **Multi-start implementation within algorithm definitions**:
   All local-search and random-walk algorithms support an internal multi-start (restart) loop controlled by the [`"n_restarts"`](./src/algorithms.cpp#L37) hyperparameter passed via `AlgorithmRunConfig::hyperparameters` map:
-  - The default when the key is absent is `n_restarts = 1` (single run). Setting `n_restarts = 0` means *rerun until the time or iteration budget is exhausted*. This is safe by construction: the outer `for` condition `!n_restarts && (max_iterations > 0 || max_time_seconds > 0)` only fires when at least one budget is set, and the inner loop checks and exits via `goto finish` once that budget is hit — so an infinite loop is impossible.
+  - These restarts are **not parallelized**.
+  - The **default** when the key is absent is `n_restarts = 1` (single run). Setting `n_restarts = 0` means *rerun until the time or iteration budget is exhausted*. This is safe by construction: the outer `for` condition `!n_restarts && (max_iterations > 0 || max_time_seconds > 0)` only fires when at least one budget is set, and the inner loop checks and exits via `goto finish` once that budget is hit — so an infinite loop is impossible.
   - **Restart mechanics.** At the start of every restart after the first, the permutation is re-randomised via `p.reshuffle()`, the cost is recomputed from scratch and an algorithm is restarted. Statistics (`best_cost`, `best_p`, efficiency accumulator) are aggregated across all restarts - the global best solution is always preserved.
   - **Statistics**. Global iteration counter is shared across restarts. Returned statistics are shared: current (within a restart) best cost updates the global multi-run best cost (if necessary), efficiency is recalculated with each update.
   - `max_iterations` and `max_time_seconds` can terminate the whole multi-start run early.
@@ -148,6 +149,7 @@ Collected metrics include:
   - `random_walk_qap` (10 restarts in Task 2): The total time budget is split equally: each restart receives `max_time_seconds / n_restarts` seconds. Every restart gets fair share of time budget.
   - Random Search and metaheuristics are explicitly excluded from multi-restart mechanics. Random Search generates a fully independent permutation every iteration, so a restart loop would be functionally identical to more iterations.
   - **Design note.** Extracting the restart loop into a shared wrapper was considered but not done: [`StatisticsAccumulator`](./src/algorithms.cpp#L91) must span the entire multi-start run (its `start_time` is set once before the restart loop, and checkpoints accumulate across restarts); [Random Walk](./src/algorithms.cpp#L761) requires custom per-restart time-slicing; and SA/Tabu do not participate at all. Keeping the ~10-line restart pattern embedded per-algorithm avoids threading the accumulator through an external wrapper and keeps budget semantics local and explicit.
+- **Task 4** performs 1000 **independent** parallel runs (starts) of Local Search algorithms. Since analysis of efficiency is explicitly excluded in this task, one could run, for instance, 10 restarts within an algorithm, and perform 100 external reruns. The result will be the same. But for the sake of parallezation, in this and subsequent tasks `n_restarts` is set to default value `1`.
 
 ### Outputs
 
