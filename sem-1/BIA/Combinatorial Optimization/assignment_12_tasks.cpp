@@ -128,7 +128,7 @@ inline void configure_parallelization(int num_cores, int n_runs_per_problem, boo
 int main(int argc, char* argv[]) {
     try {
     const int ALGORITHM_VERBOSITY = 0; // 0 - no output, 1 - basic output, 2 - detailed output
-    const int MAX_ITERS = 1000;
+    const int MAX_ITERS = 0;
     const double TIME_BUDGET_SECONDS = 2*60.0;
     const char* DATA_DIR = "./QAP data/";
     string data_dir = DATA_DIR;
@@ -308,7 +308,7 @@ void task2(const std::vector<Problem<int>>& problems, int n_runs_per_problem, in
                 [](const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& config) {
                     return heuristic_local_search_qap(problem, p, config);
                 },
-                iter_cfg(default_max_iters, algorithm_verbosity, {{"n_restarts", 100.0}}), "#11830080", "o"},
+                iter_cfg(default_max_iters, algorithm_verbosity, {{"n_restarts", 10*LS_MULTI_START_HYPERPARAMETERS.at("n_restarts")}}), "#11830080", "o"},
                 {"Steepest LS",
                 [](const Problem<int>& problem, Permutation<int>& p, const AlgorithmRunConfig& config) {
                     return steepest_local_search_qap(problem, p, config);
@@ -1329,8 +1329,9 @@ int parse_args(char *argv[], std::vector<std::string> &args, int &num_cores, int
             ++cur;
         }
     }
-    if (tasks.empty())
-        tasks = VALID_TASKS;
+    if (tasks.empty()){
+        tasks.insert({2, 345});
+    }
     _NOTE << "The following tasks will be run: "; for (auto task: tasks) std::cout << "task"<< Colors::CYAN<<std::to_string(task)<<Colors::RESET<<", ";
     std::cout<<endl;
 

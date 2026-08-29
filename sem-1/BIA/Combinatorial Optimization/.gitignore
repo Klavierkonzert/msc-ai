@@ -29,6 +29,8 @@
 !.gitignore
 !CMakeLists.txt
 
+#Final report
+!final_report.pdf
 # Allow assignments folder and its contents (reports)
 !assignments/**/*.pdf
 !assignments/**/*.txt

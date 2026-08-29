@@ -35,7 +35,12 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${fileDirname}\\${fileBasenameNoExtension}.exe",
-            "args": [ "--parallel", "--no-windows", "--tasks", "345"],
+            "args": [
+                "--parallel",
+                "--no-windows",
+                "--tasks",
+                "2,345"
+            ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

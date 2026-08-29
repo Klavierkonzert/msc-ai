@@ -1,9 +1,9 @@
 # BIA Lab 1 & 2 - Quadratic Assignment Problem
 ## Overview
-This project implements and compares heuristic/metaheuristic algorithms for the Quadratic Assignment Problem (QAP). It loads QAPLIB-style `.dat` and `.sln` instances, runs multiple algorithms across selected benchmark problems, collects quality/time/efficiency statistics, and generates plots for analysis, which are used in `assignments/Assignment 2 - SA + TS in QAP/....pdf` report.
+This project implements and compares heuristic/metaheuristic algorithms for the Quadratic Assignment Problem (QAP). It loads QAPLIB-style `.dat` and `.sln` instances, runs multiple algorithms across selected benchmark problems, collects quality/time/efficiency statistics, and generates plots for analysis, which are used in the report.
 
 ### Main results
-See [`assignments/Assignment 2 - SA + TS in QAP/....pdf`](./assignments/Assignment%202%20-%20SA%20+TS%20in%20QAP/QAP_extended_report.pdf) report for results and conclusions.
+See the 3rd version of the report -[`final_report.pdf`](./final_report.pdf) - for results and conclusions. Two previous versions of the report can be found in the [`assignments/`](./assignments/) folder.
 
 ### Experiment tasks
  | Task | Description |
@@ -77,7 +77,7 @@ cmake --build build --config Release
 The repository/folder also contains VS Code build configuration in [`.vscode/tasks.json`](../.vscode/tasks.json), [`.vscode/launch.json`](../.vscode/launch.json).
 
 ## Main entry point, run examples
-`main(...)` entry point: [`\assignment_12_tasks.cpp`](\assignment_12_tasks.cpp)
+[`main(...)`](assignment_12_tasks.cpp#L128) entry point: [`\assignment_12_tasks.cpp`](\assignment_12_tasks.cpp)
  User is encouraged to use the following arguments while running from console: 
  - `--parallel`, `--no-parallel` - define whether all the experiments will be run in parallel (using maximum or `--cores ...` logical cores) or sequentially (using one core).
  - `--no-windows` - all the Matplotlib windows will be discarded and plots will be saved silently.
@@ -144,12 +144,12 @@ Collected metrics include:
   - **Restart mechanics.** At the start of every restart after the first, the permutation is re-randomised via `p.reshuffle()`, the cost is recomputed from scratch and an algorithm is restarted. Statistics (`best_cost`, `best_p`, efficiency accumulator) are aggregated across all restarts - the global best solution is always preserved.
   - **Statistics**. Global iteration counter is shared across restarts. Returned statistics are shared: current (within a restart) best cost updates the global multi-run best cost (if necessary), efficiency is recalculated with each update.
   - `max_iterations` and `max_time_seconds` can terminate the whole multi-start run early.
-  - `heuristic_local_search_qap` (100 restarts in Task 2): Each restart runs the heuristic inner loop until no improving swap is found (`no_improving_swaps = true`), then *breaks* to the outer restart loop (not `goto finish`). 
-  - `steepest_local_search_qap` / `greedy_local_search_qap` (10 restarts in Task 2): Restart on local-minimum (`improved = false` breaks the inner loop). 
-  - `random_walk_qap` (10 restarts in Task 2): The total time budget is split equally: each restart receives `max_time_seconds / n_restarts` seconds. Every restart gets fair share of time budget.
-  - Random Search and metaheuristics are explicitly excluded from multi-restart mechanics. Random Search generates a fully independent permutation every iteration, so a restart loop would be functionally identical to more iterations.
+  - [`heuristic_local_search_qap`](./src/algorithms.cpp#L236) (100 restarts in Task 2): Each restart runs the heuristic inner loop until no improving swap is found ([`no_improving_swaps = true`](./src/algorithms.cpp#L289)), then *breaks* to the outer restart loop (not `goto finish`). 
+  - [`steepest_local_search_qap`](./src/algorithms.cpp#L343) / [`greedy_local_search_qap`](./src/algorithms.cpp#L343) (10 restarts in Task 2): Restart on local-minimum (`improved = false` breaks the inner loop). 
+  - [`random_walk_qap`](./src/algorithms.cpp#L761) (10 restarts in Task 2): The total time budget is split equally: each restart receives `max_time_seconds / n_restarts` seconds. Every restart gets fair share of time budget.
+  - [`Random Search`](./src/algorithms.cpp#L664) and metaheuristics are explicitly excluded from multi-restart mechanics. Random Search generates a fully independent permutation every iteration, so a restart loop would be functionally identical to more iterations.
   - **Design note.** Extracting the restart loop into a shared wrapper was considered but not done: [`StatisticsAccumulator`](./src/algorithms.cpp#L91) must span the entire multi-start run (its `start_time` is set once before the restart loop, and checkpoints accumulate across restarts); [Random Walk](./src/algorithms.cpp#L761) requires custom per-restart time-slicing; and SA/Tabu do not participate at all. Keeping the ~10-line restart pattern embedded per-algorithm avoids threading the accumulator through an external wrapper and keeps budget semantics local and explicit.
-- **Task 4** performs 1000 **independent** parallel runs (starts) of Local Search algorithms. Since analysis of efficiency is explicitly excluded in this task, one could run, for instance, 10 restarts within an algorithm, and perform 100 external reruns. The result will be the same. But for the sake of parallezation, in this and subsequent tasks `n_restarts` is set to default value `1`.
+- [**Task 4**](./assignment_12_tasks.cpp#L892) performs 1000 **independent** parallel runs (starts) of Local Search algorithms. Since analysis of efficiency is explicitly excluded in this task, one could run, for instance, 10 restarts within an algorithm, and perform 100 external reruns. The result will be the same. But for the sake of parallezation, in this and subsequent tasks `n_restarts` is set to default value `1`.
 
 ### Outputs
 
