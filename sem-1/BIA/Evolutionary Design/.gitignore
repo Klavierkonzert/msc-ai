@@ -23,6 +23,8 @@
 
 # Allow assignments folder and its contents (reports)
 !assignments/**/*.pdf
+!assignments/**/*.md
+!assignments/**/*.png
 !assignments/**/*.txt
 
 
