@@ -61,7 +61,7 @@ One can conclude based on these plots that most beneficial mutation intensity is
 
 Since mutation intensity controls expected jump length, some visual dominance of 0-intensity results can be attributed to the fact that in such case one (and only one) gene is changed (neighbourhood radius is 1), which provides fast exploration at the beginning of evolution process (small genomes are easy to navigate through with just one step) and then gradual adjustments at later stages (now changing only one letter is not sufficient to explore vast areas of solutions spaces; phenotypes now change only locally, even though disruptively), resembling Simulated Annealing behaviour.
 
-Basically mutation works as follows: an offspring (one of 2) of 2 selected parents, which is crossed-overed with probability `cxpb` (default $0.2$), is mutated with fixed probability `mutpb`. Mutation procedure means that a) this offspring is left intact with prob $(1-$`mutpb`$)$,  or b) with probabiltiy `mutpb` this offspring is instantly substituted with it's neighbor at distance $>=1$. Let's consider the second option: mutation means, for instance, that a long structure suddenly acquires a new limb at random place with random direction or gets some part of it substituted with another limb. If this happens on the "vertebra", with very high probability a high stable creature becomes less tall and more unstable: if only 6 genome letters indicating limb direction are available, then this happens in 4 out of 6 cases. 
+Basically mutation works as follows: an offspring (one of 2) of 2 selected parents, which is crossed-overed with probability `cxpb` (default $0.2$), is mutated with fixed probability `mutpb`. Mutation procedure means that a) this offspring is left intact with prob $(1-$ `mutpb` $)$,  or b) with probabiltiy `mutpb` this offspring is instantly substituted with it's neighbor at distance $>=1$. Let's consider the second option: mutation means, for instance, that a long structure suddenly acquires a new limb at random place with random direction or gets some part of it substituted with another limb. If this happens on the "vertebra", with very high probability a high stable creature becomes less tall and more unstable: if only 6 genome letters indicating limb direction are available, then this happens in 4 out of 6 cases. 
 
 In the following example changing one genome letter (setting mutation intensity to 0 causes exactly one such change) immedeately changes the form of the creature:
 
@@ -99,7 +99,7 @@ Now I try to explain why crossover can be the main driver of the evolution proce
 In the experiments with f9 encoding, genome representation is fragile and crossover preserves useful U‑sequences, so **small**/**singleton** mutations are advantageous.
 
 #### Notes  (from task 3):
-The number of individuals mutated at each generation - number of mutated individuals ~ $ Bin(n=50, p=$f9_mut$)$. Expected number of mutated individuals is $np$. Provided default value is $0.9$, so $E\#mutated = 45$.
+The number of individuals mutated at each generation - number of mutated individuals ~ $ Bin(n=50, p=$ `f9_mut` $)$. Expected number of mutated individuals is $np$. Provided that default value is $0.9$, we obtain $45$.
 
 
 
