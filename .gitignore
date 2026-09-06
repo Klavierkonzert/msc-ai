@@ -1,0 +1,13 @@
+# ignore everything
+*
+
+# allow traversing directories
+!*/
+
+# allow BIA folder and its contents
+!BIA/
+!BIA/**
+
+# allow gitignore itself
+!.gitignore
+sem-1/BIA/framspy-download/gui/README.md
