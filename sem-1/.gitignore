@@ -1,0 +1,5 @@
+# allow traversing directories
+!*/
+
+!README.md
+!*.pdf
