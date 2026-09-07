@@ -24,6 +24,7 @@ matplotlib.use("TkAgg")
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 import seaborn as sns
 import numpy as np
 import math
@@ -262,6 +263,7 @@ def main():
     ap.add_argument('--log-time', action='store_true', help='Plot runtime on a log scale')
     ap.add_argument('--min-samples', type=int, default=1, help='Minimum runs per parameter to include in boxplots')
     ap.add_argument('--nevals-as-time', action='store_true', help='Use total_nevals as runtime proxy (plot evaluations instead of seconds)')
+    ap.add_argument('--palettes', nargs='+', default=None, help='List of seaborn color palette names for folder subgroups')
     args = ap.parse_args()
 
     # Determine logbook directory: use provided, else newest subfolder under 'stats'
@@ -286,8 +288,10 @@ def main():
                 # plot and save curves
                 print(f"Subgroup variable for analysis: {subgroup_var}")
                 plots_dir = os.path.join(args.outdir, 'plots')
-                plot_HoF_history(df, param=subgroup_var, outdir=plots_dir)
-                plot_HoF_confidence(df, param=subgroup_var, outdir=plots_dir)
+                active_palettes = args.palettes or DEFAULT_PALETTES
+                plot_HoF_history(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes)
+                plot_HoF_confidence(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes)
+
 
                 # aggregated summary and boxplots
                 summary = collect_run_summary(logbook_dirs, df)
@@ -301,10 +305,11 @@ def main():
                         summary['duration_s'] = summary['total_nevals']
                         # pass a special time_unit marker to plotting
                         plot_boxplot_summary(summary, outdir=plots_dir, #group_by=subgroup_var,#args.group_by, 
-                                             time_unit='eval', log_time=False, min_samples=args.min_samples)
+                                             time_unit='eval', log_time=False, min_samples=args.min_samples, palettes=active_palettes)
                     else:
                         plot_boxplot_summary(summary, outdir=plots_dir, #group_by=subgroup_var,#args.group_by, 
-                                             time_unit=args.time_unit, log_time=args.log_time, min_samples=args.min_samples)
+                                             time_unit=args.time_unit, log_time=args.log_time, min_samples=args.min_samples, palettes=active_palettes)
+
         # except Exception as e:
         #     print(f'Error reading logbooks from {logbook_dirs}: {e}')
     else:
@@ -329,6 +334,21 @@ def main():
 
 
 
+DEFAULT_PALETTES: list[str] = [
+    "RdPu",      # 1. Red-Purple
+    "GnBu",      # 2. Green-Blue / Cyan
+    "YlOrRd",    # 3. Yellow-Orange-Red
+    "PuBu",      # 4. Purple-Blue
+    "YlGn",      # 5. Yellow-Green
+    "Oranges",   # 6. Amber-Orange
+    "mako",      # 7. Teal-Navy (perceptually uniform)
+    "flare",     # 8. Coral-Gold
+    "crest",     # 9. Mint-Forest
+    "rocket",    # 10. Violet-Crimson
+    "Purples",   # 11. Indigo-Purple
+    "Blues",     # 12. Ocean Blue
+]
+
 @overload
 def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:list[str|None]) -> dict[str, dict[str, tuple[float, float, float]]]:...
 @overload
@@ -337,18 +357,34 @@ def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:Non
 def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:list[str|None]|None=None) ->Any:
     """Returns dict of dir->colormap if list of directories is not dummy, otherwise returns one colormap"""
     if directories is not None:
-        dpalettes = {d:sns.color_palette(palette=palettes[directories.index(d) % len(directories)], 
+        dpalettes = {d:sns.color_palette(palette=palettes[directories.index(d) % len(palettes)], 
                                          n_colors=max(3, len(param_vals))) for d in directories}
         return {d:{p: palette[i % len(palette)] for i, p in enumerate(param_vals)} for d, palette in dpalettes.items()}
     else:
         return {p: palettes[0][i % len(palettes[0])] for i, p in enumerate(param_vals)}
+
     
     
-def get_legend_handles( param_vals:list[str],directories:list[str]|None,color_maps:dict[str, dict[str, tuple[float, float, float]]]) -> list[mpatches.Patch]:
-    return [mpatches.Patch(color=c, label=d[d.rfind('\\')+1:]+':\n'+ v if directories is not None and len(directories)>0 and param_vals.index(v)==0 
-                                                      else v ) 
-                             for d,color_map in color_maps.items() for v,c in color_map.items() ]
-def get_legend(param_vals:list[str],directories:list[str]|None,color_maps:dict[str, dict[str, tuple[float, float, float]]]):
+# --- Original patch-based legend implementation (does not reflect linestyle) ---
+# def get_legend_handles( param_vals:list[str],directories:list[str]|None,color_maps:dict[str, dict[str, tuple[float, float, float]]]) -> list[mpatches.Patch]:
+#     return [mpatches.Patch(color=c, label=d[d.rfind('\\')+1:]+':\n'+ v if directories is not None and len(directories)>0 and param_vals.index(v)==0 
+#                                                       else v ) 
+#                              for d,color_map in color_maps.items() for v,c in color_map.items() ]
+
+def get_legend_handles(param_vals: list[str], directories: list[str] | None,color_maps: dict[str, dict[str, tuple[float, float, float]]], linestyle_cycle: list[str] | None = None) -> list[mlines.Line2D]:
+    handles = []
+    for d, color_map in color_maps.items():
+        for i, (v, c) in enumerate(color_map.items()):
+            if linestyle_cycle is not None and param_vals and v in param_vals:
+                ls = linestyle_cycle[param_vals.index(v) % len(linestyle_cycle)]
+            else:
+                ls = '-'
+            dir_name = d[max(d.rfind('\\'), d.rfind('/')) + 1:] if d else ''
+            label = (dir_name + ':\n' + v) if (directories is not None and len(directories) > 0 and param_vals.index(v) == 0) else v
+            handles.append(mlines.Line2D([], [], color=c, linestyle=ls, linewidth=2.0, label=label))
+    return handles
+
+def get_legend(param_vals: list[str], directories: list[str] | None,color_maps: dict[str, dict[str, tuple[float, float, float]]], linestyle_cycle: list[str] | None = None):
     # plt.legend(title=param+' value:')
     # plt.legend(handles=get_legend_handles( param_vals,directories,color_maps))
     fig = plt.gcf()
@@ -358,13 +394,19 @@ def get_legend(param_vals:list[str],directories:list[str]|None,color_maps:dict[s
     if ax.get_legend() is not None:
         ax.get_legend().remove()
 
+    n_dirs = len(directories) if (directories is not None and len(directories) > 0) else (len(color_maps) if color_maps else 1)
+    ncols = max(1, (n_dirs % 4) if n_dirs < 4 else 4)
+
     fig.legend(
-        handles=get_legend_handles(param_vals, directories, color_maps),
+        handles=get_legend_handles(param_vals, directories, color_maps, linestyle_cycle=linestyle_cycle),
         loc='center',
         bbox_to_anchor=(0.5, -0.1),   # 2% above bottom edge of figure
-        ncol=2,
+        # ncol=2,
+        ncol=ncols,
     )
     fig.subplots_adjust(bottom=0.60)
+
+
 
 def set_scale_ticks(symlog_threshold: int, max_x_value: int = None):
     ax = plt.gca()
@@ -381,8 +423,10 @@ def set_scale_ticks(symlog_threshold: int, max_x_value: int = None):
     ax.set_xticklabels([str(int(t)) if t !=symlog_threshold else '.. lin scale.. '+str(symlog_threshold)+'.. log scale..' for t in ticks])
 
 def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = "param", extension="pdf", 
-                     palettes: list[str] = ["RdPu", "GnBu", "YlOrRd"],  _figsize:tuple[int, int]=(10, 6),
+                     # palettes: list[str] = ["RdPu", "GnBu", "YlOrRd"],
+                     palettes: list[str] = DEFAULT_PALETTES, _figsize:tuple[int, int]=(10, 6),
                      _symlog_threshold: int = 3500):
+
     """Plot best curves; x-axis is cumulative evaluated individuals when available."""
     sns.set(style='whitegrid')
     plt.figure(figsize=_figsize)
@@ -448,8 +492,8 @@ def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = 
     plt.title(f'Best result vs evaluations (colored by {param})')
     # plt.legend(handles=get_legend_handles( param_vals,directories,color_maps),
     #             #  bbox_to_anchor=(1.05,1), 
-    #              loc='upper left', borderaxespad=0.)
-    get_legend(param_vals, directories, color_maps)
+    # get_legend(param_vals, directories, color_maps)
+    get_legend(param_vals, directories, color_maps, linestyle_cycle=linestyle_cycle)
 
     plt.tight_layout()
 
@@ -464,8 +508,10 @@ def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = 
 
  
 def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param: str = "param", ci: float = 1.0,  alpha: float = 0.12, extension: str = "pdf",
-                        palettes: list[str]=["RdPu", "GnBu", "YlOrRd"], _figsize:tuple[int, int]=(10, 6), 
+                        # palettes: list[str]=["RdPu", "GnBu", "YlOrRd"],
+                        palettes: list[str] = DEFAULT_PALETTES, _figsize:tuple[int, int]=(10, 6), 
                         _symlog_threshold: int =50):
+
     """Plot shaded confidence intervals for each `param` value.
 
     - `ci`: Scales confidence limits: (mean +/- ci*std).
@@ -737,8 +783,10 @@ def collect_run_summary(logbook_dirs: list[str]|None = None, df_logbook: pd.Data
 
 
 def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', group_by: list[str] = [ 'dir', 'enc', 'param'], time_unit: str = 's', log_time: bool = False, min_samples: int = 1, extension: str = 'pdf',
-                         palettes:list[str]=["RdPu", "YlOrRd", "GnBu"], _figsize:tuple[int,int]=(14, 6)
+                         # palettes:list[str]=["RdPu", "YlOrRd", "GnBu"],
+                         palettes: list[str] = DEFAULT_PALETTES, _figsize:tuple[int,int]=(14, 6)
                          ):
+
     """Create side-by-side boxplots: (1) solution quality per group, (2) runtime per group.
 
     - `group_by` is the column name used to group runs (defaults to 'param').

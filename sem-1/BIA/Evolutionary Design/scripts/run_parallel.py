@@ -11,8 +11,8 @@ commands of the form:
     -sim <sim> \
     -opt vertpos \
     -max_numparts 30 \
-    -max_numgenochars 50 \
     -initialgenotype '/*9*/BLU' \
+
     -popsize 50 \
     -generations 50 \
     -hof_size 1 \
@@ -62,7 +62,7 @@ def fmt_float_value(m: str|float, decimal_places: int=2):
 
 def build_cmd(python_exec:str, script_path:str, frams_path:str, optimization_target:str, sim:str, stats_dir:str, hof_dir:str, popsize:int, generations:int, tournament:int, 
               param_value:str|None, idx_experiment:int
-             , genformat:str|int|None =None, initialgenotype:str|None=None
+             , genformat:str|int|None =None, initialgenotype:str|None=None, max_numgenochars:str|int|None=None
              ) -> tuple[list[str|int], str]:
     """:params:
             :param: genformat - specifies genome format used in Framsticks experiments. Should be one of follows: 0, 1, 4, 9.
@@ -74,19 +74,23 @@ def build_cmd(python_exec:str, script_path:str, frams_path:str, optimization_tar
            '-sim', sim,
            '-opt', optimization_target,
            '-max_numparts', '30',
-           '-max_numgenochars', '50',
            '-popsize', popsize,
            '-generations', generations,
            '-tournament', tournament,
            '-hof_size', '1',
            '-hof_savefile', hof_path,
            '--save-stats', stats_dir]
+
+    if max_numgenochars is not None:
+        cmd.extend(['-max_numgenochars', str(max_numgenochars)])
+
     if initialgenotype is not None:
         cmd.extend([ '-initialgenotype', initialgenotype])
     elif genformat is not None:
         cmd.extend(['-genformat', genformat])
 
     return cmd, hof_path
+
 
 
 def run_one(cmd, cwd, logfile):
@@ -135,8 +139,10 @@ def main():
     p.add_argument('--python-exec', default=sys.executable, help='Python executable used to run FramsticksEvolution.py. Use the framsticks conda env Python when dependencies are installed there.')
     p.add_argument('--genformats', nargs='+', default=['1'], help='Genetic format for the simplest initial genotype, for example 4, 9, or B. If not given, f1 is assumed.')
     p.add_argument('--initialgenotype', required=False, help='The genotype used to seed the initial population. If given, the -genformat argument is ignored.')
+    p.add_argument('--max-numgenochars', default=None, required=False, help='The maximum number of characters in genotype. Default is unlimited.')
 
     args = p.parse_args()
+
 
     script_path = os.path.abspath(args.script)
     frams_path = os.path.abspath(args.frams_path)
@@ -183,7 +189,9 @@ def main():
         cmd, hof_path = build_cmd(python_exec, script_path, frams_path, args.opt, sim + (encode_mutation(m, f) if m is not None else ''), stats_dir, gens_dir,
                                  args.popsize, args.generations, args.tournament,
                                  param_value=m, idx_experiment=n,
-                                 genformat=f, initialgenotype=args.initialgenotype)
+                                 genformat=f, initialgenotype=args.initialgenotype,
+                                 max_numgenochars=args.max_numgenochars)
+
         logfile = os.path.join(log_dir, encode_filename(m,n, f)+'.log')
         cwd = os.path.dirname(script_path) if os.path.dirname(script_path) else os.getcwd()
         jobs.append((cmd, str(cwd), logfile, hof_path))
