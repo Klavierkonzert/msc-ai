@@ -5,10 +5,9 @@
 !*/
 
 # Allow folders
-!src/
-!external/
 !assignments/
-
+!scripts/
+!scripts/*
 
 # Allow external libraries
 !external/**
@@ -16,6 +15,8 @@
 # Allow CMakeLists.txt and README.md
 !CMakeLists.txt
 !README.md
+!requirements.txt
+!setup.*
 
 # except these files
 !.gitignore
