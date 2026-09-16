@@ -16,3 +16,11 @@ test_*.png
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# Excluded documentation PDFs and uncommitted data/snippets
+README.pdf
+**/README.pdf
+data.dzn
+**/data.dzn
+E1_2_snippet.mzn
+**/E1_2_snippet.mzn

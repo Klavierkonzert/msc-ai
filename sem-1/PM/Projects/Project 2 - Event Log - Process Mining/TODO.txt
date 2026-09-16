@@ -1,0 +1,18 @@
+TODO - Project 2: Process Discovery & Event Log Mining
+=====================================================
+
+1. Fix Process Duration Distribution Calculation:
+   - Issue: The duration distribution is heavily skewed because "Return ER" events were included in trace duration calculations.
+   - Action: Drop all "Return ER" mark events prior to computing process durations. "Return ER" is not an in-process activity; it merely marks patients that returned to the ER after release, at which point a corresponding new trace begins.
+
+2. Enforce Prerequisite Order in Initial Emergency Flow:
+   - Issue: The finally selected process tree from Experiment 3 remains invalid w.r.t. the initial phase of the process. Registering a patient in "ER Registration" must strictly precede all subsequent activities (as registration enters the patient into the system), followed by "ER Triage" and "ER Sepsis Triage" (which classify and administer routing).
+   - Action:
+     * Apply stricter filtering to drop invalid or incomplete traces that violate this clinical lifecycle.
+     * Reorder events with identical or near-simultaneous timestamps where registration and triage events were logged concurrently or out of order due to noise.
+
+-----------------------------------------------------
+Instructor Feedback:
+"Comments with respect to report #2:
+In Section Distribution of process duration one of the reasons for skewness is that you included Return ER events in the distribution. Return ER is a mark event rather than an actual activity in the process. It marks patients that returned to ER after some time after release. Then, a corresponding new trace starts. When assessing duration distribution of the actual process, you are required to drop the ER Return events first.
+Good idea with partitioning and grouping process into parts in Experiments 1-3. However, the finally selected process tree from Experiment 3 is stil invalid w.r.t. the initial part of the process, where registering a patient in ER Registration is a prerequisite for other activities (as registration puts the patient into the system). Then ER Triage and ER Sepsis Triage should run, as these activities classify and administer the following steps for the patient. The event log is noisy, and achieving this kind of structure requires stricter filtering of invalid/incomplete traces or reordering events (as many misordered events share the same or very similar timestamps)."
