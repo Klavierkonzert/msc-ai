@@ -1,5 +1,5 @@
-# allow traversing directories
-!*/
-
-!README.md
-!*.pdf
+# Ignore everything in sem-1 except PM
+/*
+!/PM/
+!/README.md
+!/.gitignore

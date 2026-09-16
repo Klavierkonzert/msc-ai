@@ -1,0 +1,18 @@
+# IDE, OS, and office lock files
+.vscode/
+.specstory/
+desktop.ini
+Thumbs.db
+~$*
+
+# Build targets and nested git folders
+target/
+**/target/
+**/WitcherQuest/.git/
+
+# Temporary scratch files and test artifacts
+scratch/
+test_*.png
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
