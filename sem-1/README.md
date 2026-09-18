@@ -1,10 +1,11 @@
 # Semester 1 Curriculum
-- **Process Mining**
+- **[Process Mining](./PM)**
   - Course covers topics in **Process Mining** (process models, data mining, discovery algorithms) and **Mathematical Programming**
-  - [Lab assignments](./Process%20Mining/)
-- Biologically-inspired Algorithms and Models
-    - Course covers topics in Combinatorial Optimisation and Evolutionary Design, focusing on advanced theory of Evolutionary Algorithms (EA)
-    - [Lab assignments](./BIA/)
+  - [Coursework Projects](./PM/Projects)
+  - Labs during classes
+- **[Biologically-inspired Algorithms and Models](./BIA)**
+    - Course covers topics in [Combinatorial Optimization](./BIA/Combinatorial%20Optimization) and [Evolutionary Design](./BIA/Evolutionary%20Design), focusing on advanced theory of Evolutionary Algorithms (EA)
+    - Lab assignments (see links above) and classes
 - **Machine Perception**
   - Course covers topics in computer vision, localisation and SLAM, and point clouds.
   - Course project - _Diffusion PPO in Franka Kitchen_ (robot performs 7 tasks vs. baseline 5) - https://github.com/Klavierkonzert/dppo/
