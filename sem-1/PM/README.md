@@ -1,72 +1,50 @@
-<div align="center">
-
 # Process Mining & Business Process Management (PM)
-### Master's Coursework — Artificial Intelligence (Semester 1)
-**Aliaksandr Kladneu**, Master's Student in Artificial Intelligence
+## Master's Coursework & Term Projects &bull; Semester 1
 
-</div>
+This repository contains the coursework notes, [3 term projects](./Projects/) and laboratory exercises for the **Process Mining & Business Process Management** curriculum. The subject covers the end-to-end lifecycle of process mining - from initial business workflow specification and process discovery algorithms to conformance checking and mathematical optimization.
 
----
 
-## Overview
+## Coursework & Curriculum Topics
 
-This repository contains the coursework, lab assignments, and term projects for the **Process Mining & Business Process Management** course. The curriculum covers the complete lifecycle of business process engineering:
-1. **Design & Execution**: Modeling executable business workflows using BPMN 2.0 and executing them in modern Business Process Management Systems (jBPM / KIE Workbench).
-2. **Process Discovery & Conformance**: Mining real-world event logs, discovering formal Petri nets and Process Trees, evaluating conformance metrics (Fitness, Precision, Generalization, Simplicity), and diagnosing operational bottlenecks (PM4Py, Fluxicon Disco).
-3. **Operational Optimization**: Formulating and solving discrete optimization problems in business workflows using mathematical constraint programming (MiniZinc).
+The course combines theoretical foundations with algorithmic implementations across the following core areas:
 
----
+1. Process Model Representations. Semantics & Verification
+   - **Formal Representations**: Transition Systems, Petri Nets, Workflow Nets (WF-nets), BPMN 2.0, Causal Nets (C-nets), and Process Trees.
+   - **Semantics & Properties**: Firing rules, reachability/coverability graphs, structural and behavioral **soundness**, liveness, boundedness, and process equivalence.
+   - **Model Verification & Performance**: Model-based verification, Key Performance Indicators (KPIs), temporal/delay analysis, bottleneck identification, and statistical reasoning on process knowledge models.
+
+2. Event Logs & Local Pattern Mining
+   - **Event Data Standards - IEEE XES**
+   - **Local Patterns Mining**: association rules, sequential patterns, and episodes using the _Apriori algorithm_.
+
+3. **Process Model Discovery**
+   - Problem formulation and the four quality criteria: **Fitness**, **Precision**, **Generalization**, and **Simplicity**.
+   - **Classical & Regional Miners**: $\alpha$-algorithm, state-based regions, language-based regions, and evolutionary/genetic algorithms.
+    - **Heuristics Miner**: Frequency-based dependency measures for robust causal net discovery under noise.
+    - **Inductive Miner**: Divide-and-conquer log partitioning guaranteeing sound, block-structured process trees.
+
+4. Conformance Checking & Model Evaluation
+     - **Approximate Conformance Techniques**: Footprint comparison matrices, naïve fitness, and Token-Based Replay (TBR).
+     - **Exact Conformance (Trace Alignments)**: Optimal synchronous, model, and log move alignments between event traces and process models.
+     - **Alignment-based calculations for Quality Metrics:** Fitness, Precision, and Generalization.
+
+5. Mathematical Modeling & Linear Programming (LP / MILP)
+   - Foundations of constrained optimization problems using Linear Programming (LP) and Mixed-Integer Linear Programming (MILP).
+   - **Algorithms & Solvers**: Simplex algorithm, Branch-and-Bound, and declarative modeling languages and solvers (MiniZinc).
+   - **Modeling Techniques**: Linearization of non-linear logic, indicator variables, Big-M constraints, and scheduling design patterns.
 
 ## Projects Overview
 
-| Project | Domain / Topic | Core Technologies | Description | Direct Link |
-| :--- | :--- | :--- | :--- | :---: |
-| **Project 1** | **Business Process Modeling**<br>*(The Witcher 3 Quest)* | **jBPM 7**, **BPMN 2.0**, Java, HTML Forms | Executable workflow model of the "Ghosts of the Past" narrative quest from *The Witcher 3: Wild Hunt*. Features 3 embedded sub-processes, XOR/AND/OR gateways, interactive user task forms, process variable state management, and timer boundary events. | [Open Project 1](Projects/Project%201%20-%20Business%20Process%20Modeling%20-%20The%20Witcher%20Quest/README.md) |
-| **Project 2** | **Process Discovery & Event Log Mining**<br>*(Hospital Sepsis Pathways)* | **PM4Py**, **Fluxicon Disco**, Python, Scikit-Learn | Comprehensive process mining audit on a clinical sepsis event log (1,050 patient traces). Implements Inductive Miner and Heuristics Miner (C-nets), compares raw vs. macro-path and grouped diagnostic sub-processes, performs Token-Based Replay (TBR) decision mining, and explores temporal bottlenecks in Disco. | [Open Project 2](Projects/Project%202%20-%20Event%20Log%20-%20Process%20Mining/README.md) |
-| **Project 3** | **Mathematical Modeling & Optimization**<br>*(Battery Storage & Microgrid Dispatch)* | **MiniZinc**, Constraint Programming, Python | Discrete constraint optimization model minimizing daily operational costs for an energy consumer with solar generation, grid interaction, and battery storage. Computes optimal charging, discharging, and peak-shaving schedules under dynamic pricing. | [Open Project 3](Projects/Project%203%20-%20Mathematical%20Modeling/README.md) |
+| Project | Domain / Topic | Core Technologies | Goal | Description & Key Deliverables |
+| :--- | :--- | :--- | :--- | :--- |
+| **[Project 1](Projects/Project%201%20-%20Business%20Process%20Modeling%20-%20The%20Witcher%20Quest/README.md)** | **Business Process Modeling**<br>*(The Witcher 3 Quest)* | **jBPM 7**, **BPMN 2.0**, Java, HTML Forms | Transform a complex branching video game narrative into an executable, stateful BPMN 2.0 process. | [Executable workflow model](Projects/Project%201%20-%20Business%20Process%20Modeling%20-%20The%20Witcher%20Quest/WitcherQuest.zip) of "Ghosts of the Past" from *The Witcher 3*. Implements 3 embedded sub-processes, XOR/AND/OR gateways, custom Java objects, interactive user task forms, process variable state management. |
+| **[Project 2](Projects/Project%202%20-%20Event%20Log%20-%20Process%20Mining/README.md)** | **Process Discovery & Event Log Mining**<br>*(Hospital Sepsis Pathways)* | **PM4Py**, **Fluxicon Disco**, Python, Scikit-Learn | Conduct an end-to-end process mining audit on a real-life hospital ERP event log of suspected sepsis cases. | [Audit report](./Projects/Project%202%20-%20Event%20Log%20-%20Process%20Mining/report.pdf) of 1,050 clinical patient traces. [Event log analysis](./Projects/Project%202%20-%20Event%20Log%20-%20Process%20Mining/event_log_analysis.ipynb) features three-tier preprocessing (baseline, macro-path filtering, diagnostic panel aggregation), process model discovery using Heuristics Miner (C-nets), Inductive Miner (Process Trees) and Fuzzy Miner (in Disco), Token-Based Replay (TBR) decision mining, conformance checking, and explores temporal bottlenecks.
+| **[Project 3](Projects/Project%203%20-%20Mathematical%20Modeling/README.md)** | **Mathematical Modeling & Optimization**<br>*(Battery Storage & Microgrid Dispatch)* | **MiniZinc**, MILP / Constraint Programming, Python | Formulate and solve an energy management constraint optimization problem using MiniZinc. | Discrete constraint optimization [model](Projects/Project%203%20-%20Mathematical%20Modeling/model.mzn) minimizing operating costs for an energy consumer with solar PV generation, dynamic grid pricing, and battery storage (BESS). Enforces AC bus power balance, battery degradation wear costs, peak-shaving, and non-negative sales.|
 
----
+## Laboratory Exercises ([`Labs/`](./Labs/))
 
-## Project Summaries
-
-### [Project 1: Business Process Modeling — The Witcher Quest](Projects/Project%201%20-%20Business%20Process%20Modeling%20-%20The%20Witcher%20Quest/README.md)
-* **Goal**: Transform a complex branching video game narrative into an executable, stateful BPMN 2.0 process.
-* **Key Components**:
-  - **Sub-process Decomposition**: Segmented into *The Farmstead*, *Finding Louis*, and *Dealing with Bounty Hunters*.
-  - **Decision Points & Concurrency**: OR-splits for concurrent looting during timed pursuit, XOR branches for combat and narrative choices, and AND joins for synchronized task completion.
-  - **State & Data Objects**: Custom Java data class `Quest` managing inventory (`loot`) and cumulative rewards (`totalReward`).
-  - **Interactive Forms**: Task forms for user choices, dialogue branching, and perception inputs (`triggeredTraps`).
-* **Artifacts**: Standalone [`Quest.bpmn`](Projects/Project%201%20-%20Business%20Process%20Modeling%20-%20The%20Witcher%20Quest/Quest.bpmn), packaged deployment [`WitcherQuest.zip`](Projects/Project%201%20-%20Business%20Process%20Modeling%20-%20The%20Witcher%20Quest/WitcherQuest.zip), and detailed visual documentation.
-
----
-
-### [Project 2: Event Log and Process Model Discovery](Projects/Project%202%20-%20Event%20Log%20-%20Process%20Mining/README.md)
-* **Goal**: Perform an end-to-end process mining audit on a real-life hospital ERP event log of patients presenting with suspected sepsis.
-* **Key Components**:
-  - **Three-Tier Process Discovery**:
-    1. *Baseline*: Raw log discovery highlighting the "spaghetti effect" caused by repeated ambient laboratory draws.
-    2. *Macro-Path Abstraction*: Filtering ambient blood tests to reveal the clean organizational spine ($F_1 > 0.92$).
-    3. *Pattern Sub-Process Aggregation*: Grouping contiguous blood draws into a `Diagnostic Lab Panel` sub-process, achieving a sound, clinically complete Process Tree ($F_1 = 0.8697$).
-  - **Decision Mining (TBR Classifiers)**: Token-based replay mapping clinical intake attributes (`InfectionSuspected`, `Hypotensie`, `Age`) to downstream routing splits (`Admission IC` vs. `Admission NC` vs. outpatient discharge).
-  - **Disco Process Map & Bottleneck Analysis**: Directly-Follows Graph (DFG) frequency and delay analysis exposing the 2.5-hour ER boarding bottleneck and the 47.3-day outpatient relapse window.
-* **Artifacts**: Executable Jupyter Notebook [`event_log_analysis.ipynb`](Projects/Project%202%20-%20Event%20Log%20-%20Process%20Mining/event_log_analysis.ipynb), event log [`Sepsis.xes`](Projects/Project%202%20-%20Event%20Log%20-%20Process%20Mining/Sepsis.xes), process models, and formal report.
-
----
-
-### [Project 3: Mathematical Modeling](Projects/Project%203%20-%20Mathematical%20Modeling/README.md)
-* **Goal**: Formulate and solve an energy management constraint optimization problem using MiniZinc.
-* **Key Components**:
-  - **Objective**: Minimize total operating cost (grid purchase costs + battery degradation costs − feed-in earnings).
-  - **Constraints**: Battery State of Charge (SoC) balance, charge/discharge efficiency limits, grid intake caps, and peak-shaving thresholds.
-  - **Validation**: Time-series visualization of generation, consumption, battery dynamics, and economic dispatch across all optimization periods.
-* **Artifacts**: MiniZinc model [`model.mzn`](Projects/Project%203%20-%20Mathematical%20Modeling/model.mzn), data instance [`data.dzn`](Projects/Project%203%20-%20Mathematical%20Modeling/data.dzn), output schedule [`solution.csv`](Projects/Project%203%20-%20Mathematical%20Modeling/solution.csv), and analytical report [`README.md`](Projects/Project%203%20-%20Mathematical%20Modeling/README.md).
-
----
-
-## Laboratory Assignments (`Labs/`)
-
-The [`Labs/`](Labs/) directory contains hands-on practical exercises exploring fundamental process mining algorithms:
+Hands-on exercises and practical implementations throughout the semester:
 - **`LW1`**: Introduction to process modeling and workflow simulation.
-- **`LW5`**: Event log analysis and exploratory data statistics (`teleclaims.xes`).
+- **`LW5`**: Event log exploration and data statistics (`teleclaims.xes`).
 - **`06_Alpha_algorithm`**: Implementation and evaluation of the classic $\alpha$-miner algorithm and footprint matrices.
-- **`LW9` & `LW10`**: Mathematical programming and discrete optimization exercises in MiniZinc.
+- **`LW9` & `LW10`**: Mathematical programming, linearization techniques, and discrete optimization in MiniZinc.
