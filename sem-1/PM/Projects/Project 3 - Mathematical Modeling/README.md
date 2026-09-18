@@ -1,13 +1,5 @@
-<div align="center">
-
 # Project 3: Mathematical Modeling (Linear Programming)
 **Microgrid Dispatch & Battery Energy Storage Optimization**
-
-Aliaksandr Kladneu, Master's Student &bull; Process Mining
-
-</div>
-
----
 
 ## 1. Project Overview & Problem Statement
 
@@ -25,7 +17,12 @@ where:
 - $\text{cost}_{\text{battery\_wear}}(t) = P_{\text{charge}}(t) \cdot c_{\text{wear}}$
 - $\text{revenue}_{\text{grid\_sales}}(t) = P_{\text{sold}}(t) \cdot c_{\text{sell}}(t)$
 
----
+The input data should be downloaded prior execution of the model:
+
+```bash
+# Using curl (Linux / macOS / Windows)
+curl -o data.dzn https://www.cs.put.poznan.pl/tpawlak/files/EP/power/power0.dzn
+```
 
 ## 2. Methodology & Constraints
 
@@ -45,8 +42,6 @@ The optimization model is implemented in **MiniZinc** and solved as a Mixed-Inte
 
 > The executable MiniZinc model code is available in [model.mzn](model.mzn).
 
----
-
 ## 3. Results & Time Series Analysis
 
 ```text
@@ -62,7 +57,6 @@ The generated time series plot shows the interplay between dynamic market prices
 
 ![Energy Schedule Time Series](timeseries.png)
 
----
 
 ## 4. Known Issues & Future Improvements
 
