@@ -1,5 +1,17 @@
-# allow traversing directories
-!*/
+# Ignore IDE and temporary cache files across all courses
+**/.vscode/
+**/.specstory/
+**/scratch/
+**/__pycache__/
+*.pyc
+.ipynb_checkpoints/
+desktop.ini
+Thumbs.db
+~$*
 
-!README.md
-!*.pdf
+# Allow all course directories in sem-1
+/*
+!/PM/
+!/BIA/
+!/README.md
+!/.gitignore
