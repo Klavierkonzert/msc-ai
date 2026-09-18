@@ -1,0 +1,37 @@
+# Ignore everything
+*
+
+# Allow directories traversal
+!*/
+
+# Allow folders
+!assignments/
+!scripts/
+!scripts/*
+
+# Allow external libraries
+!external/**
+
+# Allow CMakeLists.txt and README.md
+!CMakeLists.txt
+!README.md
+!requirements.txt
+!setup.*
+
+# except these files
+!.gitignore
+!CMakeLists.txt
+
+# Allow assignments folder and its contents (reports)
+!assignments/**/*.pdf
+!assignments/**/*.md
+!assignments/**/*.png
+!assignments/**/*.txt
+
+
+# Track gitignore itself
+!.gitignore
+
+# allow VS C++ config
+!.vscode/launch.json
+!.vscode/tasks.json

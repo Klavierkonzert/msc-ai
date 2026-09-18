@@ -1,0 +1,376 @@
+Argument values: path=C:\Users\alex3\Projects\AI sem 1\sem-1\BIA\Evolutionary Design\Framsticks55, lib=None, sim=eval-allcriteria.sim;deterministic.sim;sample-period-2.sim;only-body.sim;uneven-ground.sim, genformat=4, initialgenotype=None, opt=vertpos, popsize=100, generations=300, tournament=10, pmut=0.9, pxov=0.2, hof_size=1, hof_savefile=C:\Users\alex3\Projects\AI sem 1\sem-1\BIA\Evolutionary Design\runs\2026-09-07_224747\gens\HoF-f4-6.gen, save_stats=C:\Users\alex3\Projects\AI sem 1\sem-1\BIA\Evolutionary Design\stats, max_numparts=30, max_numjoints=None, max_numneurons=None, max_numconnections=None, max_numgenochars=None
+Using Framsticks version: 5.5
+Home (writable) dir     : C:\Users\alex3\Projects\AI sem 1\sem-1\BIA\Evolutionary Design\Framsticks55\data
+Resources dir           : C:\Users\alex3\Projects\AI sem 1\sem-1\BIA\Evolutionary Design\Framsticks55\data
+
+Available objects: ['CheckpointEvent', 'Collision', 'CrCollision', 'Creature', 'CreatureSettings', 'CreatureSignals', 'CreatureSnapshot', 'Dictionary', 'ExpProperties', 'ExpState', 'ExtValue', 'File', 'FunctionReference', 'GenMan', 'GenManStats', 'GenePool', 'GenePools', 'Geno', 'GenoConverters', 'Genotype', 'Interface', 'Joint', 'Loader', 'Math', 'MechJoint', 'MechPart', 'MessageCatcher', 'Model', 'ModelGeometry', 'ModelSymmetry', 'Neuro', 'NeuroClass', 'NeuroClassLibrary', 'NeuroDef', 'NeuroSignals', 'NeuronsSimEnabled', 'ODE', 'Orient', 'Part', 'Population', 'Populations', 'Ref', 'Signal', 'SignalView', 'SimilMeasure', 'SimilMeasureDistribution', 'SimilMeasureGreedy', 'SimilMeasureHungarian', 'Simulator', 'SlaveSimulators', 'StopEvent', 'String', 'UserScripts', 'Vector', 'WireframeAppearance', 'World', 'WorldMap', 'WorldSignals', 'XYZ', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'c_api', 'ctypes', 'home_dir', 'init', 'os', 're', 'res_dir', 'sim_params', 'stats', 'sys']
+
+Basic tests OK. Using settings: ['eval-allcriteria.sim', 'deterministic.sim', 'sample-period-2.sim', 'only-body.sim', 'uneven-ground.sim']
+
+Simulator.load: Loading from 'eval-allcriteria.sim'
+Loader.load: Comments read from file follow:
+Loader.load:  Sample settings for evaluating many criteria of performance of a Framsticks creature.
+Loader.load:  See the "evalcount" parameter if you want to speed the evaluation up or have a more stable result.
+Loader.load:  Other important parameters are "Energy0" and "perfperiod".
+Loader.load:  Put this file in the "data" subdirectory within the Framsticks distribution.
+Simulator.load: Loaded genepool settings, 2 population settings, simulator settings from 'eval-allcriteria.sim'
+Simulator.load: Loading from 'deterministic.sim'
+Loader.load: Comments read from file follow:
+Loader.load:  Parameter values that make the evaluation of a Framsticks creature deterministic.
+Loader.load:  The values turn off random noise, so evaluation of the same genotype will always yield the same performance.
+Loader.load:  The advantage is that you do not need to evaluate a genotype many times, and performance values are reliable.
+Loader.load:  The disadvantage is that evolved creatures are "overfitting", i.e. rely entirely on the specific environment,
+Loader.load:  and their behavior may be different in any other environment or (even slightly) changed conditions or parameter values,
+Loader.load:  so each creature evolved using these settings must be later inspected using exactly the same setup.
+Loader.load: 
+Loader.load:  Before loading this file, load base settings, e.g. "eval-allcriteria.sim".
+Loader.load:  Put this file in the "data" subdirectory within the Framsticks distribution.
+Simulator.load: Loaded simulator settings from 'deterministic.sim'
+Simulator.load: Loading from 'sample-period-2.sim'
+Loader.load: Comments read from file follow:
+Loader.load:  Very low "performance sampling period" in the first population to sample performance very often during lifespan
+Loader.load:  and avoid overlooking some behavior. Averaged performance of sampled values is returned as the final value.
+Loader.load:  See http://www.framsticks.com/a/al_params.html#exper-perfcalc
+Loader.load: 
+Loader.load:  Before loading this file, load base settings, e.g. "eval-allcriteria.sim".
+Loader.load:  Put this file in the "data" subdirectory within the Framsticks distribution.
+Simulator.load: Loaded population settings from 'sample-period-2.sim'
+Simulator.load: Loading from 'only-body.sim'
+Loader.load: Comments read from file follow:
+Loader.load:  Turns off mutations in f0, f1, f4, fH related to brain (disables adding and modifying neurons)
+Simulator.load: Loaded simulator settings from 'only-body.sim'
+Simulator.load: Loading from 'uneven-ground.sim'
+Loader.load: Comments read from file follow:
+Loader.load:  Produces a microscopically uneven underlying heightfield, where the resting height ("vertpos") is sensitive to the shape of structures,
+Loader.load:  because individual Parts settle at different elevations depending on the (world-centered) geometry of the structure.
+Simulator.load: Loaded simulator settings from 'uneven-ground.sim'
+gen	nevals	avg         	stddev    	min         	max         
+0  	100   	-0.000966667	1.0842e-19	-0.000966667	-0.000966667
+1  	93    	-0.000964   	9.04311e-06	-0.000966667	-0.000933333
+2  	91    	-0.000944   	2.04831e-05	-0.000966667	-0.000866667
+3  	92    	-0.000913667	2.3615e-05 	-0.000966667	-0.000866667
+4  	93    	-0.000878667	2.42762e-05	-0.000966667	-0.000833333
+5  	95    	-0.000855667	3.16421e-05	-0.000966667	-0.0007     
+6  	93    	0.00106866  	0.0132708  	-0.000966667	0.104122    
+7  	95    	0.011349    	0.0318278  	-0.0009     	0.127991    
+8  	97    	0.0602816   	0.0593492  	-0.000933333	0.314805    
+9  	92    	0.122867    	0.0943116  	-0.0009     	0.39474     
+10 	97    	0.223713    	0.126828   	-0.000833333	0.553447    
+11 	93    	0.279161    	0.161357   	-0.0009     	0.671581    
+12 	94    	0.343386    	0.19273    	-0.0009     	0.714053    
+13 	94    	0.443597    	0.196204   	-0.000933333	0.763285    
+14 	92    	0.41568     	0.26479    	-0.000933333	0.805143    
+15 	88    	0.540047    	0.24759    	-0.000933333	0.842236    
+16 	91    	0.525207    	0.284772   	-0.000933333	0.916453    
+17 	95    	0.611839    	0.258129   	-0.000766667	0.933698    
+18 	91    	0.580911    	0.329954   	-0.000933333	0.946379    
+19 	94    	0.579246    	0.370179   	-0.000966667	1.11725     
+20 	99    	0.510861    	0.398275   	-0.000933333	1.20032     
+21 	89    	0.627838    	0.398819   	-0.000833333	1.20669     
+22 	91    	0.617559    	0.423097   	-0.0009     	1.20669     
+23 	90    	0.867132    	0.345903   	-0.000866667	1.24121     
+24 	88    	0.904132    	0.392522   	-0.0009     	1.24207     
+25 	89    	0.908991    	0.353386   	0.0742219   	1.25381     
+26 	94    	0.904536    	0.37305    	-0.0009     	1.27628     
+27 	88    	0.984687    	0.340724   	-0.000733333	1.28473     
+28 	92    	0.968341    	0.377875   	-0.0007     	1.34367     
+29 	97    	0.972102    	0.407893   	-0.000866667	1.36192     
+30 	91    	0.949102    	0.428839   	-0.0008     	1.36192     
+31 	91    	0.946912    	0.43659    	-0.000966667	1.36192     
+32 	93    	0.906973    	0.461452   	-0.0009     	1.36791     
+33 	92    	0.962715    	0.449555   	-0.000966667	1.40914     
+34 	89    	0.911963    	0.470931   	-0.000933333	1.41255     
+35 	94    	0.98329     	0.448416   	-0.000966667	1.41255     
+36 	94    	0.981632    	0.480344   	-0.000966667	1.43977     
+37 	95    	0.884515    	0.49689    	-0.0008     	1.4412      
+38 	92    	1.02125     	0.463865   	0.0367845   	1.44828     
+39 	88    	1.02877     	0.500076   	-0.000933333	1.47282     
+40 	95    	0.985674    	0.522058   	-0.000933333	1.49889     
+41 	88    	1.07835     	0.486244   	-0.000966667	1.5039      
+42 	94    	1.05429     	0.485694   	-0.000833333	1.52162     
+43 	89    	1.11278     	0.468121   	0.0351982   	1.55118     
+44 	90    	1.02954     	0.552228   	-0.000966667	1.5526      
+45 	92    	1.16417     	0.492134   	-0.000966667	1.55986     
+46 	92    	1.16673     	0.476798   	0.0623867   	1.56524     
+47 	89    	1.05885     	0.501483   	-0.000966667	1.58534     
+48 	94    	1.20389     	0.493858   	-0.000966667	1.58534     
+49 	90    	1.23058     	0.44278    	0.0499691   	1.58545     
+50 	93    	1.07477     	0.526323   	0.0289886   	1.59267     
+51 	91    	1.12877     	0.503143   	-0.000966667	1.59858     
+52 	91    	1.12673     	0.520502   	0.0503026   	1.60993     
+53 	89    	1.14328     	0.545535   	-0.000966667	1.6149      
+54 	92    	1.06234     	0.540513   	-0.000966667	1.62985     
+55 	95    	1.148       	0.508094   	0.0340518   	1.62985     
+56 	94    	1.12542     	0.517478   	-0.0008     	1.63866     
+57 	93    	1.13097     	0.489063   	0.0506753   	1.66108     
+58 	94    	1.26093     	0.420004   	0.0806831   	1.66108     
+59 	91    	1.22428     	0.391583   	0.36311     	1.66785     
+60 	89    	1.32836     	0.417717   	0.107921    	1.67661     
+61 	96    	1.1824      	0.439712   	0.0502686   	1.68796     
+62 	95    	1.2839      	0.462141   	-0.000866667	1.68677     
+63 	93    	1.27781     	0.457483   	0.0558996   	1.68677     
+64 	93    	1.33547     	0.394224   	0.0988514   	1.68937     
+65 	91    	1.30143     	0.442573   	-0.0008     	1.69366     
+66 	91    	1.23964     	0.469373   	0.0290259   	1.69366     
+67 	92    	1.2705      	0.465708   	-0.000933333	1.69366     
+68 	96    	1.23554     	0.42325    	-0.000966667	1.6978      
+69 	95    	1.34475     	0.401191   	0.363729    	1.69824     
+70 	97    	1.22979     	0.472862   	0.0372705   	1.70035     
+71 	92    	1.27029     	0.414231   	0.361564    	1.70554     
+72 	90    	1.34269     	0.385257   	0.156274    	1.70814     
+73 	91    	1.37525     	0.396676   	0.268493    	1.71234     
+74 	95    	1.27553     	0.439912   	-0.000933333	1.71016     
+75 	91    	1.33489     	0.418061   	0.373931    	1.71234     
+Selection: ignoring 2 infeasible solutions in a population of size 100
+76 	93    	1.33177     	0.447786   	-0.000866667	1.71271     
+77 	93    	1.33344     	0.453079   	0.0440373   	1.71271     
+78 	90    	1.35926     	0.478589   	-0.000933333	1.71463     
+79 	91    	1.35356     	0.445043   	-0.000966667	1.71489     
+80 	91    	1.38976     	0.414322   	0.289076    	1.71575     
+81 	90    	1.42659     	0.41749    	0.0507778   	1.71575     
+82 	92    	1.45194     	0.352313   	0.0803855   	1.72324     
+83 	88    	1.34149     	0.429104   	0.143075    	1.72324     
+84 	97    	1.38935     	0.432752   	-0.000933333	1.72325     
+85 	91    	1.40011     	0.437619   	0.0889611   	1.72457     
+86 	93    	1.34377     	0.452718   	0.0807629   	1.7253      
+Selection: ignoring 1 infeasible solution in a population of size 100
+87 	92    	1.38189     	0.459293   	-0.0009     	1.7253      
+88 	89    	1.3838      	0.417263   	0.277392    	1.7255      
+89 	91    	1.36283     	0.452024   	0.0803056   	1.72564     
+90 	91    	1.45048     	0.379666   	0.0674937   	1.7267      
+91 	91    	1.43931     	0.396354   	0.0831127   	1.73902     
+92 	94    	1.3799      	0.407374   	0.277463    	1.7457      
+93 	86    	1.33098     	0.422896   	0.0988585   	1.7457      
+94 	91    	1.37809     	0.415248   	0.203243    	1.74623     
+Selection: ignoring 1 infeasible solution in a population of size 100
+95 	85    	1.33298     	0.429196   	0.120787    	1.74632     
+96 	84    	1.37879     	0.471537   	0.0460672   	1.74642     
+97 	92    	1.3093      	0.43452    	0.0945854   	1.75055     
+98 	96    	1.38313     	0.401779   	0.20301     	1.75055     
+99 	96    	1.46255     	0.382873   	0.409197    	1.75586     
+100	90    	1.438       	0.407166   	0.397281    	1.75971     
+101	94    	1.38121     	0.441462   	-0.000866667	1.75971     
+102	91    	1.30455     	0.469761   	0.072611    	1.76266     
+103	91    	1.37667     	0.429703   	0.114102    	1.76518     
+104	92    	1.35512     	0.448112   	-0.000933333	1.81084     
+105	90    	1.4136      	0.47424    	-0.000966667	1.81103     
+106	95    	1.37467     	0.472317   	0.136989    	1.81996     
+Selection: ignoring 1 infeasible solution in a population of size 100
+107	90    	1.39386     	0.473579   	-0.000966667	1.81996     
+108	94    	1.48557     	0.406324   	0.20452     	1.828       
+109	91    	1.5449      	0.406906   	0.30837     	1.828       
+110	89    	1.40802     	0.503089   	0.0931936   	1.82929     
+111	92    	1.38843     	0.505179   	-0.000966667	1.83145     
+112	93    	1.45387     	0.454934   	0.122168    	1.83184     
+113	88    	1.36775     	0.505245   	0.0910393   	1.83184     
+Selection: ignoring 1 infeasible solution in a population of size 100
+114	91    	1.4715      	0.472246   	0.368948    	1.83479     
+115	92    	1.40294     	0.460093   	0.507607    	1.83454     
+116	86    	1.5285      	0.430687   	0.239177    	1.83482     
+117	90    	1.48712     	0.456989   	0.202455    	1.83557     
+118	97    	1.4248      	0.453436   	-0.000966667	1.83601     
+119	93    	1.38895     	0.51919    	-0.000966667	1.83717     
+120	92    	1.4626      	0.43714    	0.587385    	1.83717     
+121	84    	1.51177     	0.480435   	-0.000966667	1.83814     
+122	93    	1.43087     	0.464946   	0.374889    	1.83941     
+123	91    	1.43362     	0.492182   	-0.000933333	1.83972     
+124	89    	1.39628     	0.484606   	0.461196    	1.83974     
+125	97    	1.321       	0.50581    	0.119875    	1.83974     
+126	90    	1.41573     	0.483884   	0.119875    	1.83988     
+127	88    	1.44922     	0.455618   	0.48674     	1.84021     
+128	90    	1.46537     	0.476093   	-0.0009     	1.8444      
+129	93    	1.48996     	0.475469   	0.351082    	1.84445     
+130	93    	1.46047     	0.470003   	0.0231088   	1.84453     
+131	96    	1.42599     	0.463436   	0.141565    	1.85463     
+132	89    	1.4308      	0.474746   	0.0737758   	1.85463     
+133	90    	1.45685     	0.449968   	0.457992    	1.86061     
+134	93    	1.46127     	0.482768   	-0.000966667	1.86061     
+135	92    	1.43245     	0.494692   	0.0640612   	1.86294     
+136	96    	1.41722     	0.484404   	0.184386    	1.86294     
+137	90    	1.46217     	0.513063   	0.151985    	1.86494     
+138	88    	1.48524     	0.464979   	0.458756    	1.86494     
+139	94    	1.43913     	0.483114   	0.270003    	1.86895     
+140	91    	1.48783     	0.488963   	0.165235    	1.86937     
+141	91    	1.46157     	0.497459   	-0.000966667	1.86937     
+Selection: ignoring 1 infeasible solution in a population of size 100
+142	95    	1.47464     	0.479399   	0.149538    	1.86965     
+Selection: ignoring 1 infeasible solution in a population of size 100
+143	92    	1.53024     	0.466389   	0.44764     	1.87052     
+144	94    	1.43711     	0.511755   	0.0458562   	1.87052     
+Selection: ignoring 1 infeasible solution in a population of size 100
+145	92    	1.52036     	0.46773    	-0.0009     	1.87074     
+146	92    	1.4767      	0.496052   	-0.000966667	1.87452     
+147	97    	1.43915     	0.490955   	0.185961    	1.87473     
+148	91    	1.47616     	0.497139   	0.467476    	1.87473     
+149	95    	1.53474     	0.444119   	0.479836    	1.87473     
+150	94    	1.4947      	0.456883   	0.480684    	1.87701     
+151	95    	1.37207     	0.541944   	-0.000833333	1.87701     
+Selection: ignoring 1 infeasible solution in a population of size 100
+152	95    	1.4061      	0.510043   	-0.000933333	1.87701     
+153	85    	1.47621     	0.478537   	-0.000966667	1.87701     
+154	95    	1.38342     	0.505586   	0.165217    	1.87701     
+155	88    	1.43417     	0.475881   	0.380051    	1.87701     
+156	91    	1.41613     	0.476745   	0.416076    	1.87701     
+157	96    	1.43647     	0.493694   	0.380015    	1.87701     
+158	89    	1.46276     	0.491932   	0.101761    	1.87817     
+159	94    	1.47906     	0.449521   	0.599024    	1.87817     
+160	95    	1.45242     	0.498103   	0.151738    	1.87973     
+161	93    	1.44777     	0.51073    	-0.000966667	1.8805      
+162	94    	1.46723     	0.505229   	-0.000966667	1.8805      
+Selection: ignoring 1 infeasible solution in a population of size 100
+163	97    	1.41857     	0.490364   	0.0727754   	1.88108     
+164	89    	1.43367     	0.509171   	0.041755    	1.88276     
+165	91    	1.46199     	0.509766   	-0.000966667	1.88333     
+166	92    	1.43939     	0.520015   	-0.000866667	1.8836      
+167	94    	1.45621     	0.508075   	0.386169    	1.884       
+168	87    	1.47912     	0.503138   	0.0731087   	1.884       
+169	89    	1.5081      	0.509316   	-0.0009     	1.884       
+170	85    	1.49375     	0.485114   	0.385745    	1.88969     
+171	96    	1.38014     	0.510159   	0.381074    	1.88969     
+172	94    	1.33782     	0.525397   	0.0932379   	1.88969     
+173	93    	1.47253     	0.510747   	0.460319    	1.88969     
+174	94    	1.42865     	0.537241   	-0.000966667	1.88969     
+175	90    	1.39465     	0.498039   	0.483511    	1.88969     
+176	96    	1.45977     	0.515159   	0.37657     	1.88969     
+177	94    	1.48109     	0.488209   	0.260482    	1.88969     
+178	88    	1.45535     	0.479372   	-0.000966667	1.88969     
+179	93    	1.40201     	0.536556   	0.0452365   	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+180	96    	1.43655     	0.510056   	0.109685    	1.88969     
+181	85    	1.4045      	0.522755   	0.141876    	1.88969     
+182	91    	1.45851     	0.494504   	-0.000966667	1.88969     
+183	93    	1.48742     	0.506219   	-0.000966667	1.88969     
+184	91    	1.51761     	0.478736   	0.0703983   	1.88969     
+185	96    	1.46128     	0.498464   	0.0618013   	1.88969     
+186	96    	1.37476     	0.50472    	0.478808    	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+187	95    	1.39987     	0.54273    	0.0698119   	1.88969     
+188	91    	1.37403     	0.561528   	0.093987    	1.88969     
+189	94    	1.46346     	0.471033   	0.343987    	1.88969     
+190	92    	1.342       	0.530185   	0.0295827   	1.88969     
+191	90    	1.3968      	0.568692   	-0.000933333	1.88969     
+192	92    	1.40743     	0.537101   	-0.000966667	1.88969     
+193	91    	1.43709     	0.501614   	0.241489    	1.88969     
+194	89    	1.44147     	0.499902   	0.0938197   	1.88969     
+195	84    	1.35315     	0.571382   	-0.000966667	1.88969     
+196	89    	1.42048     	0.54676    	0.0933157   	1.88969     
+197	93    	1.43237     	0.527128   	0.374304    	1.88969     
+198	90    	1.38728     	0.55058    	-0.000966667	1.88969     
+199	94    	1.44022     	0.519458   	0.343939    	1.88969     
+200	95    	1.35985     	0.521131   	-0.0009     	1.88969     
+201	91    	1.35263     	0.531627   	-0.000966667	1.88969     
+202	92    	1.46913     	0.529014   	-0.000933333	1.88969     
+203	91    	1.41895     	0.509629   	0.183197    	1.88969     
+204	95    	1.29993     	0.520328   	0.0615688   	1.88969     
+205	85    	1.47821     	0.504901   	-0.000933333	1.88969     
+206	94    	1.40018     	0.515588   	0.380236    	1.88969     
+207	89    	1.45863     	0.52095    	-0.000966667	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+208	93    	1.48506     	0.534039   	-0.000933333	1.88969     
+209	94    	1.48409     	0.507111   	0.0931744   	1.88969     
+210	90    	1.39442     	0.537707   	0.0618518   	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+211	93    	1.40274     	0.521402   	-0.000966667	1.88969     
+212	88    	1.43284     	0.528725   	-0.000866667	1.88969     
+213	85    	1.49585     	0.508701   	0.0902812   	1.88969     
+214	94    	1.46801     	0.493587   	-0.000966667	1.88969     
+215	95    	1.4543      	0.499386   	0.128098    	1.88969     
+216	92    	1.35146     	0.491115   	0.379942    	1.88969     
+217	95    	1.3574      	0.51716    	0.36943     	1.88969     
+218	93    	1.46342     	0.473082   	0.478294    	1.88969     
+219	90    	1.51993     	0.513082   	0.00802867  	1.88969     
+220	95    	1.39043     	0.534562   	-0.000966667	1.88969     
+221	90    	1.55272     	0.476839   	0.377344    	1.88969     
+222	92    	1.51568     	0.500204   	0.0710217   	1.88969     
+223	93    	1.369       	0.53582    	0.0932982   	1.88969     
+224	92    	1.42518     	0.547593   	0.00327617  	1.88969     
+225	94    	1.45387     	0.525358   	0.0929484   	1.88969     
+226	90    	1.55053     	0.479385   	0.0934608   	1.88969     
+227	90    	1.41763     	0.520906   	-0.000833333	1.88969     
+228	91    	1.47916     	0.521252   	0.00719466  	1.88969     
+229	86    	1.41107     	0.564733   	-0.000966667	1.88969     
+Selection: ignoring 2 infeasible solutions in a population of size 100
+230	91    	1.47159     	0.515759   	0.0902687   	1.88969     
+231	98    	1.4471      	0.519702   	0.229033    	1.88969     
+232	90    	1.40336     	0.53331    	0.252062    	1.88969     
+233	89    	1.49564     	0.520435   	-0.0008     	1.88969     
+234	91    	1.46301     	0.5528     	-0.000966667	1.88969     
+235	92    	1.49387     	0.531734   	-0.000966667	1.88969     
+236	93    	1.37687     	0.540142   	0.0910221   	1.88969     
+237	92    	1.44232     	0.502809   	0.379752    	1.88969     
+238	90    	1.51324     	0.486293   	0.379796    	1.88969     
+239	92    	1.44524     	0.524657   	-0.000966667	1.88969     
+240	92    	1.39973     	0.500732   	0.385244    	1.88969     
+241	94    	1.38883     	0.554039   	0.0932889   	1.88969     
+242	92    	1.45117     	0.479604   	0.46594     	1.88969     
+243	87    	1.6071      	0.442739   	0.475045    	1.88969     
+244	91    	1.46952     	0.509102   	0.161955    	1.88969     
+245	90    	1.40565     	0.556259   	0.0682885   	1.88969     
+246	91    	1.48751     	0.485124   	0.379516    	1.88969     
+247	91    	1.43844     	0.536242   	-0.000966667	1.88969     
+248	90    	1.50089     	0.511481   	-0.000966667	1.88969     
+249	92    	1.38968     	0.552543   	-0.000966667	1.88969     
+250	95    	1.44457     	0.522066   	0.00829243  	1.88969     
+251	95    	1.40298     	0.50476    	0.140722    	1.88969     
+252	90    	1.51894     	0.491419   	0.345295    	1.88969     
+253	93    	1.47973     	0.495914   	-0.000933333	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+254	91    	1.42011     	0.495072   	0.387114    	1.88969     
+255	93    	1.47486     	0.498174   	0.3863      	1.88969     
+256	92    	1.44516     	0.538318   	0.0934963   	1.88969     
+257	97    	1.42943     	0.507758   	0.348044    	1.88969     
+258	97    	1.42447     	0.537637   	-0.0009     	1.88969     
+259	93    	1.4612      	0.515162   	0.140996    	1.88969     
+260	94    	1.48905     	0.51765    	-0.0008     	1.88969     
+261	92    	1.40974     	0.533898   	0.0736636   	1.88969     
+262	89    	1.46106     	0.517905   	-0.000933333	1.88969     
+263	93    	1.59922     	0.431519   	0.476786    	1.88969     
+264	90    	1.41692     	0.515059   	0.380946    	1.88969     
+265	93    	1.4596      	0.517675   	0.0750191   	1.88969     
+266	92    	1.46141     	0.481281   	0.341464    	1.88969     
+267	94    	1.36897     	0.521724   	0.136897    	1.88969     
+268	94    	1.48429     	0.537409   	-0.000933333	1.88969     
+269	91    	1.52197     	0.503275   	-0.000933333	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+270	92    	1.45922     	0.540077   	0.0938911   	1.88969     
+271	91    	1.59716     	0.457914   	0.397778    	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+272	95    	1.51178     	0.48931    	0.387324    	1.88969     
+273	89    	1.43884     	0.53838    	-0.000966667	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+274	87    	1.53783     	0.489789   	0.0726578   	1.88969     
+275	90    	1.4302      	0.504038   	0.0443505   	1.88969     
+276	96    	1.40557     	0.50843    	0.155708    	1.88969     
+277	90    	1.47913     	0.520558   	0.173318    	1.88969     
+278	92    	1.40614     	0.534179   	0.0932819   	1.88969     
+279	96    	1.51494     	0.487659   	0.464538    	1.88969     
+280	91    	1.53194     	0.502962   	-0.000933333	1.88969     
+281	94    	1.43628     	0.504431   	0.386315    	1.88969     
+282	96    	1.40849     	0.55835    	0.0845186   	1.88969     
+283	90    	1.47772     	0.528942   	-0.000966667	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+284	90    	1.45454     	0.504119   	-0.000966667	1.88969     
+285	89    	1.43279     	0.542203   	-0.000933333	1.88969     
+286	95    	1.44435     	0.528941   	0.0896759   	1.88969     
+287	91    	1.3656      	0.512964   	0.266824    	1.88969     
+288	88    	1.52278     	0.489726   	0.464797    	1.88969     
+289	92    	1.50522     	0.464181   	0.382748    	1.88969     
+Selection: ignoring 2 infeasible solutions in a population of size 100
+290	88    	1.466       	0.493511   	-0.000933333	1.88969     
+291	91    	1.48688     	0.511215   	0.0607704   	1.88969     
+292	93    	1.50397     	0.465292   	0.679812    	1.88969     
+293	96    	1.40614     	0.550209   	-0.000966667	1.88969     
+294	89    	1.46511     	0.550728   	-0.000966667	1.88969     
+295	95    	1.38704     	0.495234   	0.466155    	1.88969     
+296	93    	1.53383     	0.476976   	0.465685    	1.88969     
+Selection: ignoring 1 infeasible solution in a population of size 100
+297	91    	1.57083     	0.4833     	-0.000966667	1.88969     
+298	92    	1.52188     	0.498403   	-0.000933333	1.88969     
+299	97    	1.43703     	0.531108   	-0.000966667	1.88969     
+300	92    	1.49483     	0.525636   	-0.000966667	1.88969     
+Best individuals:
+(1.8896942780880688,) 	<--	 /*4*/FLmLLL<LFLFLLL<f<LFFqMXL>f<<rXL>X>LMLLcLLm<MqX><rqFLFcCXrLF#2ffLM#1CLq>>>LXR#2cL>>LLF<q<rqXL#6L>>XRmQ#3#1>>>FLLLLRFLq<fqQXL>RLL<MLFLLLLX>CXLLc>L<<rX#1FL>>X#2RfQ>>LL<rLcMqXL>rCcQLF<CXRLLcL>MLLQX>
+Saved 'C:\Users\alex3\Projects\AI sem 1\sem-1\BIA\Evolutionary Design\runs\2026-09-07_224747\gens\HoF-f4-6.gen' (1)
+C:\Users\alex3\Projects\AI sem 1\sem-1\BIA\Evolutionary Design\stats\2026-09-07_23\HoF-f4-6.logbook.pkl
+VMNeuronManager.autoload: Neuro classes added: Delay Light Nn PIDP PIDV SeeLight SeeLight2 S0 S1 Thr 
+UserScripts.autoload: 20 user scripts added.
