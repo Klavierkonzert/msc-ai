@@ -2,7 +2,7 @@
 Lab assignments and projects from my MSc in Artificial Intelligence at PUT.
 
 ## Master's Course Curriculum
-### Semester 1
+### [Semester 1](./sem-1)
 - Process Mining
 - Biologically-inspired Algorithms and Models
 - Machine Perception
@@ -13,9 +13,8 @@ Lab assignments and projects from my MSc in Artificial Intelligence at PUT.
 - Applications of Artificial Intelligence in IT
 - Communication in English / Polish
 - Basic health and safety training
-### Semester 2
-- Selected Topics in Natural Language 
-Processing
+### [Semester 2](./sem-2)
+- Selected Topics in Natural Language Processing
 - _Elective courses_: Artificial Intelligence in Cryptography / Information Theory Methods in Data Analysis
 - Automated Machine Learning
 - Introduction to Quantum Information and Quantum Machine Learning

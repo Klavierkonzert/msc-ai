@@ -1,0 +1,27 @@
+# Semester 1 Curriculum
+- **[Process Mining](./PM)**
+  - Course covers topics in **Process Mining** (process models, data mining, discovery algorithms) and **Mathematical Programming**
+  - [Coursework Projects](./PM/Projects)
+  - Labs during classes
+- **[Biologically-inspired Algorithms and Models](./BIA)**
+    - Course covers topics in [Combinatorial Optimization](./BIA/Combinatorial%20Optimization) and [Evolutionary Design](./BIA/Evolutionary%20Design), focusing on advanced theory of Evolutionary Algorithms (EA)
+    - Lab assignments (see links above) and classes
+- **Machine Perception**
+  - Course covers topics in computer vision, localisation and SLAM, and point clouds.
+  - Course project - _Diffusion PPO in Franka Kitchen_ (robot performs 7 tasks vs. baseline 5) - https://github.com/Klavierkonzert/dppo/
+  - Labs
+- **Program Synthesis**
+  - Course project - _Symbolic Regression on EML trees_: https://github.com/Klavierkonzert/SymRegEML
+  - Course covers topics in program synthesis (definitions, dimensions, algorithms such as EUSolver), formal verification (Hoare logic, SAT/SMT), model checking, modal logics, ML systems vulnerabilities; genetic programming and neurosymbolic program‑synthesis approaches.
+- **Multivariate Statistics**
+  - Topics include linear algebra, multidimensional probability theory, sampling, imputation, testing (multivariate normality, means, covariance matrices), MANOVA, multivariate multiple regression, PCA, discriminant analysis, and classification analysis.
+  - [Lab assignments (in R)](./MVS/)
+- **Multiobjective Optimization**
+  - Topics in Evolutionary multiple-objective optimization (e.g. NSGA-II, III)
+  - [Lab assignments](./MOO/)
+- **Machine Learning Theory**
+  - Topics include probability, classification, regression, probability losses, plug‑in classifiers and surrogate losses, ERM, bounds and uniform convergence, and Vapnik–Chervonenkis dimension.
+  - Labs
+- **Applications of AI**
+  - A series of lectures delivered by prominent practitioners from leading industry
+- **Communication in English**

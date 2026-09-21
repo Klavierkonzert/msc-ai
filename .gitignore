@@ -1,0 +1,14 @@
+# Ignore all top-level directories except sem-1
+/*
+!/sem-1/
+!/README.md
+!/.gitignore
+
+# Ignore IDE, OS, and scratch artifacts everywhere
+**/.vscode/
+**/.specstory/
+**/desktop.ini
+**/scratch/
+**/__pycache__/
+*.pyc
+.ipynb_checkpoints/
