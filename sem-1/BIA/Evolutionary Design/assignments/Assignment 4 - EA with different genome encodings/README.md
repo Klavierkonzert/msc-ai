@@ -14,7 +14,7 @@ Brief description of genformats:
 
 The **goal** is the same - maximise vertical position of the mass center of creature - `vertpos`. As before, max num of "limbs"/parts of a creature is limited by 30.
 
-In the experiments mutation intensity is set to 0 (previous experiment in the `Assignment 3` revealed that this is the optimal value). As before, population size is set to 100, tournament size is 10, number of generations is 300. All the experiments were run in parallel on 20 cores.
+In the experiments, default mutation intensity is used: for $f_9$, `f9_mut` is set to `0` (its Framsticks default, which forces exactly one clean orthogonal gene change per mutation without noisy angular drift, proven optimal in [`Assignment 3`](../Assignment%203%20-%20Mutation%20Intensity%20in%20Evolutionary%20Algorithms/README.md)). For $f_0, f_1, f_4$, Framsticks does not use a continuous mutation intensity scalar; instead, mutations select from structural operators according to their default relative probability weights. As before, population size is set to 100, tournament size is 10, number of generations is 300. All the experiments were run in parallel on 20 cores.
 
 Example of modeling creatures with *f1* genformat:
 - square: `/*1*/X(X(X(X,,),,),,)`

@@ -15,7 +15,7 @@ The **goal** of the evolution is to increase vertical position of the mass cente
 Run the following script:
 ```bash
 $ conda activate framsticks # activate environment with deap and other necessary packages
-$ python scripts/run_parallel.py --script framspy-download/FramsticksEvolution.py --frams-path "Framsticks55" --values 0 0.05 0.1 0.2 0.5 --num-experiments 10 --stats-dir stats --out runs --workers 24 --popsize 100 --generations 200 --tournament 10 --initialgenotype '/*9*/BLU' # run experiments
+$ python scripts/run_parallel.py --script framspy-download/FramsticksEvolution.py --frams-path "Framsticks55" --mutints 0 0.05 0.1 0.2 0.5 --num-experiments 10 --stats-dir stats --out runs --workers 24 --popsize 100 --generations 200 --tournament 10 --initialgenotype '/*9*/BLU' # run experiments
 $ python scripts/analyze_hof.py # plots
 ```
 

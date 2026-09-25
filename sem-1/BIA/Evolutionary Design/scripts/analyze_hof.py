@@ -15,12 +15,15 @@ from collections import Counter, defaultdict
 from typing import Dict, List, Any, overload
 
 import pandas as pd
+import sys
 import matplotlib
-# try:
-#     matplotlib.use('Agg')
-# except Exception:
-#     pass
-matplotlib.use("TkAgg")
+if os.environ.get('MPLBACKEND') == 'Agg' or '--headless' in sys.argv:
+    matplotlib.use('Agg')
+else:
+    try:
+        matplotlib.use("TkAgg")
+    except Exception:
+        matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -81,12 +84,11 @@ def discover_files(pattern: str) -> List[str]:
 
 
 def parse_filename(fname: str) -> Dict[str, Any]:
-    # try pattern HoF-f9-<M>-<N>.gen
-    m = re.match(r"HoF-[^-]+-(?P<M>[^-]+)-(?P<N>\d+)\.gen$", fname)
+    # Match HoF-<enc>-<M>-<N>.gen or HoF-<enc>-<N>.gen
+    m = re.match(r"^HoF-(?P<enc>f[a-zA-Z0-9]+)(?:-(?P<M>.+))?-(?P<N>\d+)\.gen$", fname)
     if m:
-        return {"run_M": m.group("M"), "run_N": int(m.group("N"))}
-    # fallback
-    return {"run_M": None, "run_N": None}
+        return {"enc": m.group("enc"), "run_M": m.group("M"), "run_N": int(m.group("N"))}
+    return {"enc": None, "run_M": None, "run_N": None}
 
 
 # def write_csv(records: List[Dict[str, Any]], outpath: str):
@@ -196,13 +198,18 @@ def logbook_stem(fname: str,  suffix:str = ".logbook.pkl") -> tuple[str, str]:
         if base.endswith(suffix):
             return d, base[:-len(suffix)]
         return d, os.path.splitext(base)[0]
-# helper to parse filename (same convention as read_logs)
-def parse_lb_filename(fname: str) ->dict[str, str]:
-        d, base = logbook_stem(fname)
-        parts = base.split("-")
+def parse_lb_filename(fname: str) -> dict[str, str]:
+    d, base = logbook_stem(fname)
+    m = re.match(r"^HoF-(?P<enc>f[a-zA-Z0-9]+)(?:-(?P<param>.+))?-(?P<experiment>\d+)$", base)
+    if m:
+        res = m.groupdict()
+        return {"enc": res["enc"], "param": res["param"], "experiment": res["experiment"], "dir": d, "base": base}
+    parts = base.split("-")
+    if len(parts) >= 3:
         _, enc, *params, experiment = parts
-        dpars = {"param" + (str(i) if i>0 else ""): p for i,p in enumerate(params)}
-        return {"enc": enc, **dpars, "experiment": experiment, 'dir':d, "base": base}
+        param = "-".join(params) if params else None
+        return {"enc": enc, "param": param, "experiment": experiment, "dir": d, "base": base}
+    return {"enc": "unknown", "param": None, "experiment": "0", "dir": d, "base": base}
 
 def read_logs(paths: list[str]):
     """Read all `*.logbook.pkl` files from `path` and return a pandas DataFrame.
@@ -264,6 +271,9 @@ def main():
     ap.add_argument('--min-samples', type=int, default=1, help='Minimum runs per parameter to include in boxplots')
     ap.add_argument('--nevals-as-time', action='store_true', help='Use total_nevals as runtime proxy (plot evaluations instead of seconds)')
     ap.add_argument('--palettes', nargs='+', default=None, help='List of seaborn color palette names for folder subgroups')
+    ap.add_argument('--headless', action='store_true', help='Run headless without interactive GUI popups')
+    ap.add_argument('--extension', default='png', choices=['png', 'pdf', 'svg'], help='Image extension for plots (default: png)')
+    ap.add_argument('--xscale', default='linlog', choices=['linlog', 'lin', 'log', 'linear', 'symlog'], help='X-axis scale for history and confidence plots: linlog (default), lin, log')
     args = ap.parse_args()
 
     # Determine logbook directory: use provided, else newest subfolder under 'stats'
@@ -277,7 +287,7 @@ def main():
             try:
                 df.to_csv("stats\\last_stats.csv")
             except:
-                raise Exception("Unsuccesfull writing to .csv")
+                pass
             
 
             if not df.empty:
@@ -289,8 +299,8 @@ def main():
                 print(f"Subgroup variable for analysis: {subgroup_var}")
                 plots_dir = os.path.join(args.outdir, 'plots')
                 active_palettes = args.palettes or DEFAULT_PALETTES
-                plot_HoF_history(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes)
-                plot_HoF_confidence(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes)
+                plot_HoF_history(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, extension=args.extension, xscale=args.xscale)
+                plot_HoF_confidence(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, extension=args.extension, xscale=args.xscale)
 
 
                 # aggregated summary and boxplots
@@ -304,11 +314,11 @@ def main():
                     if args.nevals_as_time:
                         summary['duration_s'] = summary['total_nevals']
                         # pass a special time_unit marker to plotting
-                        plot_boxplot_summary(summary, outdir=plots_dir, #group_by=subgroup_var,#args.group_by, 
-                                             time_unit='eval', log_time=False, min_samples=args.min_samples, palettes=active_palettes)
+                        plot_boxplot_summary(summary, outdir=plots_dir, 
+                                             time_unit='eval', log_time=False, min_samples=args.min_samples, palettes=active_palettes, extension=args.extension)
                     else:
-                        plot_boxplot_summary(summary, outdir=plots_dir, #group_by=subgroup_var,#args.group_by, 
-                                             time_unit=args.time_unit, log_time=args.log_time, min_samples=args.min_samples, palettes=active_palettes)
+                        plot_boxplot_summary(summary, outdir=plots_dir, 
+                                             time_unit=args.time_unit, log_time=args.log_time, min_samples=args.min_samples, palettes=active_palettes, extension=args.extension)
 
         # except Exception as e:
         #     print(f'Error reading logbooks from {logbook_dirs}: {e}')
@@ -356,12 +366,25 @@ def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:Non
 
 def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:list[str|None]|None=None) ->Any:
     """Returns dict of dir->colormap if list of directories is not dummy, otherwise returns one colormap"""
-    if directories is not None:
-        dpalettes = {d:sns.color_palette(palette=palettes[directories.index(d) % len(palettes)], 
-                                         n_colors=max(3, len(param_vals))) for d in directories}
-        return {d:{p: palette[i % len(palette)] for i, p in enumerate(param_vals)} for d, palette in dpalettes.items()}
+    n_params = len(param_vals)
+    if n_params <= 1:
+        sample_pts = [0.7]
     else:
-        return {p: palettes[0][i % len(palettes[0])] for i, p in enumerate(param_vals)}
+        sample_pts = np.linspace(0.35, 0.9, n_params)
+
+    if directories is not None:
+        res = {}
+        for d_idx, d in enumerate(directories):
+            pal_name = palettes[d_idx % len(palettes)]
+            cmap = sns.color_palette(pal_name, as_cmap=True)
+            colors = [cmap(float(pt)) for pt in sample_pts]
+            res[d] = {p: colors[i] for i, p in enumerate(param_vals)}
+        return res
+    else:
+        pal_name = palettes[0]
+        cmap = sns.color_palette(pal_name, as_cmap=True)
+        colors = [cmap(float(pt)) for pt in sample_pts]
+        return {p: colors[i] for i, p in enumerate(param_vals)}
 
     
     
@@ -408,24 +431,35 @@ def get_legend(param_vals: list[str], directories: list[str] | None,color_maps: 
 
 
 
-def set_scale_ticks(symlog_threshold: int, max_x_value: int = None):
+def set_scale_ticks(symlog_threshold: int, max_x_value: int = None, xscale: str = 'linlog'):
     ax = plt.gca()
-    # adding final tick
-    ax.set_xscale('symlog', linthresh=symlog_threshold)
-    ticks = list(ax.get_xticks())
-    if max_x_value is not None:
-        ticks.append(max_x_value)
-    if symlog_threshold not in ticks:
-        ticks.append(symlog_threshold)
-    ticks = sorted(ticks)
-    
-    ax.set_xticks(sorted(set(ticks)))
-    ax.set_xticklabels([str(int(t)) if t !=symlog_threshold else '.. lin scale.. '+str(symlog_threshold)+'.. log scale..' for t in ticks])
+    scale = (xscale or 'linlog').lower()
+    if scale in ('linlog', 'symlog'):
+        ax.set_xscale('symlog', linthresh=symlog_threshold)
+        ticks = list(ax.get_xticks())
+        if max_x_value is not None:
+            ticks.append(max_x_value)
+        if symlog_threshold not in ticks:
+            ticks.append(symlog_threshold)
+        ticks = sorted(ticks)
+        ax.set_xticks(sorted(set(ticks)))
+        ax.set_xticklabels([str(int(t)) if t != symlog_threshold else f'.. lin scale.. {symlog_threshold}.. log scale..' for t in ticks])
+    elif scale in ('log',):
+        ax.set_xscale('log', nonpositive='clip')
+        if max_x_value is not None:
+            xlim = ax.get_xlim()
+            ax.set_xlim(left=max(1, xlim[0]), right=max_x_value * 1.05)
+    elif scale in ('lin', 'linear'):
+        ax.set_xscale('linear')
+        if max_x_value is not None:
+            ax.set_xlim(left=0, right=max_x_value * 1.02)
+    else:
+        ax.set_xscale(scale)
 
 def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = "param", extension="pdf", 
                      # palettes: list[str] = ["RdPu", "GnBu", "YlOrRd"],
                      palettes: list[str] = DEFAULT_PALETTES, _figsize:tuple[int, int]=(10, 6),
-                     _symlog_threshold: int = 3500):
+                     _symlog_threshold: int = 3500, xscale: str = 'linlog'):
 
     """Plot best curves; x-axis is cumulative evaluated individuals when available."""
     sns.set(style='whitegrid')
@@ -482,7 +516,7 @@ def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = 
 
         max_x_value = max(max_x_value, x.max())
 
-    set_scale_ticks(_symlog_threshold, max_x_value=max_x_value)
+    set_scale_ticks(_symlog_threshold, max_x_value=max_x_value, xscale=xscale)
 
     if has_nevals:
         plt.xlabel('Cumulative evaluated individuals')
@@ -502,15 +536,17 @@ def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = 
     figpath = os.path.join(save_dir, 'logbooks_best_series.'+extension)
     plt.savefig(figpath, format=extension, bbox_inches="tight"  )
     print(f"Note: figure saved to {figpath}")
-    plt.show()
-    # plt.close()
+    if '--headless' in sys.argv or os.environ.get('MPLBACKEND') == 'Agg':
+        plt.close()
+    else:
+        plt.show()
     print(f"Saved logbook curves to {figpath}")
 
  
 def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param: str = "param", ci: float = 1.0,  alpha: float = 0.12, extension: str = "pdf",
                         # palettes: list[str]=["RdPu", "GnBu", "YlOrRd"],
                         palettes: list[str] = DEFAULT_PALETTES, _figsize:tuple[int, int]=(10, 6), 
-                        _symlog_threshold: int =50):
+                        _symlog_threshold: int =50, xscale: str = 'linlog'):
 
     """Plot shaded confidence intervals for each `param` value.
 
@@ -563,7 +599,7 @@ def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param
             plt.plot(gens, means, color=color, label=str(p))
             plt.fill_between(gens, lower, upper, color=color, alpha=alpha)
 
-    set_scale_ticks(_symlog_threshold, max_x_value=max_gens)
+    set_scale_ticks(_symlog_threshold, max_x_value=max_gens, xscale=xscale)
     plt.xlabel('Generation')
     plt.ylabel('Best (mean) fitness')
     plt.title(f'Confidence intervals ({"mean +-" + str(ci) + ' std'})')
@@ -573,8 +609,10 @@ def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param
     plt.tight_layout()
     figpath = os.path.join(save_dir, f'logbooks_confidence_std_{ci}.' + extension)
     plt.savefig(  figpath, format=extension, bbox_inches="tight" )
-    plt.show()
-    plt.close()
+    if '--headless' in sys.argv or os.environ.get('MPLBACKEND') == 'Agg':
+        plt.close()
+    else:
+        plt.show()
     print(f"Saved confidence-interval plot to {figpath}")
 
 
@@ -799,14 +837,15 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
         return
 
     # print(df_summary)
-    # expanding or truncating list of group vars
-    if 'param' in group_by:
-        group_by.extend(c for c in df_summary.columns if c.startswith('param') and c!='param')
-    # df_summary.dropna(axis=1) #remooving missing cols. 'param' can be one of them
+    active_group_by = []
     for grpb in group_by:
-        if grpb not in df_summary.columns or df_summary[grpb].isna().all():
-            group_by.remove(grpb)
-    df_summary['multigroup'] = df_summary[group_by].agg(', '.join, axis=1).str.strip()
+        if grpb in df_summary.columns and not df_summary[grpb].isna().all():
+            if df_summary[grpb].nunique() > 1:
+                active_group_by.append(grpb)
+    if not active_group_by:
+        active_group_by = [c for c in ('param', 'enc') if c in df_summary.columns and not df_summary[c].isna().all()][:1]
+    group_by = active_group_by
+    df_summary['multigroup'] = df_summary[group_by].astype(str).agg(', '.join, axis=1).str.strip()
     # print(df_summary)
 
     directories:list[str|None]= sorted(df_summary['dir'].dropna().unique()) if 'dir' in df_summary.columns else [None]
@@ -842,78 +881,74 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
     # palettes = get_colormaps(palettes, df_summary[group_by[-1]].tolist(), directories)
 
 
-    aggregated_palettes = {
-        dir: sns.color_palette(palettes[i % len(palettes)], 9)[5] for i, dir in enumerate(directories)
-    }
-    
-    # groups = sorted(quality_df['multigroup'].unique())
-    # palette = sns.color_palette(palette=palettes[0], n_colors=max(3, len(groups)))
-    sns.boxplot(x=group_by[-1], y='hof_best', data=quality_df, ax=axes[0], 
-                    hue="dir",
-                    dodge=True,
-                    palette=aggregated_palettes)
-    sns.stripplot(x=group_by[-1],
-                   y='hof_best', 
-                   data=quality_df, 
-                   hue="dir",
-                    dodge=True,
-                    # palette=aggregated_palettes,
-                   ax=axes[0], 
-                   color='k',
-                     size=4, 
-                     jitter=True, 
-                     alpha=0.6)
+    subgroup_col = group_by[-1]
+    param_vals = sorted(quality_df[subgroup_col].dropna().unique())
+    color_maps = get_colormaps(palettes, param_vals, directories)
+
+    if len(directories) <= 1:
+        # Single directory: color by subgroup value so box colors match logbook curves
+        d = directories[0] if directories else None
+        palette_map = color_maps.get(d, color_maps) if isinstance(color_maps, dict) and d in color_maps else color_maps
+        hue_col = subgroup_col
+        dodge = False
+    else:
+        # Multiple directories: color by directory
+        palette_map = {
+            d: sns.color_palette(palettes[i % len(palettes)], as_cmap=True)(0.7)
+            for i, d in enumerate(directories)
+        }
+        hue_col = "dir"
+        dodge = True
+
+    sns.boxplot(x=subgroup_col, y='hof_best', data=quality_df, ax=axes[0], 
+                hue=hue_col,
+                dodge=dodge,
+                palette=palette_map)
+    sns.stripplot(x=subgroup_col,
+                  y='hof_best', 
+                  data=quality_df, 
+                  hue=hue_col,
+                  dodge=dodge,
+                  ax=axes[0], 
+                  palette='dark:black',
+                  size=4, 
+                  jitter=True, 
+                  alpha=0.6)
     axes[0].set_title('Hall-of-Fame fitness (per run)')
     axes[0].set_xlabel(group_by)
     axes[0].set_ylabel('Fitness')
-
-    # # annotate counts
-    # # xticks = axes[0].get_xticks()
-    # for i, grp in enumerate(valid_groups):
-    #     n = int(counts.get(grp, 0))
-    #     axes[0].text(i, 0.98, f'n={n}', transform=axes[0].get_xaxis_transform(), ha='center', va='top')
-
 
     # Right plot:
     # runtime boxplot
     if 'duration_s' in df_summary.columns and df_summary['duration_s'].notna().any():
 
-        # runtimes = df_summary[df_summary[group_by[0]]==dir] [[*group_by, 'duration_s']].dropna()
-        runtimes = df_summary[[*group_by, 'duration_s']].dropna()
-        # runtimes = runtimes[runtimes[group_by].isin(valid_groups)]
-
-
-        ## same as on the left plot, see above
-        # subgr = quality_df[quality_df[group_by[0]]==dir]
-        # subgroups = sorted(subgr[group_by[-1]].unique())
-        # palette = sns.color_palette(palette=palettes[i_dir % len(palettes)], n_colors=max(3, len(subgroups)))
+        cols_to_keep = list(dict.fromkeys([*group_by, 'duration_s', *(['dir'] if 'dir' in df_summary.columns else [])]))
+        runtimes = df_summary[cols_to_keep].dropna()
 
         # special case: evaluations as time proxy
         if time_unit == 'eval':
-                runtimes['duration_unit'] = runtimes['duration_s']
-                label_unit = 'evaluations'
+            runtimes['duration_unit'] = runtimes['duration_s']
+            label_unit = 'evaluations'
         else:
-                # convert units
-                factor = 1.0
-                label_unit = 's'
-                if time_unit == 'm':
-                    factor = 60.0
-                    label_unit = 'min'
-                elif time_unit == 'h':
-                    factor = 3600.0
-                    label_unit = 'h'
-                runtimes['duration_unit'] = runtimes['duration_s'] / factor
+            # convert units
+            factor = 1.0
+            label_unit = 's'
+            if time_unit == 'm':
+                factor = 60.0
+                label_unit = 'min'
+            elif time_unit == 'h':
+                factor = 3600.0
+                label_unit = 'h'
+            runtimes['duration_unit'] = runtimes['duration_s'] / factor
 
-        # reuse same RdPu palette for runtime plot as well
-        sns.boxplot(x=group_by[-1], y='duration_unit', data=runtimes, ax=axes[1],
-                    dodge=True, 
-                    hue = group_by[0],
-                    palette=aggregated_palettes)
-        sns.stripplot(x=group_by[-1], y='duration_unit', data=runtimes, ax=axes[1],
-                      dodge=True,
-                        hue = group_by[0],
-                        color='k', size=4, jitter=True, alpha=0.6)
-
+        sns.boxplot(x=subgroup_col, y='duration_unit', data=runtimes, ax=axes[1],
+                    dodge=dodge, 
+                    hue=hue_col,
+                    palette=palette_map)
+        sns.stripplot(x=subgroup_col, y='duration_unit', data=runtimes, ax=axes[1],
+                      dodge=dodge,
+                      hue=hue_col,
+                      palette='dark:black', size=4, jitter=True, alpha=0.6)
 
         axes[1].set_title('Run duration per run')
         axes[1].set_xlabel(group_by)
@@ -931,22 +966,25 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
         if leg is not None:
             leg.remove()
 
-    # # build one shared legend
+    # build one shared legend
     handles, labels = axes[0].get_legend_handles_labels()
 
     unique = {}
     for h, l in zip(handles, labels):
-        if l not in unique:
-            # unique[l[l.rfind('\\')+1:]] = h
-            unique[l] = h
+        clean_label = os.path.basename(os.path.normpath(l)) if ('\\' in l or '/' in l) else l
+        if clean_label not in unique:
+            unique[clean_label] = h
+
+    legend_title = subgroup_col if len(directories) <= 1 else "Directories"
+    ncols = min(len(unique), 4) if unique else 1
 
     fig.legend(
         unique.values(),
         unique.keys(),
-        title="Subgroups",
+        title=legend_title,
         loc="lower center",
         bbox_to_anchor=(0.5, -0.18),
-        ncol=1
+        ncol=ncols
     )
 
     fig.subplots_adjust(bottom=0.25)
@@ -955,8 +993,10 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
     plt.tight_layout()
     figpath = os.path.join(outdir, f'boxplot_summary.{extension}')
     plt.savefig(  figpath, format=extension, bbox_inches="tight" )
-    plt.show()
-    # plt.close()
+    if '--headless' in sys.argv or os.environ.get('MPLBACKEND') == 'Agg':
+        plt.close()
+    else:
+        plt.show()
     print(f'Saved boxplot summary to {figpath}')
 
 

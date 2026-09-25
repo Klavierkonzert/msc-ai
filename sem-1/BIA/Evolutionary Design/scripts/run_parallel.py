@@ -22,7 +22,7 @@ commands of the form:
 Usage:
   python scripts/run_parallel.py --script framspy-download/FramsticksEvolution.py \
       --frams-path C:/.../Framsticks55 --sim eval-allcriteria.sim \
-      --values 0 0.05 0.1 --num-experiments 3 --stats-dir stats \
+      --mutintensities 0 0.05 0.1 --num-experiments 3 --stats-dir stats \
       --python-exec C:/Users/.../.conda/envs/framsticks/python.exe --workers 8
 
 The script saves each job's log and Hall-of-Fame genotype under the same run:
@@ -40,54 +40,108 @@ import datetime
 import typing
 import re
 
-def encode_mutation(mutation_intensity: float|str, genformat : str='9'):
-    return f"f{genformat}-mut-{fmt_float_value(mutation_intensity)}.sim"
-def encode_filename(param_value:str|float|None, idx_experiment:str|int, genformat : str='9') -> str:
-    if param_value is not None:
-        return f"HoF-f{genformat}-{fmt_float_value(param_value)}-{idx_experiment}"
-    else:
-        return f"HoF-f{genformat}-{idx_experiment}"
+def normalize_genformat(fmt: str | None) -> str | None:
+    if fmt is None:
+        return None
+    s = str(fmt).strip()
+    if s.lower().startswith('f') and len(s) > 1:
+        return s[1:]
+    return s
 
-def fmt_float_value(m: str|float, decimal_places: int=2):
-    # represent M similarly to PowerShell's default formatting (minimal)
-    if isinstance(m, float):
-        m = str(m)
-
-    if (float(m)>0):
-        return str(m).replace('.', '')+'0'*(decimal_places+1 - len(str(m)))
-    elif (float(m)==0):
+def format_mut_tag(val: float | str) -> str:
+    f_val = float(val)
+    if f_val == 0:
         return '0'
-    raise NotImplemented("fmt_float_value: Invalid input value")
+    s = f"{f_val:.2f}".replace('.', '')
+    if round(f_val, 2) != f_val:
+        s = str(f_val).replace('.', '')
+    return s
 
+def get_frams_data_dir(frams_path: str) -> str:
+    data_dir = os.path.join(frams_path, 'data')
+    if os.path.isdir(data_dir):
+        return data_dir
+    return frams_path
 
-def build_cmd(python_exec:str, script_path:str, frams_path:str, optimization_target:str, sim:str, stats_dir:str, hof_dir:str, popsize:int, generations:int, tournament:int, 
-              param_value:str|None, idx_experiment:int
-             , genformat:str|int|None =None, initialgenotype:str|None=None, max_numgenochars:str|int|None=None
-             ) -> tuple[list[str|int], str]:
-    """:params:
-            :param: genformat - specifies genome format used in Framsticks experiments. Should be one of follows: 0, 1, 4, 9.
-            :param: initialgenotype - defines initial genome sequence with a specified genome format. For instance, set to '/*9*/BLU'. If set, `genformat` has no effect.
-    """
+def ensure_mutation_sim_file(frams_path: str, genformat: str | int | None, mut_intensity: float | str) -> str:
+    """Ensures f{genformat}-mut-{tag}.sim exists in Framsticks data dir, creating it if needed.
+    Returns the sim filename (e.g. 'f9-mut-050.sim')."""
+    f = genformat if genformat is not None else '9'
+    tag = format_mut_tag(mut_intensity)
+    filename = f"f{f}-mut-{tag}.sim"
+
+    data_dir = get_frams_data_dir(frams_path)
+    file_path = os.path.join(data_dir, filename)
+
+    if not os.path.exists(file_path):
+        f_val = float(mut_intensity)
+        val_str = f"{f_val}" if f_val != 0 else "0.0"
+        content = f"sim_params:\nf{f}_mut:{val_str}\n"
+        try:
+            with open(file_path, 'w', encoding='utf-8') as fp:
+                fp.write(content)
+            print(f"Created mutation sim file: {file_path}")
+        except Exception as e:
+            print(f"Warning: Could not create {file_path}: {e}")
+
+    return filename
+
+def encode_filename(param_value: str | None, idx_experiment: str | int, genformat: str | int | None = '9') -> str:
+    f_prefix = f"f{genformat}-" if genformat is not None else ""
+    if param_value is not None:
+        return f"HoF-{f_prefix}{param_value}-{idx_experiment}"
+    return f"HoF-{f_prefix}{idx_experiment}"
+
+def combine_sim_strings(base_sim: str, extra_sim: str | None) -> str:
+    if not extra_sim:
+        return base_sim
+    base = base_sim.strip()
+    extra = extra_sim.strip()
+    if not base:
+        return extra
+    if not base.endswith(';'):
+        base += ';'
+    return base + extra
+
+def build_cmd(python_exec: str, script_path: str, frams_path: str, optimization_target: str, sim: str, stats_dir: str, hof_dir: str, popsize: int, generations: int, tournament: int, 
+              param_value: str|None, idx_experiment: int,
+              genformat: str|int|None = None, initialgenotype: str|None = None,
+              max_numparts: int|None = 30, max_numjoints: int|None = None,
+              max_numneurons: int|None = None, max_numconnections: int|None = None,
+              max_numgenochars: str|int|None = None,
+              pxov: float|None = None, pmut: float|None = None
+              ) -> tuple[list[str], str]:
     hof_path = os.path.join(hof_dir, encode_filename(param_value, idx_experiment, genformat) + ".gen")
-    cmd:list[str|int] = [python_exec, script_path,
+    cmd: list[str] = [python_exec, script_path,
            '-path', frams_path,
            '-sim', sim,
            '-opt', optimization_target,
-           '-max_numparts', '30',
-           '-popsize', popsize,
-           '-generations', generations,
-           '-tournament', tournament,
+           '-popsize', str(popsize),
+           '-generations', str(generations),
+           '-tournament', str(tournament),
            '-hof_size', '1',
            '-hof_savefile', hof_path,
            '--save-stats', stats_dir]
 
+    if max_numparts is not None:
+        cmd.extend(['-max_numparts', str(max_numparts)])
+    if max_numjoints is not None:
+        cmd.extend(['-max_numjoints', str(max_numjoints)])
+    if max_numneurons is not None:
+        cmd.extend(['-max_numneurons', str(max_numneurons)])
+    if max_numconnections is not None:
+        cmd.extend(['-max_numconnections', str(max_numconnections)])
     if max_numgenochars is not None:
         cmd.extend(['-max_numgenochars', str(max_numgenochars)])
+    if pxov is not None:
+        cmd.extend(['-pxov', str(pxov)])
+    if pmut is not None:
+        cmd.extend(['-pmut', str(pmut)])
 
     if initialgenotype is not None:
-        cmd.extend([ '-initialgenotype', initialgenotype])
+        cmd.extend(['-initialgenotype', initialgenotype])
     elif genformat is not None:
-        cmd.extend(['-genformat', genformat])
+        cmd.extend(['-genformat', str(genformat)])
 
     return cmd, hof_path
 
@@ -98,7 +152,7 @@ def run_one(cmd, cwd, logfile):
         proc = subprocess.run(cmd, stdout=lf, stderr=subprocess.STDOUT, cwd=cwd)
     return proc.returncode
 
-def parse_arg_values_list[T](values: str, desired_type: type[T]= str) -> list[T]:
+def parse_arg_values_list[T](values: list[T] | str, desired_type: type[T]= str) -> list[T]:
     # Accept space-separated floats or a single comma-separated string
     if not values:
         return []
@@ -127,11 +181,19 @@ def main():
     p.add_argument('--frams-path', required=True, help='Path to Framsticks library (Framsticks55)')
     p.add_argument('--opt', default='vertpos', help="Target to be optimized. By default, 'vertpos'")
     p.add_argument('--sim', default="eval-allcriteria.sim;deterministic.sim;sample-period-2.sim;", help='Sim filename to pass to -sim')
-    p.add_argument('--values', nargs='+', required=False, help='Parameter (mutation intensity) values (e.g. 0 0.05 0.10)')
-    p.add_argument('--num-experiments', required=True, help='Number of experiments')
-    p.add_argument('--popsize', default='50', help="Population size")
-    p.add_argument('--generations', default='50', help='Number of experiments')
-    p.add_argument('--tournament', default ='5', help = 'Number of individuals participating in an tournament')
+    p.add_argument('--sim-variants', nargs='+', required=False, help='Sim variants/filenames to evaluate in parallel')
+    p.add_argument('--mutints', '--mutintensities', '--values', dest='mutints', nargs='+', required=False, help='Mutation intensities (e.g. 0 0.05 0.10). Ignored if --sim-variants is provided.')
+    p.add_argument('--num-experiments', type=int, required=True, help='Number of experiments')
+    p.add_argument('--popsize', type=int, default=50, help="Population size")
+    p.add_argument('--generations', type=int, default=50, help='Number of generations')
+    p.add_argument('--tournament', type=int, default=5, help='Number of individuals participating in an tournament')
+    p.add_argument('--max-numparts', type=int, default=30, help='Maximum number of parts (default: 30)')
+    p.add_argument('--max-numjoints', type=int, default=None, help='Maximum number of joints (default: None)')
+    p.add_argument('--max-numneurons', type=int, default=None, help='Maximum number of neurons (default: None)')
+    p.add_argument('--max-numconnections', type=int, default=None, help='Maximum number of connections (default: None)')
+    p.add_argument('--max-numgenochars', default=None, required=False, help='The maximum number of characters in genotype. Default is unlimited.')
+    p.add_argument('--pxov', type=float, default=None, help='Probability of crossover (default: None, FramsticksEvolution default 0.2)')
+    p.add_argument('--pmut', type=float, default=None, help='Probability of mutation (default: None, FramsticksEvolution default 0.9)')
     p.add_argument('--stats-dir', default='stats', help='Base folder passed to --save-stats')
     p.add_argument('--out', default='runs', help='Output base folder for timestamped run folders')
     p.add_argument('--workers', type=int, default=os.cpu_count(), help='Parallel workers')
@@ -139,10 +201,8 @@ def main():
     p.add_argument('--python-exec', default=sys.executable, help='Python executable used to run FramsticksEvolution.py. Use the framsticks conda env Python when dependencies are installed there.')
     p.add_argument('--genformats', nargs='+', default=['1'], help='Genetic format for the simplest initial genotype, for example 4, 9, or B. If not given, f1 is assumed.')
     p.add_argument('--initialgenotype', required=False, help='The genotype used to seed the initial population. If given, the -genformat argument is ignored.')
-    p.add_argument('--max-numgenochars', default=None, required=False, help='The maximum number of characters in genotype. Default is unlimited.')
 
     args = p.parse_args()
-
 
     script_path = os.path.abspath(args.script)
     frams_path = os.path.abspath(args.frams_path)
@@ -152,21 +212,22 @@ def main():
     os.makedirs(out_base, exist_ok=True)
     os.makedirs(stats_dir, exist_ok=True)
 
-
-    print("Values of the parameter", args.values)
-    genformat_values: list[str]#list[str|None]
+    # Gen format values, e.g. f0, f1, f4, f9, fH, f0s...
+    genformat_values: list[str|None]
     if args.initialgenotype is not None:
         print(f"Initial genotype provided: {args.initialgenotype}, skipping all the irrelevant genome formats.")
-        genformat_values = re.findall(r'/\*(\d+)\*/', args.initialgenotype)
-        # if not len(genformat_values):
-        #     genformat_values = [None]
+        found_fmts = re.findall(r'/\*([a-zA-Z0-9_]+)\*/', args.initialgenotype)
+        genformat_values = [normalize_genformat(fmt) for fmt in found_fmts] if found_fmts else [None]
     else:
-        genformat_values= parse_arg_values_list(args.genformats, desired_type=str)
-    print("Genome format(s): ", genformat_values )
+        raw_fmts = parse_arg_values_list(args.genformats, desired_type=str)
+        genformat_values = [normalize_genformat(fmt) for fmt in raw_fmts]
+    print("Genome format(s):", genformat_values)
 
-    param_values = parse_arg_values_list(args.values, desired_type=float)
-    if not len(param_values):
-        param_values = [None]
+    if args.sim_variants is not None:
+        print("Sim variants:", parse_arg_values_list(args.sim_variants, desired_type=str))
+    elif args.mutints is not None:
+        print("Mutation intensity values:", parse_arg_values_list(args.mutints, desired_type=float))
+
     experiment_idc = [i for i in range(int(args.num_experiments))]
 
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
@@ -178,23 +239,45 @@ def main():
 
     python_exec = os.path.abspath(args.python_exec)
 
-    combos = [(f, fmt_float_value(m) if m is not None else None, n) #pad with 0 on the right
-              for f in genformat_values 
-              for m in param_values for n in experiment_idc]
-    print(f'Prepared {len(combos)} jobs; logs -> {log_dir}; genotypes -> {gens_dir}; stats base -> {stats_dir}')
+    jobs: list[tuple[list[str], str, str, str]] = []
 
-    jobs:  list[tuple[ list[str|int], str,str,str]] = []
-    for f, m, n in combos:
-        # f can be None, default format will be used then
-        cmd, hof_path = build_cmd(python_exec, script_path, frams_path, args.opt, sim + (encode_mutation(m, f) if m is not None else ''), stats_dir, gens_dir,
-                                 args.popsize, args.generations, args.tournament,
-                                 param_value=m, idx_experiment=n,
-                                 genformat=f, initialgenotype=args.initialgenotype,
-                                 max_numgenochars=args.max_numgenochars)
+    for f in genformat_values:
+        if args.sim_variants is not None:
+            variants = [
+                (
+                    os.path.splitext(os.path.basename(v))[0],
+                    os.path.abspath(v).replace('\\', '/') if os.path.exists(v) else v
+                )
+                for v in parse_arg_values_list(args.sim_variants, desired_type=str)
+            ]
+        elif args.mutints is not None:
+            variants = [
+                (format_mut_tag(m), ensure_mutation_sim_file(frams_path, f, m))
+                for m in parse_arg_values_list(args.mutints, desired_type=float)
+            ]
+        else:
+            variants = [(None, None)]
 
-        logfile = os.path.join(log_dir, encode_filename(m,n, f)+'.log')
-        cwd = os.path.dirname(script_path) if os.path.dirname(script_path) else os.getcwd()
-        jobs.append((cmd, str(cwd), logfile, hof_path))
+        for tag, extra_sim in variants:
+            full_sim = combine_sim_strings(sim, extra_sim)
+            for n in experiment_idc:
+                cmd, hof_path = build_cmd(
+                    python_exec, script_path, frams_path, args.opt, full_sim, stats_dir, gens_dir,
+                    args.popsize, args.generations, args.tournament,
+                    param_value=tag, idx_experiment=n,
+                    genformat=f, initialgenotype=args.initialgenotype,
+                    max_numparts=args.max_numparts,
+                    max_numjoints=args.max_numjoints,
+                    max_numneurons=args.max_numneurons,
+                    max_numconnections=args.max_numconnections,
+                    max_numgenochars=args.max_numgenochars,
+                    pxov=args.pxov, pmut=args.pmut
+                )
+                logfile = os.path.join(log_dir, encode_filename(tag, n, f) + '.log')
+                cwd = os.path.dirname(script_path) if os.path.dirname(script_path) else os.getcwd()
+                jobs.append((cmd, str(cwd), logfile, hof_path))
+
+    print(f'Prepared {len(jobs)} jobs; logs -> {log_dir}; genotypes -> {gens_dir}; stats base -> {stats_dir}')
 
     if args.dry_run:
         for cmd, cwd, logfile, hof_path in jobs:
