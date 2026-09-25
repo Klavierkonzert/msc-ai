@@ -4,6 +4,10 @@
 # Allow directories traversal
 !*/
 
+# Ban Framsticks and framspy-download completely
+Framsticks*/
+framspy-download/
+
 # Allow folders
 !assignments/
 !scripts/
@@ -12,26 +16,23 @@
 # Allow external libraries
 !external/**
 
-# Allow CMakeLists.txt and README.md
-!CMakeLists.txt
-!README.md
-!requirements.txt
-!setup.*
-
-# except these files
-!.gitignore
-!CMakeLists.txt
+# Allow root files
+!/CMakeLists.txt
+!/README.md
+!/requirements.txt
+!/setup.*
+!/.gitignore
 
 # Allow assignments folder and its contents (reports)
 !assignments/**/*.pdf
 !assignments/**/*.md
 !assignments/**/*.png
 !assignments/**/*.txt
+!assignments/**/*.py
+!assignments/**/*.csv
+## Specific Framsticks file extensions:
+!assignments/**/*.sim
 
-
-# Track gitignore itself
-!.gitignore
-
-# allow VS C++ config
+# Allow VS C++ config
 !.vscode/launch.json
 !.vscode/tasks.json
