@@ -259,7 +259,60 @@ def read_logs(paths: list[str]):
     return pd.DataFrame(rows)
 
 
+DEFAULT_PALETTES: list[str] = [
+    "RdPu",      # 1. Red-Purple
+    "GnBu",      # 2. Green-Blue / Cyan
+    "YlOrRd",    # 3. Yellow-Orange-Red
+    "PuBu",      # 4. Purple-Blue
+    "YlGn",      # 5. Yellow-Green
+    "Oranges",   # 6. Amber-Orange
+    "mako",      # 7. Teal-Navy (perceptually uniform)
+    "flare",     # 8. Coral-Gold
+    "crest",     # 9. Mint-Forest
+    "rocket",    # 10. Violet-Crimson
+    "Purples",   # 11. Indigo-Purple
+    "Blues",     # 12. Ocean Blue
+]
+
+DEFAULT_LINESTYLES: list[str] = [
+    '-.',
+    ':',
+    '-',
+    '--',
+]
+
+LINESTYLE_ALIASES: dict[str, str] = {
+    '-.': '-.', 'dashdot': '-.',
+    ':': ':', 'dotted': ':',
+    '-': '-', 'solid': '-',
+    '--': '--', 'dashed': '--',
+}
+
+
 def main():
+    # Pre-extract --linestyles from sys.argv so that leading dashes ('-', '--', '-.')
+    # are treated as values rather than option flags by argparse
+    clean_argv = []
+    custom_linestyles = None
+    i = 1
+    while i < len(sys.argv):
+        tok = sys.argv[i]
+        if tok == '--linestyles':
+            custom_linestyles = []
+            i += 1
+            while i < len(sys.argv):
+                val = sys.argv[i]
+                if val.startswith('--') and val not in LINESTYLE_ALIASES and val not in DEFAULT_LINESTYLES:
+                    break
+                for part in val.split(','):
+                    part = part.strip()
+                    if part:
+                        custom_linestyles.append(part)
+                i += 1
+        else:
+            clean_argv.append(tok)
+            i += 1
+
     ap = argparse.ArgumentParser()
     # HoF parsing is kept for legacy but disabled by default when using logbooks
     ap.add_argument('--pattern', default='HoF-*.gen', help='glob pattern for HoF files')
@@ -270,11 +323,24 @@ def main():
     ap.add_argument('--log-time', action='store_true', help='Plot runtime on a log scale')
     ap.add_argument('--min-samples', type=int, default=1, help='Minimum runs per parameter to include in boxplots')
     ap.add_argument('--nevals-as-time', action='store_true', help='Use total_nevals as runtime proxy (plot evaluations instead of seconds)')
-    ap.add_argument('--palettes', nargs='+', default=None, help='List of seaborn color palette names for folder subgroups')
+    ap.add_argument('--colors', '--palettes', dest='colors', nargs='+', default=None, help='List of seaborn color palette names for folder subgroups (e.g. RdPu GnBu). Must belong to DEFAULT_PALETTES.')
+    ap.add_argument('--linestyles', nargs='+', default=None, help='List of linestyles to use for curves (e.g. -. : - --). Must belong to DEFAULT_LINESTYLES.')
     ap.add_argument('--headless', action='store_true', help='Run headless without interactive GUI popups')
     ap.add_argument('--extension', default='png', choices=['png', 'pdf', 'svg'], help='Image extension for plots (default: png)')
     ap.add_argument('--xscale', default='linlog', choices=['linlog', 'lin', 'log', 'linear', 'symlog'], help='X-axis scale for history and confidence plots: linlog (default), lin, log')
-    args = ap.parse_args()
+    args = ap.parse_args(clean_argv)
+
+    # Validate that user-supplied colors belong to DEFAULT_PALETTES
+    if args.colors is not None and any(c not in DEFAULT_PALETTES for c in args.colors):
+        ap.error(f"Invalid color/palette: must belong to DEFAULT_PALETTES: {DEFAULT_PALETTES}")
+
+    # Validate that user-supplied linestyles belong to DEFAULT_LINESTYLES
+    if custom_linestyles is not None and any(ls not in DEFAULT_LINESTYLES and ls not in LINESTYLE_ALIASES for ls in custom_linestyles):
+        ap.error(f"Invalid linestyle: must belong to DEFAULT_LINESTYLES: {DEFAULT_LINESTYLES}")
+    
+    active_linestyles = [LINESTYLE_ALIASES.get(ls, ls) for ls in custom_linestyles] if custom_linestyles is not None else DEFAULT_LINESTYLES
+    
+    active_palettes = args.colors or DEFAULT_PALETTES
 
     # Determine logbook directory: use provided, else newest subfolder under 'stats'
     logbook_dirs:list[str]|None = args.logbook_dirs or [find_newest_subfolder('stats')]
@@ -298,9 +364,10 @@ def main():
                 # plot and save curves
                 print(f"Subgroup variable for analysis: {subgroup_var}")
                 plots_dir = os.path.join(args.outdir, 'plots')
-                active_palettes = args.palettes or DEFAULT_PALETTES
-                plot_HoF_history(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, extension=args.extension, xscale=args.xscale)
-                plot_HoF_confidence(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, extension=args.extension, xscale=args.xscale)
+                active_palettes = args.colors or DEFAULT_PALETTES
+                active_linestyles = args.linestyles or DEFAULT_LINESTYLES
+                plot_HoF_history(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, linestyles=active_linestyles, extension=args.extension, xscale=args.xscale)
+                plot_HoF_confidence(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, linestyles=active_linestyles, extension=args.extension, xscale=args.xscale)
 
 
                 # aggregated summary and boxplots
@@ -344,45 +411,32 @@ def main():
 
 
 
-DEFAULT_PALETTES: list[str] = [
-    "RdPu",      # 1. Red-Purple
-    "GnBu",      # 2. Green-Blue / Cyan
-    "YlOrRd",    # 3. Yellow-Orange-Red
-    "PuBu",      # 4. Purple-Blue
-    "YlGn",      # 5. Yellow-Green
-    "Oranges",   # 6. Amber-Orange
-    "mako",      # 7. Teal-Navy (perceptually uniform)
-    "flare",     # 8. Coral-Gold
-    "crest",     # 9. Mint-Forest
-    "rocket",    # 10. Violet-Crimson
-    "Purples",   # 11. Indigo-Purple
-    "Blues",     # 12. Ocean Blue
-]
-
 @overload
-def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:list[str|None]) -> dict[str, dict[str, tuple[float, float, float]]]:...
+def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:list[str|None], df:pd.DataFrame|None=None, param:str|None=None) -> dict[str, dict[str, tuple[float, float, float]]]:...
 @overload
-def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:None) -> dict[str, tuple[float, float, float]]:...
+def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:None, df:pd.DataFrame|None=None, param:str|None=None) -> dict[str, tuple[float, float, float]]:...
 
-def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:list[str|None]|None=None) ->Any:
+def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:list[str|None]|None=None, df:pd.DataFrame|None=None, param:str|None=None) ->Any:
     """Returns dict of dir->colormap if list of directories is not dummy, otherwise returns one colormap"""
-    n_params = len(param_vals)
-    if n_params <= 1:
-        sample_pts = [0.7]
-    else:
-        sample_pts = np.linspace(0.35, 0.9, n_params)
-
     if directories is not None:
         res = {}
         for d_idx, d in enumerate(directories):
             pal_name = palettes[d_idx % len(palettes)]
             cmap = sns.color_palette(pal_name, as_cmap=True)
-            colors = [cmap(float(pt)) for pt in sample_pts]
-            res[d] = {p: colors[i] for i, p in enumerate(param_vals)}
+            if df is not None and param is not None and 'dir' in df.columns and param in df.columns:
+                d_params = sorted(df[df['dir'] == d][param].dropna().unique())
+            else:
+                d_params = param_vals
+            n_d = len(d_params)
+            sample_pts_d = [0.7] if n_d <= 1 else np.linspace(0.35, 0.9, n_d)
+            colors = [cmap(float(pt)) for pt in sample_pts_d]
+            res[d] = {p: colors[i] for i, p in enumerate(d_params)}
         return res
     else:
         pal_name = palettes[0]
         cmap = sns.color_palette(pal_name, as_cmap=True)
+        n_params = len(param_vals)
+        sample_pts = [0.7] if n_params <= 1 else np.linspace(0.35, 0.9, n_params)
         colors = [cmap(float(pt)) for pt in sample_pts]
         return {p: colors[i] for i, p in enumerate(param_vals)}
 
@@ -403,7 +457,7 @@ def get_legend_handles(param_vals: list[str], directories: list[str] | None,colo
             else:
                 ls = '-'
             dir_name = d[max(d.rfind('\\'), d.rfind('/')) + 1:] if d else ''
-            label = (dir_name + ':\n' + v) if (directories is not None and len(directories) > 0 and param_vals.index(v) == 0) else v
+            label = (dir_name + ':\n' + v) if (directories is not None and len(directories) > 0 and i == 0) else v
             handles.append(mlines.Line2D([], [], color=c, linestyle=ls, linewidth=2.0, label=label))
     return handles
 
@@ -459,7 +513,8 @@ def set_scale_ticks(symlog_threshold: int, max_x_value: int = None, xscale: str 
 def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = "param", extension="pdf", 
                      # palettes: list[str] = ["RdPu", "GnBu", "YlOrRd"],
                      palettes: list[str] = DEFAULT_PALETTES, _figsize:tuple[int, int]=(10, 6),
-                     _symlog_threshold: int = 3500, xscale: str = 'linlog'):
+                     _symlog_threshold: int = 3500, xscale: str = 'linlog',
+                     linestyles: list[str] | None = None):
 
     """Plot best curves; x-axis is cumulative evaluated individuals when available."""
     sns.set(style='whitegrid')
@@ -473,14 +528,14 @@ def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = 
     has_nevals = 'nevals' in df_logbook.columns and df_logbook['nevals'].notna().any()
 
     # iterate per (param, experiment, filename) so each curve is one experiment run
-    linestyle_cycle = [ '-.',':','-', '--']
+    linestyle_cycle = linestyles if linestyles else DEFAULT_LINESTYLES
     curve_count = 0
 
     # plt.ion()
 
     max_x_value = 0
 
-    color_maps = get_colormaps(palettes, param_vals, directories)
+    color_maps = get_colormaps(palettes, param_vals, directories, df=df_logbook, param=param)
     for (par_val, _i_experiment, _fname, _dir), group in df_logbook.groupby([param, 'experiment', 'filename', 'dir'] if param in df_logbook.columns else ['experiment', 'filename', 'dir']
                                                                             ):
         #change palette depending on directory:
@@ -546,7 +601,8 @@ def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = 
 def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param: str = "param", ci: float = 1.0,  alpha: float = 0.12, extension: str = "pdf",
                         # palettes: list[str]=["RdPu", "GnBu", "YlOrRd"],
                         palettes: list[str] = DEFAULT_PALETTES, _figsize:tuple[int, int]=(10, 6), 
-                        _symlog_threshold: int =50, xscale: str = 'linlog'):
+                        _symlog_threshold: int =50, xscale: str = 'linlog',
+                        linestyles: list[str] | None = None):
 
     """Plot shaded confidence intervals for each `param` value.
 
@@ -563,7 +619,8 @@ def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param
     param_vals:list[str|None] = sorted(df_logbook[param].dropna().unique()) if param in df_logbook.columns else [None]
     directories:list[str|None]= sorted(df_logbook['dir'].dropna().unique()) if 'dir' in df_logbook.columns else [None]
 
-    color_maps = get_colormaps(palettes, param_vals, directories)
+    color_maps = get_colormaps(palettes, param_vals, directories, df=df_logbook, param=param)
+    linestyle_cycle = linestyles if linestyles else DEFAULT_LINESTYLES
 
     max_gens = 0
 
@@ -581,6 +638,9 @@ def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param
                 dsubset = subset
                 color_map = color_maps
 
+            if dsubset.empty:
+                continue
+
             g = dsubset.groupby('gen')['best']
             ## aggregate across experiments by generation
             # agg = g.agg(list)
@@ -596,7 +656,8 @@ def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param
                 max_gens = gens.max()
 
             color: str|tuple[float,float,float] = color_map.get(p, 'gray')
-            plt.plot(gens, means, color=color, label=str(p))
+            ls = linestyle_cycle[param_vals.index(p) % len(linestyle_cycle)] if (param_vals and p in param_vals) else '-'
+            plt.plot(gens, means, color=color, label=str(p), linestyle=ls)
             plt.fill_between(gens, lower, upper, color=color, alpha=alpha)
 
     set_scale_ticks(_symlog_threshold, max_x_value=max_gens, xscale=xscale)
@@ -604,7 +665,7 @@ def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param
     plt.ylabel('Best (mean) fitness')
     plt.title(f'Confidence intervals ({"mean +-" + str(ci) + ' std'})')
 
-    get_legend(param_vals, directories, color_maps)
+    get_legend(param_vals, directories, color_maps, linestyle_cycle=linestyle_cycle)
 
     plt.tight_layout()
     figpath = os.path.join(save_dir, f'logbooks_confidence_std_{ci}.' + extension)
@@ -958,6 +1019,11 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
     else:
         axes[1].text(0.5, 0.5, 'No duration data available', ha='center', va='center')
         axes[1].set_axis_off()
+
+    for ax in axes:
+        ax.tick_params(axis='x', labelrotation=45)
+        for label in ax.get_xticklabels():
+            label.set_horizontalalignment('right')
 
     ############### Legend #####################################
     # remove legends generated by seaborn
