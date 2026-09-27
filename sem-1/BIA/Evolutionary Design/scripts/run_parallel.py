@@ -63,6 +63,34 @@ def get_frams_data_dir(frams_path: str) -> str:
         return data_dir
     return frams_path
 
+def resolve_sim_path(sim_path: str, frams_path: str | None = None) -> str:
+    """Resolves a .sim file path:
+    1. Checks the path directly.
+    2. Checks subfolders of current working directory: 'sims' and 'sim'.
+    3. If present in Framsticks data dir, keeps the relative filename for native Framsticks loading.
+    Returns the resolved absolute path (forward slashes) or original filename."""
+    if not sim_path:
+        return sim_path
+
+    # 1. As provided
+    if os.path.exists(sim_path):
+        return os.path.abspath(sim_path).replace('\\', '/')
+
+    # 2. Check subfolders 'sims' and 'sim' of current working directory
+    cwd = os.getcwd()
+    for sub in ('sims', 'sim'):
+        cand = os.path.join(cwd, sub, sim_path)
+        if os.path.exists(cand):
+            return os.path.abspath(cand).replace('\\', '/')
+
+    # 3. If present in Framsticks data dir, let Framsticks resolve it natively
+    if frams_path:
+        frams_data = get_frams_data_dir(frams_path)
+        if os.path.exists(os.path.join(frams_data, sim_path)):
+            return sim_path
+
+    return sim_path
+
 def ensure_mutation_sim_file(frams_path: str, genformat: str | int | None, mut_intensity: float | str) -> str:
     """Ensures f{genformat}-mut-{tag}.sim exists in Framsticks data dir, creating it if needed.
     Returns the sim filename (e.g. 'f9-mut-050.sim')."""
@@ -93,15 +121,10 @@ def encode_filename(param_value: str | None, idx_experiment: str | int, genforma
     return f"HoF-{f_prefix}{idx_experiment}"
 
 def combine_sim_strings(base_sim: str, extra_sim: str | None) -> str:
-    if not extra_sim:
-        return base_sim
-    base = base_sim.strip()
-    extra = extra_sim.strip()
-    if not base:
-        return extra
-    if not base.endswith(';'):
-        base += ';'
-    return base + extra
+    parts = [p.strip() for p in (base_sim or '').split(';') if p.strip()]
+    if extra_sim:
+        parts.extend([p.strip() for p in extra_sim.split(';') if p.strip()])
+    return ';'.join(parts)
 
 def build_cmd(python_exec: str, script_path: str, frams_path: str, optimization_target: str, sim: str, stats_dir: str, hof_dir: str, popsize: int, generations: int, tournament: int, 
               param_value: str|None, idx_experiment: int,
@@ -109,7 +132,8 @@ def build_cmd(python_exec: str, script_path: str, frams_path: str, optimization_
               max_numparts: int|None = 30, max_numjoints: int|None = None,
               max_numneurons: int|None = None, max_numconnections: int|None = None,
               max_numgenochars: str|int|None = None,
-              pxov: float|None = None, pmut: float|None = None
+              pxov: float|None = None, pmut: float|None = None,
+              schedule: str|None = None
               ) -> tuple[list[str], str]:
     hof_path = os.path.join(hof_dir, encode_filename(param_value, idx_experiment, genformat) + ".gen")
     cmd: list[str] = [python_exec, script_path,
@@ -122,6 +146,9 @@ def build_cmd(python_exec: str, script_path: str, frams_path: str, optimization_
            '-hof_size', '1',
            '-hof_savefile', hof_path,
            '--save-stats', stats_dir]
+
+    if schedule is not None:
+        cmd.extend(['--schedule', schedule])
 
     if max_numparts is not None:
         cmd.extend(['-max_numparts', str(max_numparts)])
@@ -180,8 +207,9 @@ def main():
     p.add_argument('--script', required=True, help='Path to FramsticksEvolution.py')
     p.add_argument('--frams-path', required=True, help='Path to Framsticks library (Framsticks55)')
     p.add_argument('--opt', default='vertpos', help="Target to be optimized. By default, 'vertpos'")
-    p.add_argument('--sim', default="eval-allcriteria.sim;deterministic.sim;sample-period-2.sim;", help='Sim filename to pass to -sim')
+    p.add_argument('--sim', default="eval-allcriteria.sim;deterministic.sim;sample-period-2.sim", help='Sim filename to pass to -sim')
     p.add_argument('--sim-variants', nargs='+', required=False, help='Sim variants/filenames to evaluate in parallel')
+    p.add_argument('--schedules', '--schemes', dest='schedules', nargs='+', required=False, help='Schedules in format tag=schedule_str (e.g. sw1=0:sim1.sim;150:sim2.sim)')
     p.add_argument('--mutints', '--mutintensities', '--values', dest='mutints', nargs='+', required=False, help='Mutation intensities (e.g. 0 0.05 0.10). Ignored if --sim-variants is provided.')
     p.add_argument('--num-experiments', type=int, required=True, help='Number of experiments')
     p.add_argument('--popsize', type=int, default=50, help="Population size")
@@ -206,7 +234,7 @@ def main():
 
     script_path = os.path.abspath(args.script)
     frams_path = os.path.abspath(args.frams_path)
-    sim = args.sim
+    sim = ';'.join([resolve_sim_path(s.strip(), frams_path) for s in (args.sim or '').split(';') if s.strip()])
     stats_dir = os.path.abspath(args.stats_dir)
     out_base = os.path.abspath(args.out)
     os.makedirs(out_base, exist_ok=True)
@@ -242,23 +270,44 @@ def main():
     jobs: list[tuple[list[str], str, str, str]] = []
 
     for f in genformat_values:
-        if args.sim_variants is not None:
+        if args.schedules is not None:
+            variants = []
+            for s in parse_arg_values_list(args.schedules, desired_type=str):
+                if '=' in s:
+                    t, sched = s.split('=', 1)
+                else:
+                    t = f"sched{len(variants)+1}"
+                    sched = s
+                norm_parts = []
+                for entry in sched.split(';'):
+                    entry = entry.strip()
+                    if not entry:
+                        continue
+                    if ':' in entry:
+                        g, sf = entry.split(':', 1)
+                        sf = resolve_sim_path(sf, frams_path)
+                        norm_parts.append(f"{g}:{sf}")
+                    else:
+                        norm_parts.append(entry)
+                variants.append((t, None, ';'.join(norm_parts)))
+        elif args.sim_variants is not None:
             variants = [
                 (
                     os.path.splitext(os.path.basename(v))[0],
-                    os.path.abspath(v).replace('\\', '/') if os.path.exists(v) else v
+                    resolve_sim_path(v, frams_path),
+                    None
                 )
                 for v in parse_arg_values_list(args.sim_variants, desired_type=str)
             ]
         elif args.mutints is not None:
             variants = [
-                (format_mut_tag(m), ensure_mutation_sim_file(frams_path, f, m))
+                (format_mut_tag(m), ensure_mutation_sim_file(frams_path, f, m), None)
                 for m in parse_arg_values_list(args.mutints, desired_type=float)
             ]
         else:
-            variants = [(None, None)]
+            variants = [(None, None, None)]
 
-        for tag, extra_sim in variants:
+        for tag, extra_sim, schedule_str in variants:
             full_sim = combine_sim_strings(sim, extra_sim)
             for n in experiment_idc:
                 cmd, hof_path = build_cmd(
@@ -271,7 +320,8 @@ def main():
                     max_numneurons=args.max_numneurons,
                     max_numconnections=args.max_numconnections,
                     max_numgenochars=args.max_numgenochars,
-                    pxov=args.pxov, pmut=args.pmut
+                    pxov=args.pxov, pmut=args.pmut,
+                    schedule=schedule_str
                 )
                 logfile = os.path.join(log_dir, encode_filename(tag, n, f) + '.log')
                 cwd = os.path.dirname(script_path) if os.path.dirname(script_path) else os.getcwd()
