@@ -1,4 +1,4 @@
-# Assignment 5 - Task 2: Varying Landscape Definition
+# Evolutionary Design #3 - Task 2: Varying Landscape Definition
 ## Evaluating Walking Creatures under Different Performance Sampling Periods (`perfperiod`)
 
 ### 1. Objective and Setup
@@ -45,7 +45,7 @@ _Figure 2: Ratio of net rectilinear velocity ($v_{10000}$) to cumulative path ve
 
 ### 4. Theoretical Analysis and Key Scientific Insights
 
-#### 1) Limiting $\text{perfperiod} \to 0$ ($pp=1$) as Continuous Path Integration
+#### 1) Limiting $\text{perfperiod} \to 0$ as Continuous Path Integration
 In the discrete simulator, setting $\text{perfperiod} = 1$ step samples coordinates at every single simulation step ($dt = 1$). In the continuous limit $\Delta t \to 0$, the sum of discrete chord lengths converges to the line integral of differential displacement along the trajectory:
 $$\lim_{\Delta t \to 0} \frac{\sum_{k} \|\mathbf{x}(t_{k+1}) - \mathbf{x}(t_k)\|}{T} = \frac{\int_0^T \|\dot{\mathbf{x}}(t)\| \, \mathrm{d}t}{T} = \frac{\int_0^T v_{\text{instantaneous}}(t) \, \mathrm{d}t}{T}$$
 The numerator represents the total **arc length / path taken**, which constitutes the exact mathematical definition of **average scalar speed** over lifespan $T$.
