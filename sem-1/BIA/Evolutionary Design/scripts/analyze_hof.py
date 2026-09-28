@@ -411,6 +411,36 @@ def main():
 
 
 
+def natural_sort_key(s: Any) -> list:
+    """Natural alphanumeric sort key (e.g. converts digits to int so scheme-2 comes before scheme-10)."""
+    if s is None:
+        return []
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
+
+
+def get_ordered_params(df: pd.DataFrame, param: str = 'param', directories: list[str | None] | None = None) -> list[str]:
+    """Returns parameter values ordered by the directories in which they first appear,
+    with natural alphanumeric sorting within each directory."""
+    if df is None or df.empty or param not in df.columns:
+        return []
+    if not directories or 'dir' not in df.columns:
+        return sorted(df[param].dropna().unique(), key=natural_sort_key)
+
+    ordered = []
+    seen = set()
+    for d in directories:
+        d_params = sorted(df[df['dir'] == d][param].dropna().unique(), key=natural_sort_key)
+        for p in d_params:
+            if p not in seen:
+                seen.add(p)
+                ordered.append(p)
+    for p in sorted(df[param].dropna().unique(), key=natural_sort_key):
+        if p not in seen:
+            seen.add(p)
+            ordered.append(p)
+    return ordered
+
+
 @overload
 def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:list[str|None], df:pd.DataFrame|None=None, param:str|None=None) -> dict[str, dict[str, tuple[float, float, float]]]:...
 @overload
@@ -424,9 +454,9 @@ def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:lis
             pal_name = palettes[d_idx % len(palettes)]
             cmap = sns.color_palette(pal_name, as_cmap=True)
             if df is not None and param is not None and 'dir' in df.columns and param in df.columns:
-                d_params = sorted(df[df['dir'] == d][param].dropna().unique())
+                d_params = sorted(df[df['dir'] == d][param].dropna().unique(), key=natural_sort_key)
             else:
-                d_params = param_vals
+                d_params = sorted(param_vals, key=natural_sort_key)
             n_d = len(d_params)
             sample_pts_d = [0.7] if n_d <= 1 else np.linspace(0.35, 0.9, n_d)
             colors = [cmap(float(pt)) for pt in sample_pts_d]
@@ -435,10 +465,11 @@ def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:lis
     else:
         pal_name = palettes[0]
         cmap = sns.color_palette(pal_name, as_cmap=True)
-        n_params = len(param_vals)
+        sorted_params = sorted(param_vals, key=natural_sort_key)
+        n_params = len(sorted_params)
         sample_pts = [0.7] if n_params <= 1 else np.linspace(0.35, 0.9, n_params)
         colors = [cmap(float(pt)) for pt in sample_pts]
-        return {p: colors[i] for i, p in enumerate(param_vals)}
+        return {p: colors[i] for i, p in enumerate(sorted_params)}
 
     
     
@@ -450,14 +481,18 @@ def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:lis
 
 def get_legend_handles(param_vals: list[str], directories: list[str] | None,color_maps: dict[str, dict[str, tuple[float, float, float]]], linestyle_cycle: list[str] | None = None) -> list[mlines.Line2D]:
     handles = []
+    has_multiple_dirs = directories is not None and len(directories) > 1
     for d, color_map in color_maps.items():
+        dir_name = d[max(d.rfind('\\'), d.rfind('/')) + 1:] if d else ''
         for i, (v, c) in enumerate(color_map.items()):
             if linestyle_cycle is not None and param_vals and v in param_vals:
                 ls = linestyle_cycle[param_vals.index(v) % len(linestyle_cycle)]
             else:
                 ls = '-'
-            dir_name = d[max(d.rfind('\\'), d.rfind('/')) + 1:] if d else ''
-            label = (dir_name + ':\n' + v) if (directories is not None and len(directories) > 0 and i == 0) else v
+            if has_multiple_dirs:
+                label = f"{dir_name}: {v}"
+            else:
+                label = str(v)
             handles.append(mlines.Line2D([], [], color=c, linestyle=ls, linewidth=2.0, label=label))
     return handles
 
@@ -472,7 +507,7 @@ def get_legend(param_vals: list[str], directories: list[str] | None,color_maps: 
         ax.get_legend().remove()
 
     n_dirs = len(directories) if (directories is not None and len(directories) > 0) else (len(color_maps) if color_maps else 1)
-    ncols = max(1, (n_dirs % 4) if n_dirs < 4 else 4)
+    ncols = min(n_dirs, 5) if n_dirs > 1 else 4
 
     fig.legend(
         handles=get_legend_handles(param_vals, directories, color_maps, linestyle_cycle=linestyle_cycle),
@@ -520,8 +555,8 @@ def plot_HoF_history(df_logbook: pd.DataFrame, outdir: str|None = None, param = 
     sns.set(style='whitegrid')
     plt.figure(figsize=_figsize)
 
-    param_vals:list[str|None] = sorted(df_logbook[param].dropna().unique()) if param in df_logbook.columns else [None]
-    directories:list[str|None]= sorted(df_logbook['dir'].dropna().unique()) if 'dir' in df_logbook.columns else [None]
+    directories:list[str|None]= list(dict.fromkeys(df_logbook['dir'].dropna())) if 'dir' in df_logbook.columns else [None]
+    param_vals:list[str|None] = get_ordered_params(df_logbook, param, directories)
 
     print(f"The following '{param}' values will be analyzed: {param_vals}")
 
@@ -616,8 +651,8 @@ def plot_HoF_confidence(df_logbook: pd.DataFrame, outdir: str|None = None, param
 
     save_dir = outdir or os.path.join('hof_results', 'plots')
     os.makedirs(save_dir, exist_ok=True)
-    param_vals:list[str|None] = sorted(df_logbook[param].dropna().unique()) if param in df_logbook.columns else [None]
-    directories:list[str|None]= sorted(df_logbook['dir'].dropna().unique()) if 'dir' in df_logbook.columns else [None]
+    directories:list[str|None]= list(dict.fromkeys(df_logbook['dir'].dropna())) if 'dir' in df_logbook.columns else [None]
+    param_vals:list[str|None] = get_ordered_params(df_logbook, param, directories)
 
     color_maps = get_colormaps(palettes, param_vals, directories, df=df_logbook, param=param)
     linestyle_cycle = linestyles if linestyles else DEFAULT_LINESTYLES
@@ -909,7 +944,7 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
     df_summary['multigroup'] = df_summary[group_by].astype(str).agg(', '.join, axis=1).str.strip()
     # print(df_summary)
 
-    directories:list[str|None]= sorted(df_summary['dir'].dropna().unique()) if 'dir' in df_summary.columns else [None]
+    directories:list[str|None]= list(dict.fromkeys(df_summary['dir'].dropna())) if 'dir' in df_summary.columns else [None]
 
     if len(group_by)>2:
         raise NotImplemented("Support of more than 2 grouping vars is not yet implemented.")
@@ -943,7 +978,7 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
 
 
     subgroup_col = group_by[-1]
-    param_vals = sorted(quality_df[subgroup_col].dropna().unique())
+    param_vals = get_ordered_params(quality_df, subgroup_col, directories)
     color_maps = get_colormaps(palettes, param_vals, directories)
 
     if len(directories) <= 1:
@@ -964,7 +999,8 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
     sns.boxplot(x=subgroup_col, y='hof_best', data=quality_df, ax=axes[0], 
                 hue=hue_col,
                 dodge=dodge,
-                palette=palette_map)
+                palette=palette_map,
+                order=param_vals)
     sns.stripplot(x=subgroup_col,
                   y='hof_best', 
                   data=quality_df, 
@@ -974,9 +1010,10 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
                   palette='dark:black',
                   size=4, 
                   jitter=True, 
-                  alpha=0.6)
+                  alpha=0.6,
+                  order=param_vals)
     axes[0].set_title('Hall-of-Fame fitness (per run)')
-    axes[0].set_xlabel(group_by)
+    axes[0].set_xlabel('Strategy / Scheme' if subgroup_col == 'param' else ', '.join(group_by))
     axes[0].set_ylabel('Fitness')
 
     # Right plot:
@@ -1005,14 +1042,16 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
         sns.boxplot(x=subgroup_col, y='duration_unit', data=runtimes, ax=axes[1],
                     dodge=dodge, 
                     hue=hue_col,
-                    palette=palette_map)
+                    palette=palette_map,
+                    order=param_vals)
         sns.stripplot(x=subgroup_col, y='duration_unit', data=runtimes, ax=axes[1],
                       dodge=dodge,
                       hue=hue_col,
-                      palette='dark:black', size=4, jitter=True, alpha=0.6)
+                      palette='dark:black', size=4, jitter=True, alpha=0.6,
+                      order=param_vals)
 
         axes[1].set_title('Run duration per run')
-        axes[1].set_xlabel(group_by)
+        axes[1].set_xlabel('Strategy / Scheme' if subgroup_col == 'param' else ', '.join(group_by))
         axes[1].set_ylabel(f'Duration ({label_unit})')
         if log_time and time_unit != 'eval':
             axes[1].set_yscale('log')
