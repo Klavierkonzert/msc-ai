@@ -586,21 +586,77 @@ In biological morphogenesis, organisms undergo distinct developmental phases: em
 2. **Intermediate Articulation & Neuromuscular Scaffolding (Generations $100\text{--}200$)**: Biomechanical specialization (Strategy B for limbs, Strategy D for joints) allocates degrees of freedom and sensor-effector loops.
 3. **Late-Stage Convergence & Parametric Polish (Generations $200\text{--}400$)**: Suppressing structural perturbations while prioritizing Strategy A or neural tuning allows continuous metric refinement of limb lengths, muscle angles, and synaptic weights without destructive morphological mutations.
 
-### Overview of Scheduled Batches Tested
-Across Experiments 3, 4, and 5, **16 distinct scheduled schemes** (160 evolutionary runs) were tested under identical experimental controls ($N_{pop} = 50$, tournament size $5$, $p_{mut} = 0.9$, $p_{xov} = 0.0$, 400 generations):
+### Experiment 3: Multi-Stage Scheduled Switching (Schemes 1–7)
 
-1. **Experiment 3: Multi-Stage Scheduled Switching (Schemes 1–7)**:
-   - Explored diverse transition chains: classical scaffolding (Weaker $\to$ High Neural), multi-phase developmental switches (Equal $\to$ Strat B $\to$ Neural), and 6-stage micro-step cascades.
-   - Discovered that rapid 50-generation switches induce disruption shocks, but Scheme 3 and Scheme 7 achieved peak velocities exceeding $0.023$.
-2. **Experiment 4: Biphasic Exploration Timing & Scaffolding (Schemes 1, 8–11)**:
-   - Systematically varied the timing of the transition from initial Equal Weights exploration to Strategy A fine-tuning: $t_{switch} \in \{100, 200, 300\}$.
-   - Identified the **critical 100-generation plasticity window**: transitioning to Strategy A at generation 100 (**Scheme 10**) produced the highest overall mean velocity across the entire 24-configuration benchmark ($v_{mean} = 0.008272$).
-3. **Experiment 5: Refined Morphogenetic Cascades (Schemes 1, 3, 7, 10)**:
-   - Addressed the **morphological freeze trap** (where zeroing body mutations prevents correcting misaligned limbs) by replacing rigid freezes with unbroken developmental progressions:
-     $$\text{Equal (Bootstrap, 100)} \to \text{Strat B (Branching, 100)} \to \text{Strat D (Joints, 100)} \to \text{Strat A (Tuning, 100)}$$
-   - Scheme 7 yielded the second-highest average velocity of the entire benchmark ($v_{mean} = 0.007447, v_{max} = 0.019239$).
+Experiment 3 investigated diverse multi-stage schedules combining initial exploration, intermediate branching, and late-stage exploitation across 400 generations:
+
+1. **Scheme 1**: <span style="color: #c0d0fe; font-weight: 600;">Weaker Neural</span> $\xrightarrow{\text{150 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>  
+   *Rationale*: Tests classic two-stage scaffolding (body exploration followed by brain exploitation).
+2. **Scheme 2**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{150 gens }}$ <span style="color: #c0d0fe; font-weight: 600;">Weaker Neural</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>  
+   *Rationale*: Evaluates an unconstrained global search bootstrap before transitioning through intermediate morphological refinement to late synaptic polish.
+3. **Scheme 3**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #c0d0fe; font-weight: 600;">Weaker Neural</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>  
+   *Rationale*: Chains early global exploration with dedicated limb branching (Strategy B) and multi-step neural scaffolding.
+4. **Scheme 4**: <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{150 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>  
+   *Rationale*: Tests whether starting directly with limb branching without an Equal Weights bootstrap provides sufficient initial diversity.
+5. **Scheme 5**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{150 gens }}$ <span style="color: #92d4f8; font-weight: 600;">Strategy D</span> $\xrightarrow{\text{75 gens }}$ <span style="color: #c0d0fe; font-weight: 600;">Weaker Neural</span>  
+   *Rationale*: Emphasizes joint and muscle insertion (Strategy D) mid-evolution before softer neural refinement.
+6. **Scheme 6**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{150 gens }}$ <span style="color: #92d4f8; font-weight: 600;">Strategy D</span> $\xrightarrow{\text{75 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #c0d0fe; font-weight: 600;">Weaker Neural</span>  
+   *Rationale*: Tests a 4-stage progression combining joint growth with Strategy A continuous tuning.
+7. **Scheme 7**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #92d4f8; font-weight: 600;">Strategy D</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #c0d0fe; font-weight: 600;">Weaker Neural</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>  
+   *Rationale*: Evaluates a fine-grained 6-stage micro-step developmental cascade spanning all operator strategies.
+
+> *For detailed numerical tables, fitness curves, confidence intervals, and per-run logbooks, see the [Task 3 Report: Experiment 3](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-3-switching-between-strategies-in-the-course-of-evolution).*
 
 ---
+
+### Experiment 4: Biphasic Exploration Timing & Scaffolding (Schemes 1, 8–11)
+
+Experiment 4 evaluated cleaner, single-transition biphasic exploration schemes to determine the exact optimal duration of the initial morphological exploration window:
+
+1. **Scheme 1 (Classic Scaffolding)**: <span style="color: #c0d0fe; font-weight: 600;">Weaker Neural</span> $\xrightarrow{\text{200 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>  
+   *Rationale*: 200 generations of morphology exploration followed by 200 generations of complete morphological freeze for neural motor synchronization.
+2. **Scheme 8 (Smooth Annealing)**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{200 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>  
+   *Rationale*: Evaluates equal halves of unconstrained exploration and Strategy A continuous metric tuning.
+3. **Scheme 9 (Articulated Gait)**: <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{200 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>  
+   *Rationale*: Combines limb branching synthesis with continuous gait parameter tuning.
+4. **Scheme 10 (Early Freeze Timing Test)**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>  
+   *Rationale*: Tests whether an early 100-generation morphological exploration window followed by 300 generations of continuous tuning maximizes gait convergence.
+5. **Scheme 11 (Late Freeze Timing Test)**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{300 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>  
+   *Rationale*: Tests prolonged 300-generation body search before a brief 100-generation polishing phase.
+
+> *For detailed numerical tables, fitness curves, confidence intervals, and per-run logbooks, see the [Task 3 Report: Experiment 4](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-4-biphasic-two-stage-exploration-schemes).*
+
+---
+
+### Experiment 5: Refined Morphogenetic Cascades (Schemes 1, 3, 7, 10)
+
+Experiment 5 resolved the **morphological freeze trap** by replacing rigid freezes with continuous developmental progressions:
+
+1. **Scheme 1 (Bootstrapped Scaffolding)**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #c0d0fe; font-weight: 600;">Weaker Neural</span> $\xrightarrow{\text{150 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>  
+   *Rationale*: Introduces an essential 100-generation Equal Weights bootstrap before classical two-stage neural scaffolding.
+2. **Scheme 3 (Continuous Articulated Development)**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>  
+   *Rationale*: Replaces rigid neural lock-in with 200 generations of continuous Strategy A biomechanical fine-tuning.
+3. **Scheme 7 (Morphogenetic Cascade)**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #92d4f8; font-weight: 600;">Strategy D</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>  
+   *Rationale*: Tests a 4-stage biological morphogenetic cascade: global exploration $\to$ limb expansion $\to$ joint actuation $\to$ continuous fine-tuning without any destructive freeze.
+4. **Scheme 10 (Compact Late Synaptic Polish)**: <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span> $\xrightarrow{\text{250 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>  
+   *Rationale*: Maintains 250 uninterrupted generations of Strategy A co-adaptation before a compact 50-generation final synaptic lock-in.
+
+> *For detailed numerical tables, fitness curves, confidence intervals, and per-run logbooks, see the [Task 3 Report: Experiment 5](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-5-refined-rerun-continuous-biomechanical-development--softened-synaptic-transitions).*
+
+---
+
+### Summary Across Scheduled Mutation Experiments
+
+Synthesizing across all 16 scheduled schemes (160 evolutionary runs) reveals three overarching developmental dynamics:
+1. **The Critical 100-Generation Exploration Window**: Unconstrained morphological exploration (Equal Weights) is essential during the initial 100 generations to discover articulated, stable body plans. Curtailing or skipping this window cripples evolutionary potential, whereas extending it beyond 100 generations delays convergence.
+2. **The Hazard of Rigid Morphological Freezes**: Completely zeroing morphological mutations (`f1-probs01.sim`) traps creatures in rigid mechanical configurations where even minor joint misalignments cannot be remedied.
+3. **The Power of Continuous Biomechanical Tuning**: Replacing rigid freezes with continuous metric tuning (Strategy A) preserves developmental plasticity, reliably driving gaits to superior speeds while suppressing destructive topology mutations.
+
+---
+
+## Final Synthesis: Comprehensive Cross-Experimental Comparison
+
+The following sections provide a unified comparison across all **24 configurations (240 independent runs over 400 generations)** evaluated throughout Experiments 1 to 5.
 
 ### Comparative Boxplot Analysis
 
