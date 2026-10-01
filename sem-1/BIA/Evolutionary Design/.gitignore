@@ -32,6 +32,7 @@ framspy-download/
 !assignments/**/*.csv
 ## Specific Framsticks file extensions:
 !assignments/**/*.sim
+!assignments/**/*.gen
 
 # Allow VS C++ config
 !.vscode/launch.json
