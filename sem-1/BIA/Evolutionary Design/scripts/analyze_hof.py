@@ -289,6 +289,21 @@ LINESTYLE_ALIASES: dict[str, str] = {
 }
 
 
+def get_experiment_palette(dir_path: str | None, default_palette: str) -> str:
+    """Infers the dedicated experiment palette from DEFAULT_PALETTES if 'exp\\d+' or 'Exp\\d+' is in dir_path."""
+    if dir_path:
+        base = os.path.basename(os.path.normpath(str(dir_path)))
+        m = re.search(r'(?:exp|experiment)[_-]?(\d+)', base, re.IGNORECASE)
+        if not m:
+            matches = list(re.finditer(r'(?:exp|experiment)[_-]?(\d+)', str(dir_path), re.IGNORECASE))
+            m = matches[-1] if matches else None
+        if m:
+            exp_num = int(m.group(1))
+            if 1 <= exp_num <= len(DEFAULT_PALETTES):
+                return DEFAULT_PALETTES[exp_num - 1]
+    return default_palette
+
+
 def main():
     # Pre-extract --linestyles from sys.argv so that leading dashes ('-', '--', '-.')
     # are treated as values rather than option flags by argparse
@@ -340,10 +355,14 @@ def main():
     
     active_linestyles = [LINESTYLE_ALIASES.get(ls, ls) for ls in custom_linestyles] if custom_linestyles is not None else DEFAULT_LINESTYLES
     
-    active_palettes = args.colors or DEFAULT_PALETTES
-
     # Determine logbook directory: use provided, else newest subfolder under 'stats'
     logbook_dirs:list[str]|None = args.logbook_dirs or [find_newest_subfolder('stats')]
+
+    if args.colors is None and logbook_dirs and len(logbook_dirs) == 1:
+        exp_pal = get_experiment_palette(logbook_dirs[0], DEFAULT_PALETTES[0])
+        active_palettes = [exp_pal] + [p for p in DEFAULT_PALETTES if p != exp_pal]
+    else:
+        active_palettes = args.colors or DEFAULT_PALETTES
     if logbook_dirs:
         # try:
             df = read_logs(logbook_dirs) #reads one or several log folders
@@ -364,7 +383,6 @@ def main():
                 # plot and save curves
                 print(f"Subgroup variable for analysis: {subgroup_var}")
                 plots_dir = os.path.join(args.outdir, 'plots')
-                active_palettes = args.colors or DEFAULT_PALETTES
                 active_linestyles = args.linestyles or DEFAULT_LINESTYLES
                 plot_HoF_history(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, linestyles=active_linestyles, extension=args.extension, xscale=args.xscale)
                 plot_HoF_confidence(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, linestyles=active_linestyles, extension=args.extension, xscale=args.xscale)
@@ -411,6 +429,44 @@ def main():
 
 
 
+def extract_scheme_group(s: Any) -> str:
+    """Extracts base scheme group up to and including the scheme index digit(s).
+    Groups together schemes with alphabetic/refinement postfixes (e.g. scheme-3b, scheme-3_b)
+    as well as trailing numeric variation postfixes like '-\\d+' (e.g. scheme-8-100, scheme-8-200 -> scheme-8).
+    e.g. 'scheme-3' -> 'scheme-3'
+         'scheme-3b' -> 'scheme-3'
+         'scheme-8-100' -> 'scheme-8'
+         'scheme-8-200' -> 'scheme-8'
+         'scheme-8-300' -> 'scheme-8'
+         'scheme-10b' -> 'scheme-10'
+         'sch-7c' -> 'sch-7'
+         'Baseline' -> 'Baseline'
+    """
+    if s is None:
+        return ''
+    s_str = str(s)
+    # 1. Trailing -\\d+ variation (e.g. scheme-8-100, scheme-8-200 -> scheme-8)
+    if (m_num:= re.match(r'^(.*?(?:scheme|sch)[_-]?\d+)-(\d+)$', s_str, re.IGNORECASE)):
+        return m_num.group(1)
+    # 2. Trailing alphabetic or non-digit postfix (e.g. scheme-3b, scheme-3_refined -> scheme-3)
+    if (m := re.match(r'^(.*?(?:scheme|sch)[_-]?\d+)([-_a-zA-Z].*)$', s_str, re.IGNORECASE)):
+        return m.group(1)
+    # 3. Short format s3b or s8-100
+    if (m2_num := re.match(r'^(s?\d+)-(\d+)$', s_str, re.IGNORECASE)):
+        return m2_num.group(1)
+    if (m2 := re.match(r'^(s?\d+)([-_a-zA-Z].*)$', s_str, re.IGNORECASE)):
+        return m2.group(1)
+    return s_str
+
+
+def shorten_scheme_label(s: Any) -> str:
+    """Shortens scheme names for compact x-tick labeling, e.g. 'scheme-8-100' -> 'sch.-8-100'."""
+    if s is None:
+        return ''
+    s_str = str(s)
+    return re.sub(r'^(?:scheme|sch)[_-]', 'sch.-', s_str, flags=re.IGNORECASE)
+
+
 def natural_sort_key(s: Any) -> list:
     """Natural alphanumeric sort key (e.g. converts digits to int so scheme-2 comes before scheme-10)."""
     if s is None:
@@ -451,7 +507,7 @@ def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:lis
     if directories is not None:
         res = {}
         for d_idx, d in enumerate(directories):
-            pal_name = palettes[d_idx % len(palettes)]
+            pal_name = get_experiment_palette(d, palettes[d_idx % len(palettes)])
             cmap = sns.color_palette(pal_name, as_cmap=True)
             if df is not None and param is not None and 'dir' in df.columns and param in df.columns:
                 d_params = sorted(df[df['dir'] == d][param].dropna().unique(), key=natural_sort_key)
@@ -917,7 +973,6 @@ def collect_run_summary(logbook_dirs: list[str]|None = None, df_logbook: pd.Data
 
 
 def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', group_by: list[str] = [ 'dir', 'enc', 'param'], time_unit: str = 's', log_time: bool = False, min_samples: int = 1, extension: str = 'pdf',
-                         # palettes:list[str]=["RdPu", "YlOrRd", "GnBu"],
                          palettes: list[str] = DEFAULT_PALETTES, _figsize:tuple[int,int]=(14, 6)
                          ):
 
@@ -925,14 +980,13 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
 
     - `group_by` is the column name used to group runs (defaults to 'param').
     """
-    import seaborn as sns
     import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
 
     if df_summary is None or df_summary.empty:
         print('No per-run summary available for boxplots.')
         return
 
-    # print(df_summary)
     active_group_by = []
     for grpb in group_by:
         if grpb in df_summary.columns and not df_summary[grpb].isna().all():
@@ -942,7 +996,6 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
         active_group_by = [c for c in ('param', 'enc') if c in df_summary.columns and not df_summary[c].isna().all()][:1]
     group_by = active_group_by
     df_summary['multigroup'] = df_summary[group_by].astype(str).agg(', '.join, axis=1).str.strip()
-    # print(df_summary)
 
     directories:list[str|None]= list(dict.fromkeys(df_summary['dir'].dropna())) if 'dir' in df_summary.columns else [None]
 
@@ -954,102 +1007,126 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
     os.makedirs(outdir, exist_ok=True)
     fig, axes = plt.subplots(1, 2, figsize=_figsize)
 
-    ## prepare data for quality boxplot
-    # quality_df = df_summary[[*group_by, 'hof_best']].dropna()
-    # counts = quality_df.groupby(group_by).size()
-    # # filter by min_samples
-    # valid_groups = counts[counts >= min_samples][group_by]
-    # if not valid_groups:
-    #     print('No groups with enough samples for boxplot (min_samples=%d)' % min_samples)
-    #     return
-    # quality_df = quality_df[quality_df[group_by].isin(valid_groups)]
-    quality_df = df_summary
-    
-
-    # left plot: fitness
-    # for i_dir, dir in enumerate(directories):
-        # use same palette as other plots for consistent coloring
-    # subgr = quality_df[quality_df[group_by[0]]==dir]
-    # subgroups = sorted(subgr[group_by[-1]].unique())
-
-    # palette = sns.color_palette(palette=palettes[i_dir % len(palettes)], n_colors=max(3, len(subgroups)))
-    
-    # palettes = get_colormaps(palettes, df_summary[group_by[-1]].tolist(), directories)
-
-
+    quality_df = df_summary.copy()
     subgroup_col = group_by[-1]
-    param_vals = get_ordered_params(quality_df, subgroup_col, directories)
+
+    # Extract base scheme groups so schemes with the same index but different postfix (e.g. scheme-8-100, scheme-8-200)
+    # share the same base group tick position on the x-axis.
+    scheme_group_col = f'{subgroup_col}_group'
+    quality_df[scheme_group_col] = quality_df[subgroup_col].apply(extract_scheme_group)
+
+    param_vals = get_ordered_params(quality_df, scheme_group_col, directories)
     color_maps = get_colormaps(palettes, param_vals, directories)
 
-    if len(directories) <= 1:
-        # Single directory: color by subgroup value so box colors match logbook curves
-        d = directories[0] if directories else None
-        palette_map = color_maps.get(d, color_maps) if isinstance(color_maps, dict) and d in color_maps else color_maps
-        hue_col = subgroup_col
-        dodge = False
-    else:
-        # Multiple directories: color by directory
-        palette_map = {
-            d: sns.color_palette(palettes[i % len(palettes)], as_cmap=True)(0.7)
+    is_multi_dir = len(directories) > 1
+
+    if is_multi_dir:
+        dir_palette = {
+            d: sns.color_palette(get_experiment_palette(d, palettes[i % len(palettes)]), as_cmap=True)(0.7)
             for i, d in enumerate(directories)
         }
-        hue_col = "dir"
-        dodge = True
+    else:
+        d = directories[0] if directories else None
+        base_cmap = color_maps.get(d, color_maps) if isinstance(color_maps, dict) and d in color_maps else color_maps
 
-    sns.boxplot(x=subgroup_col, y='hof_best', data=quality_df, ax=axes[0], 
-                hue=hue_col,
-                dodge=dodge,
-                palette=palette_map,
-                order=param_vals)
-    sns.stripplot(x=subgroup_col,
-                  y='hof_best', 
-                  data=quality_df, 
-                  hue=hue_col,
-                  dodge=dodge,
-                  ax=axes[0], 
-                  palette='dark:black',
-                  size=4, 
-                  jitter=True, 
-                  alpha=0.6,
-                  order=param_vals)
+    # Check duration availability
+    has_duration = 'duration_s' in df_summary.columns and df_summary['duration_s'].notna().any()
+    if has_duration:
+        factor = 1.0
+        label_unit = 's'
+        if time_unit == 'm':
+            factor = 60.0
+            label_unit = 'min'
+        elif time_unit == 'h':
+            factor = 3600.0
+            label_unit = 'h'
+        elif time_unit == 'eval':
+            label_unit = 'evaluations'
+
+    # Render boxplots and scatter points per group
+    for i, grp in enumerate(param_vals):
+        grp_df = quality_df[quality_df[scheme_group_col] == grp]
+        if grp_df.empty:
+            continue
+
+        if is_multi_dir:
+            # Multi-directory: item per (dir, variant)
+            items = sorted(grp_df[['dir', subgroup_col]].drop_duplicates().values.tolist(),
+                           key=lambda x: (directories.index(x[0]) if x[0] in directories else 99, natural_sort_key(x[1])))
+        else:
+            # Single-directory: item per variant
+            variants = sorted(grp_df[subgroup_col].dropna().unique(), key=natural_sort_key)
+            items = [(directories[0], v) for v in variants]
+
+        M = len(items)
+        if M == 0:
+            continue
+
+        total_width = min(0.8, 0.22 * M) if M > 1 else 0.45
+        w = total_width / M
+        centers = [i] if M == 1 else np.linspace(i - total_width / 2 + w / 2, i + total_width / 2 - w / 2, M)
+        box_w = w * 0.85
+
+        for (d_val, v_val), c in zip(items, centers):
+            cond = (grp_df[subgroup_col] == v_val)
+            if is_multi_dir and d_val is not None:
+                cond = cond & (grp_df['dir'] == d_val)
+            item_df = grp_df[cond]
+
+            box_color = dir_palette[d_val] if is_multi_dir else base_cmap.get(grp, (0.5, 0.5, 0.5))
+
+            # 1. Quality plot
+            vals_q = item_df['hof_best'].dropna().values
+            if len(vals_q) > 0:
+                bp = axes[0].boxplot([vals_q], positions=[c], widths=[box_w], patch_artist=True, manage_ticks=False)
+                for patch in bp['boxes']:
+                    patch.set_facecolor(box_color)
+                    patch.set_edgecolor('black')
+                    patch.set_linewidth(1.0)
+                for median in bp['medians']:
+                    median.set_color('black')
+                    median.set_linewidth(1.2)
+                for whisker in bp['whiskers']:
+                    whisker.set_color('black')
+                for cap in bp['caps']:
+                    cap.set_color('black')
+                for flier in bp['fliers']:
+                    flier.set(marker='o', markeredgecolor='black', markerfacecolor='none', alpha=0.7, markersize=4)
+
+                np.random.seed(42 + i * 10 + int(c * 100) % 100)
+                jitter = np.random.uniform(-box_w * 0.2, box_w * 0.2, size=len(vals_q))
+                axes[0].scatter(c + jitter, vals_q, color='black', alpha=0.5, s=12, zorder=3)
+
+            # 2. Duration plot
+            if has_duration:
+                dur_col = 'total_nevals' if time_unit == 'eval' and 'total_nevals' in item_df.columns else 'duration_s'
+                vals_d = item_df[dur_col].dropna().values
+                if len(vals_d) > 0:
+                    if time_unit != 'eval':
+                        vals_d = vals_d / factor
+                    bp2 = axes[1].boxplot([vals_d], positions=[c], widths=[box_w], patch_artist=True, manage_ticks=False)
+                    for patch in bp2['boxes']:
+                        patch.set_facecolor(box_color)
+                        patch.set_edgecolor('black')
+                        patch.set_linewidth(1.0)
+                    for median in bp2['medians']:
+                        median.set_color('black')
+                        median.set_linewidth(1.2)
+                    for whisker in bp2['whiskers']:
+                        whisker.set_color('black')
+                    for cap in bp2['caps']:
+                        cap.set_color('black')
+                    for flier in bp2['fliers']:
+                        flier.set(marker='o', markeredgecolor='black', markerfacecolor='none', alpha=0.7, markersize=4)
+
+                    jitter = np.random.uniform(-box_w * 0.2, box_w * 0.2, size=len(vals_d))
+                    axes[1].scatter(c + jitter, vals_d, color='black', alpha=0.5, s=12, zorder=3)
+
     axes[0].set_title('Hall-of-Fame fitness (per run)')
     axes[0].set_xlabel('Strategy / Scheme' if subgroup_col == 'param' else ', '.join(group_by))
     axes[0].set_ylabel('Fitness')
 
-    # Right plot:
-    # runtime boxplot
-    if 'duration_s' in df_summary.columns and df_summary['duration_s'].notna().any():
-
-        cols_to_keep = list(dict.fromkeys([*group_by, 'duration_s', *(['dir'] if 'dir' in df_summary.columns else [])]))
-        runtimes = df_summary[cols_to_keep].dropna()
-
-        # special case: evaluations as time proxy
-        if time_unit == 'eval':
-            runtimes['duration_unit'] = runtimes['duration_s']
-            label_unit = 'evaluations'
-        else:
-            # convert units
-            factor = 1.0
-            label_unit = 's'
-            if time_unit == 'm':
-                factor = 60.0
-                label_unit = 'min'
-            elif time_unit == 'h':
-                factor = 3600.0
-                label_unit = 'h'
-            runtimes['duration_unit'] = runtimes['duration_s'] / factor
-
-        sns.boxplot(x=subgroup_col, y='duration_unit', data=runtimes, ax=axes[1],
-                    dodge=dodge, 
-                    hue=hue_col,
-                    palette=palette_map,
-                    order=param_vals)
-        sns.stripplot(x=subgroup_col, y='duration_unit', data=runtimes, ax=axes[1],
-                      dodge=dodge,
-                      hue=hue_col,
-                      palette='dark:black', size=4, jitter=True, alpha=0.6,
-                      order=param_vals)
-
+    if has_duration:
         axes[1].set_title('Run duration per run')
         axes[1].set_xlabel('Strategy / Scheme' if subgroup_col == 'param' else ', '.join(group_by))
         axes[1].set_ylabel(f'Duration ({label_unit})')
@@ -1059,33 +1136,34 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
         axes[1].text(0.5, 0.5, 'No duration data available', ha='center', va='center')
         axes[1].set_axis_off()
 
+    # Build tick labels: group name
+    tick_labels = [str(grp) for grp in param_vals]
+
+    rot = 45
     for ax in axes:
-        ax.tick_params(axis='x', labelrotation=45)
-        for label in ax.get_xticklabels():
-            label.set_horizontalalignment('right')
+        ax.set_xticks(range(len(param_vals)))
+        ax.set_xticklabels(tick_labels, rotation=rot, ha='right', va='top', rotation_mode='anchor')
+        ax.set_xlim(-0.6, len(param_vals) - 0.4)
 
     ############### Legend #####################################
-    # remove legends generated by seaborn
-    for ax in axes:
-        leg = ax.get_legend()
-        if leg is not None:
-            leg.remove()
+    if is_multi_dir:
+        legend_handles = [
+            mpatches.Patch(facecolor=dir_palette[d], edgecolor='black',
+                           label=os.path.basename(os.path.normpath(d)) if ('\\' in str(d) or '/' in str(d)) else str(d))
+            for d in directories if d in dir_palette
+        ]
+        legend_title = "Directories"
+    else:
+        legend_handles = [
+            mpatches.Patch(facecolor=base_cmap.get(grp, (0.5, 0.5, 0.5)), edgecolor='black', label=str(grp))
+            for grp in param_vals if grp in base_cmap
+        ]
+        legend_title = subgroup_col
 
-    # build one shared legend
-    handles, labels = axes[0].get_legend_handles_labels()
-
-    unique = {}
-    for h, l in zip(handles, labels):
-        clean_label = os.path.basename(os.path.normpath(l)) if ('\\' in l or '/' in l) else l
-        if clean_label not in unique:
-            unique[clean_label] = h
-
-    legend_title = subgroup_col if len(directories) <= 1 else "Directories"
-    ncols = min(len(unique), 4) if unique else 1
+    ncols = min(len(legend_handles), 4) if legend_handles else 1
 
     fig.legend(
-        unique.values(),
-        unique.keys(),
+        handles=legend_handles,
         title=legend_title,
         loc="lower center",
         bbox_to_anchor=(0.5, -0.18),
