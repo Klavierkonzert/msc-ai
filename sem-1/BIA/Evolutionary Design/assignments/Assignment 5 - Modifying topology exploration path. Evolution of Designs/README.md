@@ -55,6 +55,7 @@ Across all the following experiments, fitness evaluations utilize the determinis
 - In Framsticks, **Lifespan** is governed by energy depletion. Initial energy is proportional to body size: $E_0 = \text{Energy0} \times n$ (with $\text{Energy0} = 10\,000.0$, $n = \text{number of joints/sticks}$). Each step consumes an idle metabolic cost of $e\_\text{meta} \times n$ energy (with $e\_\text{meta} = 1.0$):
 
   $$\text{lifespan} = \frac{\text{Energy0} \times n}{e\_\text{meta} \times n} = \frac{10\,000.0}{1.0} = 10\,000 \text{ simulation steps}$$
+
 - **Performance Sampling (`perfperiod`)** determines how often positions are sampled to calculate `velocity`:
     - In [Task 2](#task-2-varying-landscape-definition-height
     ), `perfperiod` is varied across values up to $10\,000$ ($\text{lifespan}$). 
@@ -69,7 +70,9 @@ In Framstics, the definition of `velocity` relies on the average distance travel
 
 1. **Continuous Limit**:
    - As sampling interval $\Delta t \to 0$, discrete trajectory curve chord lengths converge to the line integral of instantaneous speed over lifespan $T$:
+
      $$\lim_{\Delta t \to 0} \frac{\sum_{k} \|\mathbf{x}(t_{k+1}) - \mathbf{x}(t_k)\|}{T} = \frac{\int_0^T \|\dot{\mathbf{x}}(t)\| \, \mathrm{d}t}{T}$$
+
    - The numerator represents total **arc length (path taken)**. Setting `perfperiod = 1` in discretisized Framsticks time is equivalent to evaluating the average scalar speed.
 
 2. **Monotonic Surface Degradation & Denoising**:
@@ -77,7 +80,10 @@ In Framstics, the definition of `velocity` relies on the average distance travel
    - At small `perfperiod`, absolute physical contact noise is accumulated across all $10\,000$ simulation steps, producing a rugged, noisy landscape. **Increasing `perfperiod` acts as a low-pass filter**, removing accumulated high-frequency fluctuations and smoothing the global fitness surface.
 
 3. **Common Points Between Landscapes**:
-   - Fitness values across different `perfperiod` definitions coincide **if and only if** a creature moves along a straight line at constant speed ($\dot{\mathbf{x}}(t) \approx {\text{const}}$), such that total path arc length equals net displacement: $\int_0^T \|\dot{\mathbf{x}}(t)\|\,\mathrm{d}t \approx \|\mathbf{x}(T) - \mathbf{x}(0)\|$.
+   - Fitness values across different `perfperiod` definitions coincide **if and only if** a creature moves along a straight line at constant speed ($\dot{\mathbf{x}}(t) \approx {\text{const}}$), such that total path arc length equals net displacement: 
+
+   $$\int_0^T \|\dot{\mathbf{x}}(t)\|\,\mathrm{d}t \approx \|\mathbf{x}(T) - \mathbf{x}(0)\|$$
+
    - Highly directional creatures like **Fast Lizard** and **Basic Quadruped** retain virtually unchanged velocities across all sampling periods, forming invariant fixed points between landscapes. In contrast, creatures that twist or veer (e.g., **Speedy**) show dramatic fitness decay.
 
 4. **Navigability**:
@@ -151,10 +157,8 @@ In $f_1$ representation, a creature is subject to a mutation with probability `p
 **Neuron net mutation operators** concern neuron net parts in genotypes. 
 
 The weight of each operator is set in the `.sim` files for the morphology and neuron net mutation operators, respectively. In each mutation step, exactly **one** elementary mutation operator is chosen based on its relative weight:
-<div align="center" style="font-size: 120%;">
 
-   $P(\text{op}_i) = \frac{w_i}{\sum_{j=0}^{8} w_j}$
-</div>
+$$P(\text{op}_i) = \frac{w_i}{\sum_{j=0}^{8} w_j}$$
 
 
 ### Tested Stationary Mutation Strategies (Experiments 1 and 2)
@@ -163,7 +167,7 @@ The weight of each operator is set in the `.sim` files for the morphology and ne
 ##### Settings and Rationale
 Comparing baseline, high neural, weaker neural, and equal weights configurations:
    1. **[Baseline](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-all-crit.sim)** emphasizes neural weight modifications (`f1_nmWei = 1.0`, $67.1\%$ probability) with low morphology ($12.8\%$ total probability).  
-      - Structural neuron insertions/deletions are still relatively high (0.05), but low compared to synaptic weight changes.
+      - Structural neuron insertions/deletions are still relatively high ($0.05$), but low compared to synaptic weight changes.
       - On the morphology side, modifier adjustments are the most common type of mutation, favoring subtle geometric scaling over drastic topology disruptions.
       - This allocation allows evolution to primarily focus on calibrating muscle activation phases, frequencies, and sensory feedback loops on viable body chassis.
    2. **[High Neural](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs01.sim)** doubles neural operator weights, further suppressing body topology perturbations to focus on controller coordination.
@@ -172,6 +176,7 @@ Comparing baseline, high neural, weaker neural, and equal weights configurations
 
 The following table summarizes the weight settings for each operator in each configuration:
    
+<div align="center">
    <table tableId="table1">
      <thead>
        <tr>
@@ -343,12 +348,12 @@ The following table summarizes the weight settings for each operator in each con
        </tr>
      </tbody>
    </table>
-
+</div>
 
 ##### Key findings in Batch 1
 - **[Equal Operator Weights](./sim/f1-equal-probs.sim)** achieves roughly double the median velocity of the baseline, providing the best performance during almost the entire evolution ([Figure 3](#comparative-results-experiment-2)), outperforming the rest 3 settings.
 
-- In $f_1$, **equal weights** translate to a $4$-to-$5$ ratio between morphology and brain. This balanced ratio maintains structural diversity while preserving sufficient frequency of synaptic weight mutations ($11.1\%$) to coordinate newly emerging limbs.
+- In $f_1$, **equal weights** translate to a 4-to-5 ratio between morphology and brain. This balanced ratio maintains structural diversity while preserving sufficient frequency of synaptic weight mutations ($11.1 \% $) to coordinate newly emerging limbs.
 
 #### Batch 2 (Experiment 2)
 
@@ -356,14 +361,14 @@ To move beyond blunt global morphology-vs-brain ratios, **four tuned operator pr
 
 
 ##### Settings & Rationales
-1. **[Strategy A (Continuous Fine-Tuning)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-a.sim)** heavily suppresses catastrophic structural additions/deletions while prioritizing continuous physical and neural scaling. Protects working gaits from being ripped apart.
-2. **[Strategy B (Branching & Morphology Exploration)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-b.sim)** strongly promotes structural branching alongside balanced neural operators. Encourages bilateral limbs, outriggers, and multi-legged chassis.
+1. **[Strategy A (Continuous Neural Params Fine-Tuning)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-a.sim)** heavily suppresses catastrophic structural additions/deletions while prioritizing continuous physical and neural scaling. Protects working gaits from being ripped apart.
+2. **[Strategy B (Morphology Exploration)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-b.sim)** strongly promotes structural branching alongside balanced neural operators. Encourages bilateral limbs, outriggers, and multi-legged chassis.
 3. **[Strategy C (CPG Resonance & Control Dynamics)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-c.sim)** minimizes body alterations and concentrates on central pattern generator frequency/phase coordination.
 4. **[Strategy D (3-Tier Evolutionary Pyramid)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-d.sim)** hierarchical architecture allocating ~15% to macro-topology jumps, ~35% to mesoscale wiring and modifiers, and ~50% to continuous parameter calibration.
 
 The table below summarises the main differences between the 4 strategies:
 
-
+<div align="center">
 <table tableId="table2">
   <thead>
     <tr>
@@ -535,20 +540,27 @@ The table below summarises the main differences between the 4 strategies:
     </tr>
   </tbody>
 </table>
-
+</div>
 
 #### [Comparative results](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/) (Experiment 2)
 
 Each strategy was evaluated across 10 independent runs of strategies from [**Batch 1**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-26_172452/) and [**Batch 2**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-26_180136/) over 400 generations (20 CPU workers), summarised in the following figures.
 
+
+<div align="center">
+
 ![Comparative Best Series (Linear)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_best_series.png)
 _Figure 1: Comparative best-of-generation fitness trajectories._
 
 ![Comparative Confidence Intervals (Linear)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_confidence_std_1.0.png)
-_Figure 2: Mean fitness and shaded $\pm 1\sigma$ intervals._
+_Figure 2: Mean fitness and shaded confidence intervals._
 
 ![Comparative Boxplots](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/boxplot_summary.png)
+
 _Figure 3: Final Hall-of-Fame velocity and run duration distributions._
+
+</div>
+
 
 #### Findings: Stationary Mutation Strategies (Batches 1 & 2)
 
@@ -589,21 +601,18 @@ Comparing the varied baseline and equal weights strategies ([Batch 1](#tested-st
    <div style="text-align: center; width: 70%; margin: 0 auto;">
    
       ![Experiment 2 Best Creature](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp2-best-creature.png)
-   </div>
    
-      _Figure 4: Phenotypic inspection of the fastest creature evolved in Experiment 2._
+      _Figure 4: Phenotype of the fastest creature evolved in Experiment 2._
+    </div>
 
 
 ### Scheduled Mutation Schemes: Non-Stationary Developmental Exploration (Experiments 3-5)
 
 To overcome the static exploration–exploitation dilemma, **non-stationary scheduled mutation distributions** across evolutionary time were introduced:
-<div align="center">
 
-$\vec{w}(t) = \vec{w}_k \quad \text{for } t_k \le t < t_{k+1}$
+$$\vec{w}(t) = \vec{w}_k \quad \text{for } t_k \le t < t_{k+1}$$
 
-</div>
-
-_where $\vec{w}(t)$ is the vector of mutation weights at generation $t$, $\vec{w}_k$ is the vector of mutation weights for the $k$-th stage, and $t_k$ is the start generation of the $k$-th stage_.
+_where_ $\vec{w}(t)$ _is the vector of mutation weights at generation_ $t$, $\vec{w}_k$ _is the vector of mutation weights for the $k$-th stage, and_ $t_k$ _is the start generation of the_ $k$-th _stage_.
 
 #### Rationale for Scheduled Schemes
 
@@ -682,40 +691,46 @@ Dynamic mutation scheduling is implemented through a lightweight interception pa
 In total, there were **24 configurations** of _mutation probabilities_ tested over **400 generations** each, with **10 independent runs** for each configuration, summarized and analyzed below.
 However, since different number of workers was used in different experiments, temporal performance is not analyzed between different experiments.
 
-#### [Comparative Boxplot Analysis](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_exp1_5)
+#### [Comparative Analysis](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/)
 
+<div align="center">
+
+![Champions Confidence Intervals](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/plots/logbooks_confidence_std_1.0.png)
+_Figure 5a: Mean best fitness and shaded confidence intervals over 400 generations for all experiment champions. Experiment 4 Scheme 8-100 and Experiment 5 Scheme 12 demonstrate the steepest sustained fitness ascent._
 
 ![Global Boxplot Across All 24 Configurations](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_exp1_5/plots/boxplot_summary.png)
-_Figure 5a: Comprehensive Hall-of-Fame final velocity (left) and run duration (right) distributions across all 24 configurations tested in Experiments 1–5 (240 total runs over 400 generations). Note the natural ordering by experiment [run folders](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/) and numerical [scheme indices](#schemes-tested-in-experiments-3-5)._
+_Figure 5b: Comprehensive Hall-of-Fame final velocity (left) and run duration (right) distributions across all 24 configurations tested in Experiments 1–5 (240 total runs over 400 generations). Note the natural ordering by experiment [run folders](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/) and numerical [scheme indices](#schemes-tested-in-experiments-3-5)._
 
 ![Champions Boxplot Summary](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/plots/boxplot_summary.png)
-_Figure 5b: Hall-of-Fame velocity and duration distributions for the selected top-performing strategies (Experiments 1–5)._
+_Figure 5c: Hall-of-Fame velocity and duration distributions for the selected top-performing strategies (Experiments 1–5)._
 
-#### Top-4 Evolutionary Configurations
+</div>
+
+#### Performance of Top-4 Probabilistic Configurations
 
 | Rank | Exp #idx | Configuration / Scheme | Mean Velocity | Median Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | 
-| 1 | **4** | **Scheme 8-100 (Early Freeze)** | **$0.008272$** | $0.005797$ | $0.006459$ | **$0.001554$** | $0.022688$ | $970.7\text{ s}$ |
-| 2 | **5** | **Scheme 12 (Morphogenetic Cascade)** | **$0.007447$** | $0.004367$ | $0.007049$ | $0.000352$ | $0.019239$ | $779.5\text{ s}$ |
-| 3 | **3** | **Scheme 3 (Balanced Scaffolding)** | **$0.007213$** | $0.005296$ | $0.006716$ | $0.001013$ | **$0.023459$** | $919.0\text{ s}$ |
-| 4 | **1** | **Equal Weights** | $0.007167$ | **$0.006500$** | $0.005391$ | $0.000574$ | $0.019564$ | $758.5\text{ s}$ |
+| 1 | **4** | **Scheme 8-100 (Early Freeze)** | **0.008272** | 0.005797 | 0.006459 | **0.001554** | **0.022688** | $970.7\text{ s}$ |
+| 2 | **5** | **Scheme 12 (Morphogenetic Cascade)** | 0.007447 | 0.004367 | 0.007049 | 0.000352 | 0.019239 | $779.5\text{ s}$ |
+| 3 | **3** | **Scheme 3 (Balanced Scaffolding)** | 0.007213 | 0.005296 | 0.006716 | 0.001013 | **0.023459** | $919.0\text{ s}$ |
+| 4 | **1** | **Equal Weights** | 0.007167 | **0.006500** | **0.005391** | 0.000574 | 0.019564 | $758.5\text{ s}$ |
 
 ### Best Evolved Creature Genomes
 
-#### 1. [Absolute Peak Velocity Champion](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_175220/gens/HoF-f1-scheme-3-3.gen) : Experiment 3 Scheme 3 ($v = 0.023459$)
+#### 1. Best overall result - [Experiment 3 Scheme 3](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_175220/gens/HoF-f1-scheme-3-3.gen)
 - **genotype**:
   ```cpp
   qMLL(X[N, 12:12.399, 9:-1.407, 9:6.412, 12:4.867, fo:0.887,4:3.922][|, 8:1, r:0.929], (X[Gpart, ry:2.129]X[S]m((X[S][Gpart][Gpart]X[N, -4:-0.547, -1:1, -3:-1.7,3:11.708][|, -3:1, r:1][N, 0:0.987, -3:1.684, -4:-0.029, -4:1.827, fo:1, -6:12.219, -2:2.178, -6:3.295], , X[S][@, -9:1][Gpart]))))
   ```
 - **Velocity**: $0.023459$
-- **Morphological & Neural Architecture**:
-  - **Body Chassis**: Asymmetrical 4-part stick morphology comprising a heavy, passive 3-part torso (the leftmost sticks) and a single active articulated joint (the rightmost stick) functioning as a unilateral jumping leg.
-  - **Neural Circuitry**: Features a redundant but robust neural architecture where dormant or isolated nodes surround an ultra-streamlined functional pathway: **2 gyroscopes -> adjusted weights -> bending muscle** in the center joint (visible as the light square in Figure 6a).
-  - **Locomotion Dynamics & Mechanics**: Movement is executed by jumping rhythmically on the rightmost leg and forcefully pushing the heavy 3-part torso forward across the substrate.
+- **Morphology, Neural Architecture & Dynamics**:
+  - **Redudant but stable <u>neural struture</u>** where dormant or isolated nodes surround main functional pathway being _effectively_ **one gyroscope (2 twin gyroscopes) -> amplified assembled signal -> bending muscle**. in the center (light square on _Figure 6a_), which turns the rightmost stick into a leg. 
+  - <u>Movement</u> is executed by **jumping rhythmically** (sinusoidal activation plots on _Figure 6b_) on the rightmost leg and forcefully pushing heavy 3-part torso forward along the trajectory. Torso serves as a stabilisation mass and prevents turning upside-down. Gyroscopes located at the center of torso thus read reliable data regarding stability of the creature, generating a movement by bending muscle at the moment static position of the torso is achieved.
 
 <div style="width: 70%; align-content: center; margin-left: auto; margin-right: auto;" >
 
 ![Benchmark Champion Creature](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature.png)
+
 _Figure 6a: Phenotype and neural structure of the overall champion_
 
 </div>
@@ -728,12 +743,12 @@ _Figure 6a: Phenotype and neural structure of the overall champion_
 
 <div style="width: 100%; align-content: center; margin-left: auto; margin-right: auto; " >
 
-_Figure 6b: Inspection of functioning of the best creature: redudant but stable neural struture with the main activation path being **2 gyroscopes -> adjusted weights -> bending muscle** in the center (light square on Figure 6a), which turns the rightmost stick into a leg. The whole movements is performed as jumping on that leg and pushing the heavy 3-parts torso (leftmost sticks) forwards._
+_Figure 6b: Inspection of functioning of the best creature. The left side depicts the moment of jumping and lifting from the ground._
 
 </div>
 
 
-#### 2. Mean Velocity Champion: [Experiment 4 Scheme 8-100](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen)
+#### 2. Mean Velocity Champion - [Experiment 4 Scheme 8-100](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen)
 - **Genotype**:
   ```cpp
   QMmQCX[S][S][*][G]X[T][Gpart,ry:-0.088,rz:0][S][Gpart][N, -1:-1.725, -4:2.469, -7:-3.609, -5:-0.702, 0:3.422,-2:1.862,in:0,0:0.885,-7:-0.332][S]FLLLX[T]rX[S][@, -6:1.078][|, -10:3.096, p:0.414,r:0.93]
@@ -741,14 +756,14 @@ _Figure 6b: Inspection of functioning of the best creature: redudant but stable 
 - **Velocity**: $0.022688$
 
 ![Benchmark Exp 4 Best Creature](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp4-best-creature-inspection.png)
-_Figure 7: Inspection of functioning of the experiment 4 champion: redudant but stable neural struture with multiple disconnected neurons, and the main activation path being **1 gyroscope -> bending muscle**. Movement dynamics and technique are similar to the overall champion (Figure 6)._
+_Figure 7: Inspection of functioning of the experiment 4 champion. Compare to Figures 6._
 
-- **Morphological & Neural Architecture**:
-  - **Body Chassis**: Compact stick chassis evolved under Scheme 8-100 (100 generations of unconstrained Equal Weights exploration establishing an effective articulated geometry, followed by 300 generations of Strategy A metric tuning).
-  - **Neural Circuitry**: Characterized by significant neural redundancy with multiple disconnected or silent neurons ("junk DNA"). The primary functional drive is concentrated into an ultra-streamlined reflex loop: **1 gyroscope -> bending muscle** (with auxiliary extensor muscle actuation).
-  - **Locomotion Dynamics & Mechanics**: Movement dynamics and technique closely mirror the overall champion (Figure 6): executing a unilateral jumping and pushing cycle that leverages ground reaction forces to propel the remaining passive chassis forward.
+- **Morphology, Neural Architecture & Dynamics**:
+  - **Body** of this snake-like structure consists of one leg and three-part linear torso.
+  - **Neural circuitry** is characterized by noticeable neural redundancy with multiple disconnected or silent neurons ("junk DNA"). 
+  - **The main activation path, movement dynamics and technique** are similar to the overall champion. However, stabilization-acting torso suffers from snake-shaped form of the creature which less stable positioning. 
 
-#### 3. Morphogenetic Cascade Champion: [Experiment 5 Scheme 12](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_230717/gens/HoF-f1-scheme-12-9.gen)
+#### 3. Morphogenetic Cascade Champion - [Experiment 5 Scheme 12](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_230717/gens/HoF-f1-scheme-12-9.gen)
 - **Genotype**:
   ```cpp
   MqMqqq((mrqMCMqLX[N, 13:0.523][G][G][|, 2:1.92][S][S][T, ry:1.482]m(QRmLq(, (MX[Gpart][T][G][T])))), X[S][@, -3:-0.432][N, -4:-3.21, -13:3.814, si:1.753, in:0.8, si:-4.394][|, -8:3.533])
@@ -756,13 +771,12 @@ _Figure 7: Inspection of functioning of the experiment 4 champion: redudant but 
 - **Velocity**: $0.019239$
 
 ![Exp 5 Best Creature Inspection](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp5-best-creature-inspection.png)
-_Figure 8: Inspection of functioning of the experiment 5 champion: multiple disconnected neurons, 2 main activation paths **gyroscope -> bending/rotating muscle** (these paths are rather independent, but can interact with each other via physics). Movement dynamics and technique are similar to the overall champion and experiment 4 champion (Figure 6, 7)._
 
-- **Morphological & Neural Architecture**:
-  - Evolved through the 4-stage biological morphogenetic cascade ($\text{Equal} \to \text{Strat B} \to \text{Strat D} \to \text{Strat A}$), achieving high worst-case velocity retention ($v_{min} = 0.001554$) by avoiding disruptive morphological freezes.
-  - **Body Chassis & Dynamics**: Streamlined stick chassis demonstrating hopping and pushing dynamics directly comparable to the champions of Experiments 3 and 4 (Figures 6 and 7).
-  - **Neural Circuitry**: Contains multiple disconnected neurons alongside **2 primary, largely independent activation pathways**: **gyroscope -> bending/rotating muscle**.
-  - **Physical Coupling**: While the two neural control pathways operate without direct synaptic crosstalk, they interact and coordinate through **body mechanics and ground reaction forces**, generating stable forward momentum.
+_Figure 8: Inspection of functioning of the experiment 5 champion. Movement dynamics and technique are similar to the overall champion and experiment 4 champion (Figures 6, 7). On the left side the moment of jumping is depicted._
+
+- **Morphology, Neural Architecture & Dynamics**:
+  - **Dynamics** demonstrates hopping and pushing technique, directly comparable to the champions of Experiments 3 and 4 (Figures 6 and 7).
+  - **Neural circuitry** features significant number of disconnected neurons alongside **2 primary, largely independent activation pathways**: main for locomotion - **gyroscope -> bending muscle**, secondary (with low amplitude of work) - **touch sensor -> rotating muscle**. These pathways interact through **body mechanics and ground reaction forces**. However, this may lack some coordination, and jumping sometimes fails (the muscle bends, but creature doesnt jump because of no push-off support).
 
 ### Evolution Challenges
 

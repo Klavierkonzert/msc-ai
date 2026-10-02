@@ -11,9 +11,13 @@ The objective of this experiment is to optimize **net rectilinear displacement s
 - **Genetic format**: $f_1$ (`-genformat 1`)
 - **Simulation Environment (`eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim;*`)**:
   - **Lifespan Mechanism**: In Framsticks, lifespan is not a static timeout parameter; it is determined by metabolic energy depletion. Each creature receives starting energy proportional to its size: $E_0 = \text{Energy0} \times n$ (with $\text{Energy0} = 10\,000.0$, $n = \text{number of joints/sticks}$). Each simulation step consumes an idle metabolic cost of $e\_\text{meta} \times n$ energy (with $e\_\text{meta} = 1.0$). With constant metabolism (`aging: 0`) and no food replenishment (`feed: 0`), size $n$ cancels out, yielding an exact lifespan of:
+
     $$\text{lifespan} = \frac{\text{Energy0} \times n}{e\_\text{meta} \times n} = \frac{10\,000.0}{1.0} = 10\,000 \text{ simulation steps}$$
+
   - **Deterministic Physics (`deterministic.sim`)**: Eliminates stochastic sensory/neural noise (`randinit: 0.0`, `nnoise: 0.0`, `bnoise_vel: 0.0`) and fixes central spawn (`placement: 1`), enabling deterministic, repeatable single-trial evaluation (`evalcount: 1`).
-  - **Performance Sampling (`perfperiod`)**: Across all experiments, `sample-period-longest.sim` sets `perfperiod: 999999`. Because $999\,999 > \text{lifespan}$ ($10\,000$), intermediate sampling never triggers. The simulator samples coordinates only twice (at birth $t=0$ and death $t=10\,000$), measuring strictly **net rectilinear displacement velocity**: $v = \frac{\|\mathbf{x}(T) - \mathbf{x}(0)\|}{T}$.
+  - **Performance Sampling (`perfperiod`)**: Across all experiments, `sample-period-longest.sim` sets `perfperiod: 999999`. Because $999\,999 > \text{lifespan}$ ($10\,000$), intermediate sampling never triggers. The simulator samples coordinates only twice (at birth $t=0$ and death $t=10\,000$), measuring strictly **net rectilinear displacement velocity**:
+
+  $$v = \frac{\|\mathbf{x}(T) - \mathbf{x}(0)\|}{T}$$
 - **Morphological & Neural Limits**:
   - Max parts: `15`
   - Max joints: `30`
@@ -280,7 +284,7 @@ The table below summarizes weights and probabilities of mutation operators in de
 _Figure 1: Best-of-generation fitness trajectories across all 10 independent replications over 300 generations for all 4 mutation probability configurations (`f1-all-crit`, `f1-probs01`, `f1-probs10`, `f1-equal-probs`)._
 
 ![Confidence Intervals](results/hof_results/plots/logbooks_confidence_std_1.0.png)
-_Figure 2: Mean best fitness and $\pm 1\sigma$ shaded confidence intervals over 300 generations. `f1-equal-probs` achieves the fastest growth rate and highest sustained trajectory._
+_Figure 2: Mean best fitness and shaded confidence intervals over 300 generations. `f1-equal-probs` achieves the fastest growth rate and highest sustained trajectory._
 
 ![Boxplot Summary](results/hof_results/plots/boxplot_summary.png)
 _Figure 3: Distribution of Hall-of-Fame final fitness (left) and total run duration (right) across 10 independent replications._
@@ -512,7 +516,7 @@ Each strategy was evaluated across 10 independent runs over 400 generations (20 
 _Figure 4: Comparative best-of-generation fitness trajectories across all 8 configurations, 400 generations._
 
 ![Comparative Confidence Intervals (Linear)](results/hof_results_comparison/plots/logbooks_confidence_std_1.0.png)
-_Figure 5: Mean fitness and shaded $\pm 1\sigma$ intervals comparing **Experiment 1** configurations (pink/purple) against **Experiment 2** strategies (cyan/blue), 400 generations._
+_Figure 5: Mean fitness and shaded intervals comparing **Experiment 1** configurations (pink/purple) against **Experiment 2** strategies (cyan/blue), 400 generations._
 
 ![Comparative Boxplots](results/hof_results_comparison/plots/boxplot_summary.png)
 _Figure 6: Final Hall-of-Fame velocity and run duration distributions across all 8 configurations, 400 generations._
@@ -642,7 +646,7 @@ Experiment 3 investigated diverse multi-stage schedules combining initial explor
 _Figure 7: Best-of-generation fitness trajectories across all 10 independent replications over 400 generations for all 7 scheduled mutation schemes (linear evaluations scale)._
 
 ![Experiment 3 Confidence Intervals](./results/hof_results_exp3/plots/logbooks_confidence_std_1.0.png)
-_Figure 8: Mean best fitness and $\pm 1\sigma$ shaded confidence intervals over 400 generations across Schemes 1–7 (linear generations scale). Multi-stage schemes consistently accelerate fitness accumulation during staged transitions._
+_Figure 8: Mean best fitness and shaded confidence intervals over 400 generations across Schemes 1–7 (linear generations scale). Multi-stage schemes consistently accelerate fitness accumulation during staged transitions._
 
 ![Experiment 3 Boxplot Summary](results/hof_results_exp3/plots/boxplot_summary.png)
 _Figure 9: Distribution of Hall-of-Fame final fitness (left) and total run duration (right) across 10 independent replications for Schemes 1–7._
@@ -710,20 +714,20 @@ To address the disruptive operator shocks observed in the multi-stage schedules 
 _Figure 10: Best-of-generation fitness trajectories across all 10 independent replications over 400 generations for all 5 biphasic mutation schemes (linear evaluations scale)._
 
 ![Experiment 4 Confidence Intervals](results/hof_results_exp4/plots/logbooks_confidence_std_1.0.png)
-_Figure 11: Mean best fitness and $\pm 1\sigma$ shaded confidence intervals over 400 generations across Schemes 1, 8-100, 8-200, 8-300, 9. Scheme 8-100 (early switch at gen 100) demonstrates clear superiority, outperforming all other schemes._
+_Figure 11: Mean best fitness and shaded confidence intervals over 400 generations across Schemes 1, 8-100, 8-200, 8-300, 9. Scheme 8-100 (early switch at gen 100) demonstrates clear superiority, outperforming all other schemes._
 
 ![Experiment 4 Boxplot Summary](results/hof_results_exp4/plots/boxplot_summary.png)
 _Figure 12: Distribution of Hall-of-Fame final fitness (left) and total run duration (right) across 10 independent replications for Schemes 1, 8-100, 8-200, 8-300, 9 (variations sharing base scheme color, with shortened x-axis ticks)._
 
 #### Quantitative Summary and Analysis
 
-| Scheme #idx | Strategy Name | Transition Strategy Chain | Mean HoF Velocity | Median HoF Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
-| :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| 1 | Classic Scaffolding | Weaker Neural ($200$) $\to$ High Neural ($200$) | $0.007140$ | $0.005181$ | $0.006051$ | $0.000355$ | $0.018452$ | $1172.8\text{ s}$ |
-| 8-200 | Smooth Annealing (Mid Freeze) | Equal ($200$) $\to$ Strat A ($200$) | $0.003969$ | $0.003336$ | $0.002554$ | $0.000408$ | $0.008064$ | $1159.6\text{ s}$ |
-| 9 | Articulated Gait | Strat B ($200$) $\to$ Strat A ($200$) | $0.006799$ | $0.004921$ | $0.004481$ | $0.001447$ | $0.014140$ | $1058.7\text{ s}$ |
-| **8-100** | **Early Freeze (Optimal)** | Equal ($100$) $\to$ Strat A ($300$) | **$0.008272$** | **$0.005797$** | $0.006459$ | **$0.001554$** | **$0.022688$** | $970.7\text{ s}$ |
-| 8-300 | Late Freeze | Equal ($300$) $\to$ Strat A ($100$) | $0.003456$ | $0.002369$ | $0.002733$ | $0.000845$ | $0.009163$ | $920.6\text{ s}$ |
+| Scheme #idx | Mean HoF Velocity | Median HoF Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
+| :---: |:---: | :---: | :---: | :---: | :---: | :---: |
+| 1 | 0.007140 | 0.005181 | 0.006051 | 0.000355 | 0.018452 | $1172.8\text{ s}$ |
+| **8-100** | **0.008272** | **0.005797** | 0.006459 | **0.001554** | **0.022688** | $970.7\text{ s}$ |
+| 8-200 | 0.003969 | 0.003336 | **0.002554** | 0.000408 | 0.008064 | $1159.6\text{ s}$ |
+| 8-300 | 0.003456 | 0.002369 | 0.002733 | 0.000845 | 0.009163 | $920.6\text{ s}$ |
+| 9 | 0.006799 | 0.004921 | 0.004481 | 0.001447 | 0.014140 | $1058.7\text{ s}$ |
 
 #### Key Findings from Experiment 4
 
@@ -742,11 +746,11 @@ _Figure 12: Distribution of Hall-of-Fame final fitness (left) and total run dura
 3. **Classic Scaffolding (Scheme 1) Strongly Outperforms High Neural Alone**:
    - Transitioning from Weaker Neural ($200$ gens) to High Neural ($200$ gens) reached a mean of $0.007140$ and peak of $0.018452$—more than double the performance of constant High Neural mutation alone ($v_{mean} = 0.003288$, $v_{max} = 0.007002$).
 
-4. **[Best Evolved Creature](./runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen) in Experiment 4 (`HoF-f1-scheme-8-100-2.gen`)**:
+4. **[Best Evolved Creature](./runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen) in Experiment 4**:
    - Reached peak velocity $v = 0.022688$:
-     ```
-     genotype: QMmQCX[S][S][*][G]X[T][Gpart,ry:-0.088,rz:0][S][Gpart][N, -1:-1.725, -4:2.469, -7:-3.609, -5:-0.702, 0:3.422,-2:1.862,in:0,0:0.885,-7:-0.332][S]FLLLX[T]rX[S][@, -6:1.078][|, -10:3.096, p:0.414,r:0.93]
-     velocity: 0.022688085717180884
+     ```cpp
+     //genotype: 
+     QMmQCX[S][S][*][G]X[T][Gpart,ry:-0.088,rz:0][S][Gpart][N, -1:-1.725, -4:2.469, -7:-3.609, -5:-0.702, 0:3.422,-2:1.862,in:0,0:0.885,-7:-0.332][S]FLLLX[T]rX[S][@, -6:1.078][|, -10:3.096, p:0.414,r:0.93]
      ```
    - Morphology features a compact, elongated chassis stabilized by gyroscopic sensors (`Gpart,ry:-0.088`), tactile contact sensors (`S`), rotational muscles (`*`), and a high-amplitude bending actuator (`|`, `-10:3.096, p:0.414`) driven by an interconnected pattern generator (`N`) tuned to resonant crawling frequencies.
 
@@ -758,7 +762,7 @@ _Figure 12: Distribution of Hall-of-Fame final fitness (left) and total run dura
 Experiment 5 directly synthesizes the empirical insights gained across Experiments 1 through 4 to design an optimized suite of staged evolutionary schedules. Specifically:
 
 1. **The 100-Generation Window of Morphological Plasticity**:
-   - [Experiment 4](#experiment-4-varying-topology-morphology-exploration-durations-across-generations) demonstrated that transitioning away from unconstrained structural mutations at generation 100 significantly outperformed 200- or 300-generation delays.
+   - [Experiment 4](#experiment-4-two-stage-exploration-schemes) demonstrated that transitioning away from unconstrained structural mutations at generation 100 significantly outperformed 200- or 300-generation delays.
    - During the first 100 generations, global exploration (**Equal weights**) rapidly discovers viable body plans (stable bases, balanced limb orientations, tactile/gyro sensor placement).
    - Lingering in high-structural-mutation space beyond generation 100 produces morphological clutter and mechanical destabilization that continually resets controller learning.
 
@@ -768,7 +772,7 @@ Experiment 5 directly synthesizes the empirical insights gained across Experimen
    - In contrast, Experiment 4's champion Scheme 8-100 utilized **Strategy A**, which permits continuous metric fine-tuning of part lengths, angles, motor power, and sensor directions (`f1_smMod: 1.0`, $23.1\%$) while suppressing disruptive additions/deletions.
 
 3. **Continuous Biological Cascades vs. Fragmented Switching**:
-   - [Experiment 3](#experiment-3-dynamic-strategy-switching-execution) showed that rapid 50-generation switches induced recurring operator disruption shocks.
+   - [Experiment 3](#experiment-3-multi-stage-scheduled-switching-schemes-1-7) showed that rapid 50-generation switches induced recurring operator disruption shocks.
    - Experiment 5 adopts a standardized **100-generation macro-stage cadence**, organizing evolution into a smooth, biological morphogenetic progression that guides the population naturally from global body search to limb growth, joint allocation, and biomechanical parameter tuning without rigid freezes.
 
 #### Evaluated Schemes & Design Rationale (40 runs across 20 workers)
@@ -776,48 +780,40 @@ Experiment 5 directly synthesizes the empirical insights gained across Experimen
 Under the unified global numbering system, Experiment 5 evaluates four staged evolutionary progressions designed to avoid premature morphological freezing:
 
 1. **Scheme 2: Bootstrapped Classic Scaffolding**
-   <div style="font-size: 1.05em; margin: 8px 0;">
    <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #c0d0fe; font-weight: 600;">Weaker Neural</span> $\xrightarrow{\text{150 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>
-   </div>
    - **Rationale**: Incorporates the vital 100-generation Equal Weights bootstrap before transitioning into 150 generations of Weaker Neural and a 150-generation final High Neural controller convergence.
 
 2. **Scheme 10: Champion with Compact Late Synaptic Polish**
-   <div style="font-size: 1.05em; margin: 8px 0;">
    <span style="color: #f27282; font-weight: 600;"> Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span> $\xrightarrow{\text{250 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span>
-   </div>
-   - retains 250 uninterrupted generations of the winning Strategy A co-adaptation regime, testing whether a compact 50-generation final synaptic lock-in ($350 \to 400$) avoids the freeze penalty while boosting peak velocities.
+   - **Rationale**: retains 250 uninterrupted generations of the winning Strategy A co-adaptation regime, testing whether a compact 50-generation final synaptic lock-in ($350 \to 400$) avoids the freeze penalty while boosting peak velocities.
 
 3. **Scheme 11: Continuous Articulated Development**
-
-   <div style="font-size: 1.05em; margin: 8px 0;">
-   <span style="color: #f27282; font-weight: 600;"> Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>
-   </div>
-    replaces rigid freezes with continuous Strategy A fine-tuning: 100 gens of unconstrained body search $\to$ 100 gens of limb branching (Strategy B) $\to$ 200 continuous generations of Strategy A biomechanical optimization (tuning part lengths, angles, and control signals without part bloat).
+   <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>
+   - **Rationale**: replaces rigid freezes with continuous Strategy A fine-tuning: 100 gens of unconstrained body search $\to$ 100 gens of limb branching (Strategy B) $\to$ 200 continuous generations of Strategy A biomechanical optimization (tuning part lengths, angles, and control signals without part bloat).
 
 4. **Scheme 12: Morphogenetic Cascade (Gradual Anatomical Annealing)**
-   <div style="font-size: 1.05em; margin: 8px 0;">
    <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #92d4f8; font-weight: 600;">Strategy D</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>
-   </div> tests a 4-stage biological morphogenetic progression without any freeze: global exploration ($0 \to 100$) $\to$ limb expansion ($100 \to 200$) $\to$ joint/muscle actuation focus ($200 \to 300$) $\to$ biomechanical fine-tuning ($300 \to 400$).
+   - **Rationale**: tests a 4-stage biological morphogenetic progression without any freeze: global exploration $\to$ limb expansion $\to$ joint/muscle actuation focus $\to$ biomechanical fine-tuning.
 
-#### Experimental Results
+#### [Experimental Results](./results/hof_results_exp5/)
 
 ![Experiment 5 Fitness Trajectories](results/hof_results_exp5/plots/logbooks_best_series.png)
 _Figure 13: Best-of-generation fitness trajectories across all 10 independent replications over 400 generations for the refined mutation schemes (linear evaluations scale)._
 
 ![Experiment 5 Confidence Intervals](results/hof_results_exp5/plots/logbooks_confidence_std_1.0.png)
-_Figure 14: Mean best fitness and $\pm 1\sigma$ shaded confidence intervals over 400 generations across Schemes 2, 10, 11, 12. Scheme 12 (morphogenetic cascade) and Scheme 2 (bootstrapped scaffolding) exhibit the strongest, most consistent upward fitness trajectories._
+_Figure 14: Mean best fitness and shaded confidence intervals over 400 generations across Schemes 2, 10, 11, 12. Scheme 12 (morphogenetic cascade) and Scheme 2 (bootstrapped scaffolding) exhibit the strongest, most consistent upward fitness trajectories._
 
 ![Experiment 5 Boxplot Summary](results/hof_results_exp5/plots/boxplot_summary.png)
 _Figure 15: Distribution of Hall-of-Fame final fitness (left) and total run duration (right) across 10 independent replications for refined Schemes 2, 10, 11, 12._
 
 #### Quantitative Summary and Analysis
 
-| Scheme #idx | Strategy Name | Transition Strategy Chain | Mean HoF Velocity | Median HoF Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
-| :---: | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **2** | **Bootstrapped Scaffolding** | Equal ($100$) $\to$ Weaker Neural ($150$) $\to$ High Neural ($150$) | $0.006142$ | **$0.006151$** | $0.004138$ | $0.001541$ | $0.015509$ | $787.5\text{ s}$ |
-| **10** | **Compact Polish** | Equal ($100$) $\to$ Strat A ($250$) $\to$ High Neural ($50$) | $0.004868$ | $0.005210$ | **$0.002427$** | **$0.001578$** | $0.007571$ | $741.3\text{ s}$ |
-| 11 | Continuous Articulated | Equal ($100$) $\to$ Strat B ($100$) $\to$ Strat A ($200$) | $0.004083$ | $0.002732$ | $0.003260$ | $0.000555$ | $0.010659$ | $776.0\text{ s}$ |
-| **12** | **Morphogenetic Cascade** | Equal ($100$) $\to$ Strat B ($100$) $\to$ Strat D ($100$) $\to$ Strat A ($100$) | **$0.007447$** | $0.004367$ | $0.007049$ | $0.000352$ | **$0.019239$** | $779.5\text{ s}$ |
+| Scheme #idx | Mean HoF Velocity | Median HoF Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
+| :---:  | :--- | :---: | :---: | :---: | :---: | :---: |
+| **2** | 0.006142 | **0.006151** | 0.004138 | 0.001541 | 0.015509 | 787.5 s |
+| **10** | 0.004868 | 0.005210 | **0.002427** | **0.001578** | 0.007571 | 741.3 s |
+| 11 | 0.004083 | 0.002732 | 0.003260 | 0.000555 | 0.010659 | 776.0 s |
+| **12** | **0.007447** | 0.004367 | 0.007049 | 0.000352 | **0.019239** | 779.5 s |
 
 #### Key Findings from Experiment 5
 
@@ -868,7 +864,7 @@ Comparing the top-performing strategies identified across Experiments 1 through 
 _Figure 16: Best-of-generation fitness trajectories across 10 independent replications over 400 generations for the champion strategies from each experiment (linear evaluations scale)._
 
 ![Champions Confidence Intervals](results/hof_results_comparison_champions/plots/logbooks_confidence_std_1.0.png)
-_Figure 17: Mean best fitness and $\pm 1\sigma$ shaded confidence intervals over 400 generations for all experiment champions. Experiment 4 Scheme 8-100 and Experiment 5 Scheme 12 demonstrate the steepest sustained fitness ascent._
+_Figure 17: Mean best fitness and shaded confidence intervals over 400 generations for all experiment champions. Experiment 4 Scheme 8-100 and Experiment 5 Scheme 12 demonstrate the steepest sustained fitness ascent._
 
 ![Champions Boxplot Summary](results/hof_results_comparison_champions/plots/boxplot_summary.png)
 _Figure 18: Distribution of Hall-of-Fame final fitness (left) and total run duration (right) across 10 independent replications for the champions of Experiments 1–5._
@@ -881,34 +877,12 @@ _Figure 19: Comprehensive Hall-of-Fame final velocity and run duration distribut
 
 ### Master Leaderboard (All 24 Configurations across 400 Generations)
 
-| Rank | Paradigm / Experiment | Configuration / Scheme Name | Transition Strategy Chain | Mean Velocity | Median Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
+| Rank | Exp. idx | Configuration / Scheme Name | Transition Strategy Chain | Mean Velocity | Median Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
 | :---: | :---  | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 1 | **Experiment 4** | **Scheme 8-100 (Early Freeze)** | Equal ($100$) $\to$ Strat A ($300$) | **$0.008272$** | $0.005797$ | $0.006459$ | **$0.001554$** | $0.022688$ | $970.7\text{ s}$ |
-| 🥈 2 | **Experiment 5** | **Scheme 12 (Morphogenetic Cascade)** | Equal ($100$) $\to$ Strat B ($100$) $\to$ Strat D ($100$) $\to$ Strat A ($100$) | **$0.007447$** | $0.004367$ | $0.007049$ | $0.000352$ | $0.019239$ | $779.5\text{ s}$ |
-| 🥉 3 | **Experiment 3** | **Scheme 3 (Balanced Scaffolding)** | Equal ($100$) $\to$ Strat B ($50$) $\to$ Weaker Neural ($50$) $\to$ High Neural ($200$) | **$0.007213$** | $0.005296$ | $0.006716$ | $0.001013$ | **$0.023459$** | $919.0\text{ s}$ |
-| 4 | **Experiment 1** | **Equal Weights (Atomic)** | Constant Equal Weights ($400$) | $0.007167$ | **$0.006500$** | $0.005391$ | $0.000574$ | $0.019564$ | $758.5\text{ s}$ |
-| 5 | **Experiment 4** | **Scheme 1 (Classic Scaffolding)** | Weaker Neural ($200$) $\to$ High Neural ($200$) | $0.007140$ | $0.005181$ | $0.006051$ | $0.000355$ | $0.018452$ | $1172.8\text{ s}$ |
-| 6 | **Experiment 3** | **Scheme 7 (Multi-Stage Switching)** | Equal ($100$) $\to$ Strat B ($50$) $\to$ Strat D ($50$) $\to$ Strat A ($50$) $\to$ Weaker ($50$) $\to$ High ($100$) | $0.006889$ | $0.005790$ | $0.005881$ | $0.000549$ | $0.014549$ | $1057.9\text{ s}$ |
-| 7 | **Experiment 4** | **Scheme 9 (Articulated Gait)** | Strat B ($200$) $\to$ Strat A ($200$) | $0.006799$ | $0.004921$ | $0.004481$ | $0.001447$ | $0.014140$ | $1058.7\text{ s}$ |
-| 8 | **Experiment 3** | **Scheme 5 (Joint Growth)** | Equal ($150$) $\to$ Strat D ($75$) $\to$ Weaker Neural ($175$) | $0.006551$ | $0.004666$ | $0.005132$ | $0.000363$ | $0.015115$ | $955.7\text{ s}$ |
-| 9 | **Experiment 2** | **Strategy B (Articulation)** | Constant Strategy B ($400$) | $0.006325$ | $0.004553$ | $0.005191$ | $0.001025$ | $0.016070$ | $753.2\text{ s}$ |
-| 10 | **Experiment 5** | **Scheme 2 (Bootstrapped Scaffolding)** | Equal ($100$) $\to$ Weaker Neural ($150$) $\to$ High Neural ($150$) | $0.006142$ | **$0.006151$** | $0.004138$ | **$0.001541$** | $0.015509$ | $787.5\text{ s}$ |
-| 11 | **Experiment 3** | **Scheme 1** | Weaker Neural ($150$) $\to$ High Neural ($250$) | $0.005944$ | **$0.006273$** | $0.002468$ | $0.001006$ | $0.009180$ | $906.0\text{ s}$ |
-| 12 | **Experiment 2** | **Strategy A (Fine-Tuning)** | Constant Strategy A ($400$) | $0.005721$ | $0.004023$ | $0.005857$ | $0.000149$ | $0.017484$ | $693.0\text{ s}$ |
-| 13 | **Experiment 2** | **Strategy D (Joints/Muscles)** | Constant Strategy D ($400$) | $0.005691$ | $0.005484$ | $0.003389$ | $0.001103$ | $0.010394$ | $695.9\text{ s}$ |
-| 14 | **Experiment 1** | **Weaker Neural (Atomic)** | Constant Weaker Neural ($400$) | $0.005603$ | $0.005615$ | $0.003776$ | $0.000890$ | $0.011583$ | $740.9\text{ s}$ |
-| 15 | **Experiment 3** | **Scheme 2** | Equal ($150$) $\to$ Weaker Neural ($50$) $\to$ High Neural ($200$) | $0.005550$ | $0.003672$ | $0.005117$ | $0.001381$ | $0.017202$ | $906.4\text{ s}$ |
-| 16 | **Experiment 1** | **Baseline (Default Framsticks)** | Constant Baseline ($400$) | $0.005470$ | $0.003304$ | $0.005167$ | $0.001657$ | $0.018541$ | $737.9\text{ s}$ |
-| 17 | **Experiment 3** | **Scheme 4** | Strat B ($150$) $\to$ High Neural ($250$) | $0.005469$ | $0.004775$ | $0.003361$ | $0.001482$ | $0.012361$ | $941.8\text{ s}$ |
-| 18 | **Experiment 3** | **Scheme 6** | Equal ($150$) $\to$ Strat D ($75$) $\to$ Strat A ($50$) $\to$ Weaker ($125$) | $0.004907$ | $0.003778$ | $0.003853$ | $0.000496$ | $0.012416$ | $1103.5\text{ s}$ |
-| 19 | **Experiment 5** | **Scheme 10 (Compact Polish)** | Equal ($100$) $\to$ Strat A ($250$) $\to$ High Neural ($50$) | $0.004868$ | $0.005210$ | **$0.002427$** | **$0.001578$** | $0.007571$ | $741.3\text{ s}$ |
-| 20 | **Experiment 5** | **Scheme 11 (Continuous Articulated)** | Equal ($100$) $\to$ Strat B ($100$) $\to$ Strat A ($200$) | $0.004083$ | $0.002732$ | $0.003260$ | $0.000555$ | $0.010659$ | $776.0\text{ s}$ |
-| 21 | **Experiment 4** | **Scheme 8-200 (Smooth Annealing)** | Equal ($200$) $\to$ Strat A ($200$) | $0.003969$ | $0.003336$ | $0.002554$ | $0.000408$ | $0.008064$ | $1159.6\text{ s}$ |
-| 22 | **Experiment 4** | **Scheme 8-300 (Late Freeze)** | Equal ($300$) $\to$ Strat A ($100$) | $0.003456$ | $0.002369$ | $0.002733$ | $0.000845$ | $0.009163$ | $920.6\text{ s}$ |
-| 23 | **Experiment 1** | **High Neural (Atomic)** | Constant High Neural ($400$) | $0.003288$ | $0.003036$ | $0.002625$ | $0.000286$ | $0.007002$ | $723.8\text{ s}$ |
-| 24 | **Experiment 2** | **Strategy C (Neural Overdrive)** | Constant Strategy C ($400$) | $0.002754$ | $0.002203$ | $0.001593$ | $0.000962$ | $0.005328$ | $715.3\text{ s}$ |
-
----
+| 1 | [**4**](#experiment-4-two-stage-exploration-schemes) | **Scheme 8-100 (Early Freeze)** | $ \text{Equal Weights}^{100} \to \text{Strat A}^{300}$ | **$0.008272$** | $0.005797$ | $0.006459$ | **$0.001554$** | $0.022688$ | $970.7\text{ s}$ |
+| 2 | [**5**](#experiment-5-continuous-biomechanical-development--developmental-cascades) | **Scheme 12 (Morphogenetic Cascade)** | $ \text{Equal Weights}^{100} \to \text{Strat B}^{100} \to \text{Strat D}^{100} \to \text{Strat A}^{100}$ | **$0.007447$** | $0.004367$ | $0.007049$ | $0.000352$ | $0.019239$ | $779.5\text{ s}$ |
+| 3 | [**3**](#experiment-3-scheduled-multi-stage-switching) | **Scheme 3 (Balanced Scaffolding)** | $ \text{Equal Weights}^{100} \to \text{Strat B}^{50} \to \text{Weaker Neural}^{50} \to \text{High Neural}^{200}$ | **$0.007213$** | $0.005296$ | $0.006716$ | $0.001013$ | **$0.023459$** | $919.0\text{ s}$ |
+| 4 | [**1**](#experiment-1) | **Equal Weights (Atomic)** | Constant Equal Weights | $0.007167$ | **$0.006500$** | $0.005391$ | $0.000574$ | $0.019564$ | $758.5\text{ s}$ |
 
 ### Grand Cross-Experimental Insights & Key Conclusions
 
@@ -944,25 +918,25 @@ _Figure 19: Comprehensive Hall-of-Fame final velocity and run duration distribut
 
 ### Best Evolved Creature Genomes
 
-#### 1. Absolute Peak Velocity Champion: [Experiment 3 Scheme 3](./runs/2026-09-27_175220/gens/HoF-f1-scheme-3-3.gen) ($v = 0.023459$)
+#### 1. Best overall result - [Experiment 3 Scheme 3](./runs/2026-09-27_175220/gens/HoF-f1-scheme-3-3.gen) ($v = 0.023459$)
 - **File**: `runs/2026-09-27_175220/gens/HoF-f1-scheme-3-3.gen`
 - **Genotype**:
   ```cpp
   qMLL(X[N, 12:12.399, 9:-1.407, 9:6.412, 12:4.867, fo:0.887,4:3.922][|, 8:1, r:0.929], (X[Gpart, ry:2.129]X[S]m((X[S][Gpart][Gpart]X[N, -4:-0.547, -1:1, -3:-1.7,3:11.708][|, -3:1, r:1][N, 0:0.987, -3:1.684, -4:-0.029, -4:1.827, fo:1, -6:12.219, -2:2.178, -6:3.295], , X[S][@, -9:1][Gpart]))))
   ```
 - **Velocity**: $0.023459$
-- **Morphological & Neural Architecture**:
-  - **Body Chassis**: Asymmetrical 4-part stick morphology comprising a heavy, passive 3-part torso (the leftmost sticks) and a single active articulated joint (the rightmost stick) functioning as a unilateral jumping leg.
-  - **Neural Circuitry**: Features a redundant but robust neural architecture where dormant or isolated nodes surround an ultra-streamlined functional pathway: **2 gyroscopes -> adjusted weights -> bending muscle** in the center joint (visible as the light square in Figure 20a).
-  - **Locomotion Dynamics & Mechanics**: Movement is executed by jumping rhythmically on the rightmost leg and forcefully pushing the heavy 3-part torso forward across the substrate.
+- **Morphology, Neural Architecture & Dynamics**:
+  - **Body chassis**: Asymmetrical 4-part stick morphology comprising a heavy, passive 3-part torso (the leftmost sticks) and a single active articulated joint (the rightmost stick) functioning as a unilateral jumping leg.
+  - **Redundant but stable <u>neural structure</u>** where dormant or isolated nodes surround the main functional pathway being _effectively_ **one gyroscope (2 twin gyroscopes) -> amplified assembled signal -> bending muscle** in the center (light square on _Figure 20a_), which turns the rightmost stick into a leg.
+  - <u>Movement</u> is executed by **jumping rhythmically** (sinusoidal activation plots on _Figure 20b_) on the rightmost leg and forcefully pushing the heavy 3-part torso forward along the trajectory. The torso serves as a stabilization mass and prevents turning upside-down. Gyroscopes located at the center of the torso thus read reliable data regarding stability of the creature, generating movement by bending muscle at the moment a static position of the torso is achieved.
 
 ![Benchmark Champion Creature](./images/Final-best-creature.png)
 _Figure 20a: Phenotype and neural structure of the overall champion_
 
 ![Benchmark Champion Creature Inspection](./images/Final-best-creature-inspection.png)
-_Figure 20b: Inspection of functioning of the best creature: redudant but stable neural struture with the main activation path being **2 gyroscopes -> adjusted weights -> bending muscle** in the center (light square on Figure 20a), which turns the rightmost stick into a leg. The whole movements is performed as jumping on that leg and pushing the heavy 3-parts torso (leftmost sticks) forwards._
+_Figure 20b: Inspection of functioning of the best creature. The left side depicts the moment of jumping and lifting from the ground._
 
-#### 2. Mean Velocity Champion: [Experiment 4 Scheme 8-100](./runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen) ($v = 0.022688$)
+#### 2. Mean Velocity Champion - [Experiment 4 Scheme 8-100](./runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen) ($v = 0.022688$)
 - **File**: `runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen`
 - **Genotype**:
   ```cpp
@@ -971,14 +945,14 @@ _Figure 20b: Inspection of functioning of the best creature: redudant but stable
 - **Velocity**: $0.022688$
 
 ![Benchmark Exp 4 Best Creature](./images/Exp4-best-creature-inspection.png)
-_Figure 21: Inspection of functioning of the experiment 4 champion: redudant but stable neural struture with multiple disconnected neurons, and the main activation path being **1 gyroscope -> bending muscle**. Movement dynamics and technique are similar to the overall champion (Figure 20)._
+_Figure 21: Inspection of functioning of the experiment 4 champion. Compare to Figures 20._
 
-- **Morphological & Neural Architecture**:
-  - **Body Chassis**: Compact stick chassis evolved under Scheme 8-100 (100 generations of unconstrained Equal Weights exploration establishing an effective articulated geometry, followed by 300 generations of Strategy A metric tuning).
-  - **Neural Circuitry**: Characterized by significant neural redundancy with multiple disconnected or silent neurons ("junk DNA"). The primary functional drive is concentrated into an ultra-streamlined reflex loop: **1 gyroscope -> bending muscle** (with auxiliary extensor muscle actuation).
-  - **Locomotion Dynamics & Mechanics**: Movement dynamics and technique closely mirror the overall champion (Figure 20): executing a unilateral jumping and pushing cycle that leverages ground reaction forces to propel the remaining passive chassis forward.
+- **Morphology, Neural Architecture & Dynamics**:
+  - **Body**: Snake-like compact stick chassis consisting of one active jumping leg and a three-part linear torso evolved under Scheme 8-100 (100 generations of unconstrained Equal Weights exploration establishing an articulated geometry, followed by 300 generations of Strategy A continuous metric tuning).
+  - **Neural circuitry**: Characterized by noticeable neural redundancy with multiple disconnected or silent neurons ("junk DNA"). The primary functional drive is concentrated into an ultra-streamlined reflex loop: **1 gyroscope -> bending muscle** (with auxiliary extensor muscle actuation).
+  - **The main activation path, movement dynamics and technique** are similar to the overall champion (Figures 20a, 20b), executing a unilateral jumping and pushing cycle that leverages ground reaction forces to propel the passive torso forward. However, the stabilization-acting torso suffers from the snake-shaped linear form of the creature, which yields less stable positioning.
 
-#### 3. Morphogenetic Cascade Champion: [Experiment 5 Scheme 12](./runs/2026-09-27_230717/gens/HoF-f1-scheme-12-9.gen) ($v = 0.019239$)
+#### 3. Morphogenetic Cascade Champion - [Experiment 5 Scheme 12](./runs/2026-09-27_230717/gens/HoF-f1-scheme-12-9.gen) ($v = 0.019239$)
 - **File**: `runs/2026-09-27_230717/gens/HoF-f1-scheme-12-9.gen`
 - **Genotype**:
   ```cpp
@@ -987,13 +961,13 @@ _Figure 21: Inspection of functioning of the experiment 4 champion: redudant but
 - **Velocity**: $0.019239$
 
 ![Exp 5 Best Creature Inspection](./images/Exp5-best-creature-inspection.png)
-_Figure 22: Inspection of functioning of the experiment 5 champion: multiple disconnected neurons, 2 main activation paths **gyroscope -> bending/rotating muscle** (these paths are rather independent, but can interact with each other via physics). Movement dynamics and technique are similar to the overall champion and experiment 4 champion (Figure 20, 21)._
+_Figure 22: Inspection of functioning of the experiment 5 champion. Movement dynamics and technique are similar to the overall champion and experiment 4 champion (Figures 20, 21). On the left side the moment of jumping is depicted._
 
-- **Morphological & Neural Architecture**:
-  - Evolved through the 4-stage biological morphogenetic cascade ($\text{Equal} \to \text{Strat B} \to \text{Strat D} \to \text{Strat A}$), achieving high worst-case velocity retention ($v_{min} = 0.001554$) by avoiding disruptive morphological freezes.
-  - **Body Chassis & Dynamics**: Streamlined stick chassis demonstrating hopping and pushing dynamics directly comparable to the champions of Experiments 3 and 4 (Figures 20 and 21).
-  - **Neural Circuitry**: Contains multiple disconnected neurons alongside **2 primary, largely independent activation pathways**: **gyroscope -> bending/rotating muscle**.
-  - **Physical Coupling**: While the two neural control pathways operate without direct synaptic crosstalk, they interact and coordinate through **body mechanics and ground reaction forces**, generating stable forward momentum.
+- **Morphology, Neural Architecture & Dynamics**:
+  - **Evolutionary Progression**: Evolved through the 4-stage biological morphogenetic cascade ($\text{Equal} \to \text{Strat B} \to \text{Strat D} \to \text{Strat A}$), achieving high worst-case velocity retention ($v_{min} = 0.001554$) by avoiding disruptive morphological freezes and maintaining continuous metric adaptation.
+  - **Dynamics**: Streamlined stick chassis demonstrating hopping and pushing technique, directly comparable to the champions of Experiments 3 and 4 (Figures 20 and 21).
+  - **Neural circuitry**: Features a significant number of disconnected neurons alongside **2 primary, largely independent activation pathways**: the main pathway for locomotion is **gyroscope -> bending muscle**, while a secondary pathway (with low amplitude of work) is **touch sensor -> rotating muscle**.
+  - **Physical Coupling & Coordination**: While these two neural control pathways operate without direct synaptic crosstalk, they interact through **body mechanics and ground reaction forces**. However, this may lack coordination at times, causing jumping to occasionally fail when the muscle bends without sufficient push-off substrate support.
 
 ### Evolution Challenges
 
