@@ -9,11 +9,12 @@ The optimization objective in all tasks is to maximize the creature's `velocity`
 Earlier tasks used only passive structures, now [active elements](https://www.framsticks.com/muscles_and_receptors) are introduced:
 
 - **Active sensors**:
-    - G - gyroscope
-    - T - thermistor
+    - **G - gyroscope** - returns signed relative difference of a vertical position of a stick's parts ($[-1, 1]$)
+    - **T - touch** - returns relative depth of a sensor touching the ground ($(-1, 1]$)
+    - **S - smell** - returns normalized aggregate value related to the amount of energy-to-squared-distance in the vicinity ($[0, 1]$)
 - **Effectors**:
-    - @ - flexor muscle
-    - | - extensor muscle
+    - **@ - rotating muscle** - rotates connected part around the other joint's part's axis.
+    - **| - bending muscle** - changes the angle between two joint's parts.
 - **Generators**:
     - $\sin$ - sine wave generator neuron
     -  $*$ - constant $1$ generator neuron
@@ -50,16 +51,18 @@ This experiment investigates how enlarging the mutation neighborhood definition 
    - In contrast, the **control network topology was substantially restructured** - novel neurons, sensory inputs, and synaptic links were integrated to govern rhythmic muscle actuation.
 
 
+<a id="simulation-settings-lifespan"></a><a id="simulation-environment--lifespan"></a>
 ## Simulation Settings & Lifespan 
 Across all the following experiments, fitness evaluations utilize the deterministic benchmark `eval-allcriteria.sim;deterministic.sim`  (deterministic evaluation, active neural networks and physics):
 - In Framsticks, **Lifespan** is governed by energy depletion. Initial energy is proportional to body size: $E_0 = \text{Energy0} \times n$ (with $\text{Energy0} = 10\,000.0$, $n = \text{number of joints/sticks}$). Each step consumes an idle metabolic cost of $e\_\text{meta} \times n$ energy (with $e\_\text{meta} = 1.0$):
 
-  $$\text{lifespan} = \frac{\text{Energy0} \times n}{e\_\text{meta} \times n} = \frac{10\,000.0}{1.0} = 10\,000 \text{ simulation steps}$$
+  ```math
+  \text{{lifespan}} = \frac{\text{{Energy0}} \times n}{e\_\text{{meta}} \times n} = \frac{10\,000.0}{1.0} = 10\,000 \text{{ simulation steps}}
+  ```
 
 - **Performance Sampling (`perfperiod`)** determines how often positions are sampled to calculate `velocity`:
-    - In [Task 2](#task-2-varying-landscape-definition-height
-    ), `perfperiod` is varied across values up to $10\,000$ ($\text{lifespan}$). 
-    - In [Task 3](#task-3-varying-different-mutations-probs-nonstationary-categorical-distribution-over-mutation), `sample-period-longest.sim` (`perfperiod` $=999999 > \text{lifespan}$) samples strictly at birth and death to evaluate net rectilinear displacement speed.
+    - In [Task 2](#task-2-varying-landscape-definition-height), `perfperiod` is varied across values up to $10\,000$ ($\text{lifespan}$). 
+    - In [Task 3](#task-3), `sample-period-longest.sim` (`perfperiod` $=999999 > \text{lifespan}$) samples strictly at birth and death to evaluate net rectilinear displacement speed.
 
 ## [Task 2: Varying Landscape Definition (Height)](./task2%20-%20Varying%20landscape%20definition/README.md)
 
@@ -82,7 +85,9 @@ In Framstics, the definition of `velocity` relies on the average distance travel
 3. **Common Points Between Landscapes**:
    - Fitness values across different `perfperiod` definitions coincide **if and only if** a creature moves along a straight line at constant speed ($\dot{\mathbf{x}}(t) \approx {\text{const}}$), such that total path arc length equals net displacement: 
 
-   $$\int_0^T \|\dot{\mathbf{x}}(t)\|\,\mathrm{d}t \approx \|\mathbf{x}(T) - \mathbf{x}(0)\|$$
+    ```math
+      \int_0^T \|\dot{\mathbf{x}}(t)\|\,\mathrm{d}t \approx \|\mathbf{x}(T) - \mathbf{x}(0)\|\
+    ```
 
    - Highly directional creatures like **Fast Lizard** and **Basic Quadruped** retain virtually unchanged velocities across all sampling periods, forming invariant fixed points between landscapes. In contrast, creatures that twist or veer (e.g., **Speedy**) show dramatic fitness decay.
 
@@ -102,14 +107,14 @@ In Framstics, the definition of `velocity` relies on the average distance travel
 _**Figure 2:** Measured velocity for each of the 28 walking genotypes across 13 different `perfperiod` values. Straight-line movers maintained flat curves, whereas turning or wriggling creatures experienced steep velocity drops as `perfperiod` increased._
 
 #### Config
-28 walking creatures with diverse locomotion kinematics taken from [`walking.gen`](../../Framsticks55/data/walking.gen) were evaluated in batch mode using FramsticksLib with [standard settings](#simulation-environment--lifespan).
+28 walking creatures with diverse locomotion kinematics taken from [`walking.gen`](../../Framsticks55/data/walking.gen) were evaluated in batch mode using FramsticksLib with [standard settings](#simulation-settings-lifespan).
 
 * **Sampling Periods Tested**:
   $$\text{perfperiod} \in \{1, 2, ..., 100,..., 10000\}$$
   where:
   - $\text{perfperiod} = 1$ - maximum continuous sampling (every single simulation step).
   - $\text{perfperiod} = 100$ - default Framsticks sampling period.
-  - $\text{perfperiod} = 10\,000$: Sampling only at birth and death ($T = \text{lifespan}$), representing [**net rectilinear displacement speed**](#task-3-varying-different-mutations-probs-nonstationary-categorical-distribution-over-mutation).
+  - $\text{perfperiod} = 10\,000$: Sampling only at birth and death ($T = \text{lifespan}$), representing [**net rectilinear displacement speed**](#task-3).
 
 #### Running
 ``` bash
@@ -123,6 +128,7 @@ python "assignments\Assignment 5 - Modifying topology exploration path. Evolutio
 
 
 
+<a id="task-3"></a><a id="task-3-varying-different-mutations-probs-nonstationary-categorical-distribution-over-mutation"></a>
 ## [Task 3: Varying Different Mutations Probs. Non‑stationary categorical distribution over mutation ](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md) 
 
 The objective of experiments in this task is to optimize **net rectilinear displacement speed**: 
@@ -134,7 +140,7 @@ The objective of experiments in this task is to optimize **net rectilinear displ
 by varying the relative probabilities (weights,[ `.sim`](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims)) of applying different mutation operators, forming different distributions over these operators, and thus representing different mutation strategies. In this task, we analyze how these strategies influence the evolutionary dynamics and the performance of the evolved solutions for locomotion velocity.
 
 ### Setup
-- **[Simulation Environment](#simulation-settings--lifespan):** `eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim;` + varying `*.sim` files from [`sims`](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims) directory.
+- **[Simulation Environment](#simulation-settings-lifespan):** `eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim;` + varying `*.sim` files from [`sims`](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims) directory.
 - **Morphological & Neural Limits**:
   - Max parts: `15`
   - Max joints: `30`
@@ -166,13 +172,13 @@ $$P(\text{op}_i) = \frac{w_i}{\sum_{j=0}^{8} w_j}$$
 #### Batch 1 (Tested in Experiment 1 and 2)
 ##### Settings and Rationale
 Comparing baseline, high neural, weaker neural, and equal weights configurations:
-   1. **[Baseline](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-all-crit.sim)** emphasizes neural weight modifications (`f1_nmWei = 1.0`, $67.1\%$ probability) with low morphology ($12.8\%$ total probability).  
-      - Structural neuron insertions/deletions are still relatively high ($0.05$), but low compared to synaptic weight changes.
+   1. **[Baseline](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-all-crit.sim)** emphasizes neural weight modifications (`f1_nmWei = 1.0`, _67.1%_ probability) with low morphology (_12.8%_ total probability).  
+      - Structural neuron insertions/deletions are still relatively high (_0.05_), but low compared to synaptic weight changes.
       - On the morphology side, modifier adjustments are the most common type of mutation, favoring subtle geometric scaling over drastic topology disruptions.
       - This allocation allows evolution to primarily focus on calibrating muscle activation phases, frequencies, and sensory feedback loops on viable body chassis.
    2. **[High Neural](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs01.sim)** doubles neural operator weights, further suppressing body topology perturbations to focus on controller coordination.
-   3. **[Weaker Neural](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs10.sim)** doubles morphological operator weights relative to neural operators (increasing body mutation proportion to $22.6\%$), fostering broader body shape exploration.
-   4. **[Equal Weights](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-equal-probs.sim)** provides equal uniform distribution ($11.1\%$ each) across morphology ($44.4\%$) and brain ($55.5\%$).
+   3. **[Weaker Neural](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs10.sim)** doubles morphological operator weights relative to neural operators (increasing body mutation proportion to _22.6%_), fostering broader body shape exploration.
+   4. **[Equal Weights](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-equal-probs.sim)** provides equal uniform distribution (_11.1%_ each) across morphology (_44.4%_) and brain (_55.5%_).
 
 The following table summarizes the weight settings for each operator in each configuration:
    
@@ -351,7 +357,7 @@ The following table summarizes the weight settings for each operator in each con
 </div>
 
 ##### Key findings in Batch 1
-- **[Equal Operator Weights](./sim/f1-equal-probs.sim)** achieves roughly double the median velocity of the baseline, providing the best performance during almost the entire evolution ([Figure 3](#comparative-results-experiment-2)), outperforming the rest 3 settings.
+- **[Equal Operator Weights](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-equal-probs.sim)** achieves roughly double the median velocity of the baseline, providing the best performance during almost the entire evolution ([Figure 3](#comparative-results-experiment-2)), outperforming the rest 3 settings.
 
 - In $f_1$, **equal weights** translate to a 4-to-5 ratio between morphology and brain. This balanced ratio maintains structural diversity while preserving sufficient frequency of synaptic weight mutations ($11.1 \% $) to coordinate newly emerging limbs.
 
@@ -542,18 +548,22 @@ The table below summarises the main differences between the 4 strategies:
 </table>
 </div>
 
+<a id="comparative-results-experiment-2"></a>
 #### [Comparative results](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/) (Experiment 2)
 
 Each strategy was evaluated across 10 independent runs of strategies from [**Batch 1**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-26_172452/) and [**Batch 2**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-26_180136/) over 400 generations (20 CPU workers), summarised in the following figures.
 
 
 <div align="center">
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_best_series.png" width="80%">
 
-![Comparative Best Series (Linear)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_best_series.png)
 _Figure 1: Comparative best-of-generation fitness trajectories._
 
-![Comparative Confidence Intervals (Linear)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_confidence_std_1.0.png)
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_confidence_std_1.0.png" width="80%">
+
 _Figure 2: Mean fitness and shaded confidence intervals._
+
+<br/>
 
 ![Comparative Boxplots](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/boxplot_summary.png)
 
@@ -562,6 +572,7 @@ _Figure 3: Final Hall-of-Fame velocity and run duration distributions._
 </div>
 
 
+<a id="findings-stationary-mutation-strategies-batches-1--2"></a><a id="findings-stationary-mutation-strategies-batches-1-2"></a>
 #### Findings: Stationary Mutation Strategies (Batches 1 & 2)
 
 Comparing the varied baseline and equal weights strategies ([Batch 1](#tested-stationary-mutation-strategies-experiments-1-and-2)) and adjusted strategies ([Batch 2](#batch-2-experiment-2)) reveals how static operator allocations shape the evolutionary trajectory:
@@ -582,7 +593,7 @@ Comparing the varied baseline and equal weights strategies ([Batch 1](#tested-st
    - Heavily suppressing morphological mutations ($<23\%$) caused noticeable stagnation.
    - This suggests that neural networks cannot compensate for a mechanically flawed or unarticulated body chassis: controllers require mechanical degrees of freedom to produce propulsion.
 
-5. **[Equal Weights](./sims/f1-equal-probs.sim)**:
+5. **[Equal Weights](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-equal-probs.sim)**:
    - **Equal Weights** achieves the highest overall median ($0.006500$) and peak velocity ($0.019564$), benefiting from balanced structural and neural exploration. Across almost all the 400 generations this strategy retains the best average velocity.
    - *It demonstrates the highest increase in average fitness during the first 50 generations.*
 
@@ -596,11 +607,11 @@ Comparing the varied baseline and equal weights strategies ([Batch 1](#tested-st
      //genotype: 
      mf((fMm(FMX[*][|, r:0.846, r:1,1:3.431][S]LQLMmX[T][*][Gpart, rz:-1.725,ry:0](M(rFFCMmX[N, -4:4.187,-4:-0.104,-3:1][@,-5:1][|, -3:2.525, p:0.277, r:1])), rfCqX), ))
      ```
-   - Highly articulated morphology featuring rotational muscle joints (`*`), bending muscles with dynamic feedback (`|`, `-3:2.525, p:0.277`), tactile contact sensor (`S`), body gyroscope sensor (`Gpart, rz:-1.725`), sinusoidal pattern generator (`N`), and friction/joint modifiers (`mf, fMm, F, LQLMm, T, M, rFFC, rfCq`).
+   - Highly articulated snake-like morphology with one muscled leg in the front. Movement is acomplished by crawling.
 
    <div style="text-align: center; width: 70%; margin: 0 auto;">
    
-      ![Experiment 2 Best Creature](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp2-best-creature.png)
+   <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp2-best-creature.png">
    
       _Figure 4: Phenotype of the fastest creature evolved in Experiment 2._
     </div>
@@ -612,7 +623,7 @@ To overcome the static exploration–exploitation dilemma, **non-stationary sche
 
 $$\vec{w}(t) = \vec{w}_k \quad \text{for } t_k \le t < t_{k+1}$$
 
-_where_ $\vec{w}(t)$ _is the vector of mutation weights at generation_ $t$, $\vec{w}_k$ _is the vector of mutation weights for the $k$-th stage, and_ $t_k$ _is the start generation of the_ $k$-th _stage_.
+_where_ $\vec{w}(t)$ _is the vector of mutation weights at generation_ $t$, $\vec{w}_k$ _is the vector of mutation weights for the k-th stage, and_ $t_k$ _is the start generation of the_ $k$-th _stage_.
 
 #### Rationale for Scheduled Schemes
 
@@ -634,6 +645,7 @@ In biological morphogenesis, organisms undergo distinct developmental phases: em
    - **Idea**: Standardizes schedules into a 100-generation developmental macro-stage cadence to resolve the "morphological freeze trap" through continuous biomechanical development.
    - **Rationale**: Completely zeroing morphological mutations (High Neural) freezes creatures in rigid mechanical configurations where even minor joint misalignments cannot be remedied. Experiment 5 replaces rigid freezes with continuous developmental progressions: Scheme 2 adds the vital 100-generation Equal Weights bootstrap to classic scaffolding; Scheme 10 tests whether a compact 50-generation final synaptic polish ($350 \to 400$) preserves the benefits of 250 uninterrupted generations of Strategy A co-adaptation without the freeze penalty; Schemes 11 and 12 eliminate freezes entirely, with Scheme 12 realizing a 4-stage biological morphogenetic cascade ($\text{Equal} \to \text{Strat B} \to \text{Strat D} \to \text{Strat A}$) from macro-anatomy to micro-parameter tuning.
 
+<a id="schemes-tested-in-experiments-3-5"></a>
 #### Schemes tested in Experiments 3-5: 
 The following 16 variations of 12 schemes were tested (10 runs per each):
 
@@ -727,17 +739,17 @@ _Figure 5c: Hall-of-Fame velocity and duration distributions for the selected to
   - **Redudant but stable <u>neural struture</u>** where dormant or isolated nodes surround main functional pathway being _effectively_ **one gyroscope (2 twin gyroscopes) -> amplified assembled signal -> bending muscle**. in the center (light square on _Figure 6a_), which turns the rightmost stick into a leg. 
   - <u>Movement</u> is executed by **jumping rhythmically** (sinusoidal activation plots on _Figure 6b_) on the rightmost leg and forcefully pushing heavy 3-part torso forward along the trajectory. Torso serves as a stabilisation mass and prevents turning upside-down. Gyroscopes located at the center of torso thus read reliable data regarding stability of the creature, generating a movement by bending muscle at the moment static position of the torso is achieved.
 
-<div style="width: 70%; align-content: center; margin-left: auto; margin-right: auto;" >
+<div style="width: 80%; align-content: center; margin-left: auto; margin-right: auto;" >
 
-![Benchmark Champion Creature](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature.png)
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature.png">
 
 _Figure 6a: Phenotype and neural structure of the overall champion_
 
 </div>
 
-<div style="width: 100%; align-content: center; margin-left: auto; margin-right: auto; transform: scale(120%); transform-origin: left top;" >
+<div style="width: 100%; align-content: center; margin-left: auto; margin-right: auto;" >
 
-![Benchmark Champion Creature Inspection](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature-inspection.png)
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature-inspection.png">
 
 </div>
 
@@ -762,6 +774,7 @@ _Figure 7: Inspection of functioning of the experiment 4 champion. Compare to Fi
   - **Body** of this snake-like structure consists of one leg and three-part linear torso.
   - **Neural circuitry** is characterized by noticeable neural redundancy with multiple disconnected or silent neurons ("junk DNA"). 
   - **The main activation path, movement dynamics and technique** are similar to the overall champion. However, stabilization-acting torso suffers from snake-shaped form of the creature which less stable positioning. 
+  - This creature  has the same morphological traits as the experiment 2 champion (**Strategy A**, see [_Figure 4_](#findings-stationary-mutation-strategies-batches-1-2)), however the body dynamics is completely different.
 
 #### 3. Morphogenetic Cascade Champion - [Experiment 5 Scheme 12](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_230717/gens/HoF-f1-scheme-12-9.gen)
 - **Genotype**:
@@ -780,55 +793,64 @@ _Figure 8: Inspection of functioning of the experiment 5 champion. Movement dyna
 
 ### Evolution Challenges
 
-#### Summary of Empirical Observations: Neural Redundancy & Minimalist Reflex Loops
-Inspection of champion genotypes across experiments in the Framsticks GUI neural viewer and via the Framsticks C-API (`frams.Model.newFromString`) reveals a consistent topological reality:
+#### Empirical Observations: Neural Redundancy & Minimalist Reflex Arcs
+Inspection of champion genotypes across experiments 1-5 (see [_Figures 6-8_](#best-evolved-creature-genomes)) reveals consistent topological patterns:
 1. **Pervasive Neural Redundancy ("Junk DNA")**:
    - Across all top-performing creatures, the vast majority of evolved neural nodes are completely redundant, disconnected, or wired to non-effector endpoints. 
-   - For instance, in the 15-node network of the Experiment 5 champion (and similarly saturated networks in Experiments 3 and 4 - see _Figures 6-8_), over half the nodes are silent: unused gyroscopes (`G`, `Gpart`), uncoupled tilt sensors (`T`), and isolated touch receptors (`S`) that exert zero torque on effectors.
-2. **Minimalist Functional Reflex Arcs**:
-   - Locomotion does not rely on intricate, heavily cross-wired central pattern generators (CPGs). Instead, actual forward displacement is driven by remarkably simple 1-to-2 sensor reflex loops:
-     - **Champion 1 (Exp 3 Scheme 3)**: **2 gyroscopes -> adjusted weights -> central bending muscle**.
-     - **Champion 2 (Exp 4 Scheme 8-100)**: **1 gyroscope -> bending muscle**.
-     - **Champion 3 (Exp 5 Scheme 12)**: **2 independent gyroscope -> bending/rotating muscle reflex paths**.
-3. **Coordination Through Physics Rather Than Neural Crosstalk**:
-   - Even when multiple reflex arcs exist (as in Champion 3), there is virtually no direct synaptic interconnect between them. Synchronization emerges purely from **embodied physical interaction**: structural inertia, joint limits, gravity, and ground reaction forces couple the actuators dynamically.
+   - For instance, in the 15-node network of the Experiment 5 champion, over half the nodes are silent - most sensors exert zero torque on effectors.
+2. **Minimal Functional Reflex Arcs**:
+   - Locomotion does not rely on intricate, cross-wired central pattern generators. Instead, actual forward displacement is driven by **one or two main neural paths**, while the rest of the neural nodes and connections are **redundant**.
+3. **Coordination Through Physics Rather Than Neural Topology**:
+   - Even when multiple reflex arcs exist (as in Champion 3), there is virtually no direct synaptic interconnect between them. Synchronization emerges purely from **unavoidable physical interactions** (structural inertia, joint limits, gravity, and ground reaction), that force dynamical coupling of actuators.
+4. **Useless neural traits**:
+    - Smell sensors are present in all champions, but are useless in the current simulation setting as there are no energy sources. Their presence in neural networks is a neutral mutation which does not affect fitness of a creature, except the case when it gets connected to an effector - then it rather prevents more useful neurons to futher connect to the effector, and hinders evolution.
 
-#### Fitness Landscape Bias: Why Rectilinear Rewards Favor Simple One-Legged Evolution
-A critical insight into why evolved creatures converge on such minimalist physical and neural architectures lies in the **fitness function formulation**:
-- **Rectilinear Displacement as the Sole Metric**:
-  - In the Framsticks velocity benchmark, used in this project, fitness rewards solely linear displacement along the primary forward axis:
-    $$v = \frac{\Delta x}{\Delta t}$$
-- **The Fitness Penalty on Multi-Legged Complexity**:
+#### Fitness Landscape Bias
+One of the reasons evolved creatures converge on such minimalist physical and neural architectures may lie in the **fitness function formulation**:
+
+- **Rectilinear Displacement is the sole metric** in the current evolutionary setup. [Fitness definition](#task-3) rewards solely linear displacement along the primary forward axis: $v = {\Delta x}/{\Delta t}$
+- **Fitness penalty for multi-legged complexity**:
   - Evolving a multi-legged chassis or complex bilateral walking gaits requires coordinated multi-limb stabilization, lateral balance, and phase-shifted gait cycles.
-  - Under a 1D rectilinear objective, **lateral movements, stabilization adjustments, or turning torque yield zero fitness reward**. In early evolutionary exploration, attempts to sprout additional limbs or complex multi-joint chassis invariably introduce parasitic ground friction, mechanical dragging, and coordination failures where limbs trip over one another, immediately reducing forward velocity.
-- **Selective Pressure for Unilateral ("One-Legged") Pogo-Hopping**:
+  - Under a unidimensional rectilinear objective, **lateral movements, stabilization adjustments, or turning torque yield zero fitness reward**. In early evolutionary exploration, attempts to sprout additional limbs or complex multi-joint chassis invariably introduce parasitic ground friction, mechanical dragging, and coordination failures where limbs trip over one another, immediately reducing forward velocity.
+- **Selective Pressure for unilateral (one-legged) locomotion**:
   - In contrast, a unilateral (single-leg) body plan concentrates 100% of available muscular torque directly along the rectilinear forward axis.
   - The remaining sticks are passively dragged or pushed along as an inert "torso," avoiding limb interference entirely.
-  - Consequently, the rectilinear fitness landscape heavily rewards simple "one-legged" jumping evolution while actively suppressing the emergence of more complex chassis or multi-legged locomotion.
+  - Consequently, the rectilinear fitness landscape heavily rewards simple "one-legged" jumping evolution while actively suppressing the emergence of more complex chassis or multiple legs.
 
 #### Evolutionary Mechanisms Explaining Disconnected Neurons:
 1. **Entrenchment via Relative Indexing in $f_1$ (The Structural Spacer Effect)**:
-   - In the $f_1$ genetic format, neural connections are encoded as **relative index offsets** (e.g., Node #13 connects to Node #0 with offset `-13` and Node #9 with offset `-4`).
-   - Every intervening neuron—even if unconnected—acts as a positional spacer in the gene sequence. If a deletion mutation deletes an unused sensor (e.g. Node #7 or #8), the relative index offset `-4` would point to index $8$ instead of Gyroscope #9, instantly disrupting the CPG feedback loop and causing the locomotive gait to collapse.
-   - Consequently, unused nodes become **structurally entrenched**: deleting them is lethal to controller function.
+   - In the $f_1$ genetic format, neural connections are encoded as **relative index offsets**.
+   - Every intervening neuron, even if unconnected, acts as a positional spacer in the gene sequence. _For instance, Node #10-N connects to Node #3-S with offset `-7` and the other nodes. If a mutation adds a new neuron #4-$*$, the relative index offset `-7` would point to index #4-$*$ instead of #3-S, instantly disrupting the CPG feedback loop or causing the locomotive gait to collapse. See Figure 9 below._
+   - Analagously, a deletion mutation may delete an unused sensor, breaking the connection and causing the gait to collapse, so unused nodes become **structurally entrenched**.
+
+<div align="center" style="display: grid; grid-template-columns: 1fr 1fr; justify-content: center; align-items: center; gap: 20px;">
+   <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/example-intervening-neuron-before-insertion.png" width="400px"/>
+   <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/example-intervening-neuron-inserted.png" width="400px"/>
+</div>
+
+<div align="center">
+
+_Figure 9: Disruption of the connection (in blue) between sensor and effector due to insertion of a new neuron._
+
+</div>
+
 2. **Neutral Genetic Drift & Absence of Parsimony Pressure**:
-   - The evolutionary fitness objective maximizes velocity ($v = \Delta x / \Delta t$), which is not influenced by parasitic neurons.
-   - Because Framsticks imposes zero metabolic penalty for unused neurons ($\lambda \cdot N_{neu} = 0$), non-functional sensors (e.g. smell sensors, disconnected or neurons connected to no effector) incur zero selective disadvantage and accumulate freely during early exploratory generations.
+   - The evolutionary fitness objective maximizes velocity, which is not influenced by parasitic neurons.
+   - Because in the current setting Framsticks imposes **zero metabolic penalty for unused neurons**, non-functional sensors (e.g. smell sensors, disconnected or neurons connected to no effector) incur zero selective disadvantage and accumulate freely during early exploratory generations.
 3. **Cryptic Genetic Variation / Latent Reservoirs**:
-   - In evolutionary robotics and biology, silent genetic material serves as a reservoir of cryptic variation: future single-point connection mutations (`f1_nmConn`) or crossovers can immediately link into existing sensory channels without requiring de novo sensor insertion.
+   - In evolutionary robotics and biology, silent genetic material serves as a reservoir of cryptic variation: future single-point neural connection mutations (`f1_nmConn`) or crossovers (disabled in the current settings) can provide new functional neural pathways in existing sensory channels without requiring de novo sensor insertion.
 
 #### The Evaluation Budget Penalty of Decoupled Operators
 This architectural phenomenon exposes a fundamental inefficiency in the standard $f_1$ genetic representation: **the mutation budget penalty of decoupled operators**.
 - In Framsticks $f_1$, neuron insertion (`f1_nmNeu`) and synaptic wiring (`f1_nmConn`) are independent, competing mutation operators on the roulette wheel.
-- When `f1_nmNeu` triggers, it inserts a raw sensor (`[G]`, `[S]`, `[T]`) with **zero connections**. Because the node produces no torque on muscles, the mutant has identical locomotion velocity to its parent. The evaluation budget spent generating that offspring is wasted in the short term.
-- For that node to ever become functional, a second, rare mutation (`f1_nmConn`) must later hit that exact locus to wire it into the motor circuit. If this second event never occurs, the node remains dead weight.
-- **Why Strategy C Collapsed vs. Scheme 8-100 Succeeded**:
-  - In **Strategy C (Neural Overdrive)**, $20\%$ of all mutations were allocated to `f1_nmNeu` and $20\%$ to `f1_nmConn`. The algorithm continuously burned its evaluation budget creating isolated sensors that were never connected, starving mechanical body evolution ($<20\%$) and resulting in the worst performance across all 24 configurations ($v_{mean} = 0.002754$).
-  - In contrast, **Scheme 8-100** allowed neural exploration during generations $0\text{--}100$, then switched to **Strategy A**, slashing `f1_nmNeu` to just **$3.1\%$**. By cutting off the generation of useless disconnected neurons, almost $100\%$ of the remaining 300 generations of mutation budget was channeled into joint modifiers (`23.1\%`) and synaptic weights (`30.8\%`), yielding the #1 overall champion.
+- When `f1_nmNeu` triggers, it inserts a raw neuron with **zero connections** resulting in identical locomotion velocity to its parent. The evaluation budget spent generating that offspring is wasted in the short term.
+- For that node to ever become functional, a second, sometimes rare mutation (`f1_nmConn`) must later hit that exact locus to wire it into the motor circuit. If this second event never occurs, the node remains dead, and moreover can potentially become entrenched in the course of evolution.
+
+- **In practice**, **Strategy C (Neural Overdrive)**, with its $20\%$ `f1_nmNeu` allocation continuously burned evaluation budget on isolated, uninnervated sensors that starved mechanical body evolution, resulting in the lowest velocity across all static runs ($v_{mean} = 0.002754$).
 
 
 
-### Grand Conclusions & Key Insights
+### Final Conclusions
 
 1. **The 100-Generation Window of Morphological Plasticity**:
    - Across all 24 configurations, **Equal Weights during the first 100 generations** was the single most decisive determinant of evolutionary success.
@@ -844,7 +866,7 @@ This architectural phenomenon exposes a fundamental inefficiency in the standard
      $$\text{Global Exploration (Equal)} \to \text{Limb Branching (Strat B)} \to \text{Joint Allocation (Strat D)} \to \text{Biomechanical Tuning (Strat A)}$$
      guides evolution naturally from macro-anatomy to micro-parameter tuning, yielding top-tier performance without sacrificing stability.
 
-4. **The Rectilinear Fitness Bias (Why One-Legged Pushers Dominate)**:
-   - Because Framsticks fitness rewards exclusively forward displacement ($v = \Delta x / \Delta t$) without rewarding lateral balance, evolution heavily favors simple unilateral jumping/pushing mechanics. A single active leg pushing an inert multi-stick torso eliminates limb collision risks and channels all mechanical work directly into the forward axis, explaining why creatures across all experiments converge on extreme morphological and neural simplicity.
+4. **Morphological Convergence**:
+    - Unidimensional fitness definition suppresses multi-legged gaits in favor of unilateral pushers. _See [Fitness Landscape Bias](#fitness-landscape-bias)_.
 
 For complete per-run logbooks, statistical distributions, and individual experiment scripts, see the [Task 3 Detailed Report](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md).
