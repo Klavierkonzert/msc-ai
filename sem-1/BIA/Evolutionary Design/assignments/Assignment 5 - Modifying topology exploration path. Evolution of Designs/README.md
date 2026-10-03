@@ -24,11 +24,9 @@ Earlier tasks used only passive structures, now [active elements](https://www.fr
 
 This experiment investigates how enlarging the mutation neighborhood definition influences evolutionary performance on locomotion velocity (following [Framsticks Tutorial II.1](http://www.framsticks.com/common/tutorial/index.html)).
 
-<div align="center" width="50%">
-
-![alt text](./task1%20-%20Neighbourhood%20shape%20and%20operators/image.png)
-
-</div>
+<p align="center">
+  <img src="./task1%20-%20Neighbourhood%20shape%20and%20operators/image.png" width="55%" alt="Neighborhood shape and operators" />
+</p>
 
 ### Velocity Across Different Neighborhood [Configurations](./task1%20-%20Neighbourhood%20shape%20and%20operators/)
 
@@ -56,13 +54,16 @@ This experiment investigates how enlarging the mutation neighborhood definition 
 Across all the following experiments, fitness evaluations utilize the deterministic benchmark `eval-allcriteria.sim;deterministic.sim`  (deterministic evaluation, active neural networks and physics):
 - In Framsticks, **Lifespan** is governed by energy depletion. Initial energy is proportional to body size: $E_0 = \text{Energy0} \times n$ (with $\text{Energy0} = 10\,000.0$, $n = \text{number of joints/sticks}$). Each step consumes an idle metabolic cost of $e\_\text{meta} \times n$ energy (with $e\_\text{meta} = 1.0$):
 
-  ```math
-  \text{{lifespan}} = \frac{\text{{Energy0}} \times n}{e\_\text{{meta}} \times n} = \frac{10\,000.0}{1.0} = 10\,000 \text{{ simulation steps}}
-  ```
+
+<div align="center" style="font-size: 110%;">
+
+  $\displaystyle\text{{lifespan}} = \frac{\text{{Energy0}} \times n}{e\_\text{{meta}} \times n} = \frac{10\,000.0}{1.0} = 10\,000 \text{{ simulation steps}}$
+
+</div>
 
 - **Performance Sampling (`perfperiod`)** determines how often positions are sampled to calculate `velocity`:
     - In [Task 2](#task-2-varying-landscape-definition-height), `perfperiod` is varied across values up to $10\,000$ ($\text{lifespan}$). 
-    - In [Task 3](#task-3), `sample-period-longest.sim` (`perfperiod` $=999999 > \text{lifespan}$) samples strictly at birth and death to evaluate net rectilinear displacement speed.
+    - In [Task 3](#task-3), `sample-period-longest.sim` (`perfperiod` $=999999 \gg \text{lifespan}$) samples strictly at birth and death to evaluate net rectilinear displacement speed.
 
 ## [Task 2: Varying Landscape Definition (Height)](./task2%20-%20Varying%20landscape%20definition/README.md)
 
@@ -74,7 +75,11 @@ In Framstics, the definition of `velocity` relies on the average distance travel
 1. **Continuous Limit**:
    - As sampling interval $\Delta t \to 0$, discrete trajectory curve chord lengths converge to the line integral of instantaneous speed over lifespan $T$:
 
-     $$\lim_{\Delta t \to 0} \frac{\sum_{k} \|\mathbf{x}(t_{k+1}) - \mathbf{x}(t_k)\|}{T} = \frac{\int_0^T \|\dot{\mathbf{x}}(t)\| \, \mathrm{d}t}{T}$$
+   <div align="center" style="font-size: 110%;">
+
+     $\displaystyle\lim_{\Delta t \to 0}  \frac{1}{T} \sum_{k} \lVert \mathbf{x}(t_{k+1}) - \mathbf{x}(t_k) \rVert = \frac{1}{T} \int_0^T \lVert \dot{\mathbf{x}}(t) \rVert \, \mathrm{d}t$
+
+    </div>
 
    - The numerator represents total **arc length (path taken)**. Setting `perfperiod = 1` in discretisized Framsticks time is equivalent to evaluating the average scalar speed.
 
@@ -85,32 +90,31 @@ In Framstics, the definition of `velocity` relies on the average distance travel
 3. **Common Points Between Landscapes**:
    - Fitness values across different `perfperiod` definitions coincide **if and only if** a creature moves along a straight line at constant speed ($\dot{\mathbf{x}}(t) \approx {\text{const}}$), such that total path arc length equals net displacement: 
 
-    ```math
-      \int_0^T \|\dot{\mathbf{x}}(t)\|\,\mathrm{d}t \approx \|\mathbf{x}(T) - \mathbf{x}(0)\|\
-    ```
+    <div align="center" style="font-size: 110%;">
+
+      $\displaystyle\int_0^T \lVert \dot{\mathbf{x}}(t) \rVert\,\mathrm{d}t \approx \lVert \mathbf{x}(T) - \mathbf{x}(0) \rVert$
+    </div>
 
    - Highly directional creatures like **Fast Lizard** and **Basic Quadruped** retain virtually unchanged velocities across all sampling periods, forming invariant fixed points between landscapes. In contrast, creatures that twist or veer (e.g., **Speedy**) show dramatic fitness decay.
 
 4. **Navigability**:
-   - **Noisy Landscapes ($\text{perfperiod} \to 1$)** are difficult to navigate because additive physical noise pollutes the fitness signal, causing similar genotypes to differ randomly and rewarding stationary wobblers.
-   - **Overly Denoised Landscapes ($\text{perfperiod} \to T$)** aggregate the whole lifespan into a single boundary chord $\|\mathbf{x}(T) - \mathbf{x}(0)\| / T$, completely masking intermediate accelerations. Fast circular or undulating gaits yield near-zero net displacement, producing flat, uninformative plateaus.
-   - **Optimal Balance** - intermediate sampling ($\text{perfperiod} \approx 50\text{--}100$) filters contact jitter while retaining sufficient gradient information to guide early locomotion evolution.
+   - **Noisy landscapes ($\text{perfperiod} \to 1$)** are difficult to navigate because additive physical noise pollutes the fitness signal, causing similar genotypes to differ randomly and rewarding stationary wobblers.
+   - **Overly denoised landscapes ($\text{perfperiod} \to T$)** aggregate the whole lifespan into a single boundary chord $\lVert\mathbf{x}(T) - \mathbf{x}(0)\rVert T^{-1}$, completely masking intermediate accelerations. Fast circular or undulating gaits yield near-zero net displacement, producing flat, uninformative plateaus.
+   - **Optimal balance** - intermediate sampling ($\text{perfperiod} \approx 50...100$) filters contact jitter while retaining sufficient gradient information to guide early locomotion evolution.
 
 ### Empirical verification
 
-<div align="center">
-
-![Velocity vs. Perfperiod](./task2%20-%20Varying%20landscape%20definition/velocity_vs_perfperiod.png)
-
-</div>
-
-_**Figure 2:** Measured velocity for each of the 28 walking genotypes across 13 different `perfperiod` values. Straight-line movers maintained flat curves, whereas turning or wriggling creatures experienced steep velocity drops as `perfperiod` increased._
+<p align="center">
+  <img src="./task2%20-%20Varying%20landscape%20definition/velocity_vs_perfperiod.png" width="75%" alt="Velocity vs. Perfperiod" />
+  <br>
+  <em><b>Figure 2:</b> Measured velocity for each of the 28 walking genotypes across 13 different <code>perfperiod</code> values. Straight-line movers maintained flat curves, whereas turning or wriggling creatures experienced steep velocity drops as <code>perfperiod</code> increased.</em>
+</p>
 
 #### Config
 28 walking creatures with diverse locomotion kinematics taken from [`walking.gen`](../../Framsticks55/data/walking.gen) were evaluated in batch mode using FramsticksLib with [standard settings](#simulation-settings-lifespan).
 
 * **Sampling Periods Tested**:
-  $$\text{perfperiod} \in \{1, 2, ..., 100,..., 10000\}$$
+  $$\text{perfperiod} \in \left\lbrace 1, 2, \dots, 100, \dots, 10\,000 \right\rbrace$$
   where:
   - $\text{perfperiod} = 1$ - maximum continuous sampling (every single simulation step).
   - $\text{perfperiod} = 100$ - default Framsticks sampling period.
@@ -132,9 +136,9 @@ python "assignments\Assignment 5 - Modifying topology exploration path. Evolutio
 ## [Task 3: Varying Different Mutations Probs. Non‑stationary categorical distribution over mutation ](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md) 
 
 The objective of experiments in this task is to optimize **net rectilinear displacement speed**: 
-<div align="center" style="font-size: 130%;">
+<div align="center" style="font-size: 110%;">
 
-   $v = \frac{\|\mathbf{x}(T) - \mathbf{x}(0)\|}{T}$
+   $\displaystyle v = \frac{\lVert \mathbf{x}(T) - \mathbf{x}(0) \rVert}{T}$
 </div>
 
 by varying the relative probabilities (weights,[ `.sim`](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims)) of applying different mutation operators, forming different distributions over these operators, and thus representing different mutation strategies. In this task, we analyze how these strategies influence the evolutionary dynamics and the performance of the evolved solutions for locomotion velocity.
@@ -164,7 +168,9 @@ In $f_1$ representation, a creature is subject to a mutation with probability `p
 
 The weight of each operator is set in the `.sim` files for the morphology and neuron net mutation operators, respectively. In each mutation step, exactly **one** elementary mutation operator is chosen based on its relative weight:
 
-$$P(\text{op}_i) = \frac{w_i}{\sum_{j=0}^{8} w_j}$$
+$$
+P(\text{op}_i) = \frac{w_i}{\sum_{j=0}^{8} w_j}
+$$
 
 
 ### Tested Stationary Mutation Strategies (Experiments 1 and 2)
@@ -555,17 +561,16 @@ Each strategy was evaluated across 10 independent runs of strategies from [**Bat
 
 
 <div align="center">
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_best_series.png" width="80%">
+
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_best_series.png" width="80%" alt="Comparative Best Series" />
 
 _Figure 1: Comparative best-of-generation fitness trajectories._
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_confidence_std_1.0.png" width="80%">
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_confidence_std_1.0.png" width="80%" alt="Confidence Intervals" />
 
 _Figure 2: Mean fitness and shaded confidence intervals._
 
-<br/>
-
-![Comparative Boxplots](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/boxplot_summary.png)
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/boxplot_summary.png" width="80%" alt="Comparative Boxplots" />
 
 _Figure 3: Final Hall-of-Fame velocity and run duration distributions._
 
@@ -609,12 +614,11 @@ Comparing the varied baseline and equal weights strategies ([Batch 1](#tested-st
      ```
    - Highly articulated snake-like morphology with one muscled leg in the front. Movement is acomplished by crawling.
 
-   <div style="text-align: center; width: 70%; margin: 0 auto;">
-   
-   <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp2-best-creature.png">
-   
-      _Figure 4: Phenotype of the fastest creature evolved in Experiment 2._
-    </div>
+   <p align="center">
+     <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp2-best-creature.png" width="60%" alt="Experiment 2 Best Creature" />
+     <br>
+     <em>Figure 4: Phenotype of the fastest creature evolved in Experiment 2.</em>
+   </p>
 
 
 ### Scheduled Mutation Schemes: Non-Stationary Developmental Exploration (Experiments 3-5)
@@ -628,9 +632,9 @@ _where_ $\vec{w}(t)$ _is the vector of mutation weights at generation_ $t$, $\ve
 #### Rationale for Scheduled Schemes
 
 In biological morphogenesis, organisms undergo distinct developmental phases: embryonic body plan formation precedes neuromuscular differentiation and fine motor tuning. In evolutionary robotics, applying a uniform operator distribution throughout all 400 generations forces an artificial compromise. Scheduled schemes resolve this by decomposing the search into stages that mimics biological development:
-1. **Initial Bootstrapping (Generations $0\text{--}100$)**: Unconstrained morphological exploration (**Equal Weights**, showing the best performance - *see [*Figure 2, 3*](#comparative-results-experiment-2)*) discovers viable multi-jointed body plans and limb branching. 
-2. **Intermediate Articulation & Neuromuscular Scaffolding (Generations $100\text{--}200$)**: Biomechanical specialization (Strategy B for limbs, Strategy D for joints) allocates degrees of freedom and sensor-effector loops.
-3. **Late-Stage Convergence & Parametric Polish (Generations $200\text{--}400$)**: Suppressing structural perturbations while prioritizing Strategy A or neural tuning allows continuous metric refinement of limb lengths, muscle angles, and synaptic weights without destructive morphological mutations.
+1. **Initial Bootstrapping (Generations $0-100$)**: Unconstrained morphological exploration (**Equal Weights**, showing the best performance - *see [*Figure 2, 3*](#comparative-results-experiment-2)*) discovers viable multi-jointed body plans and limb branching. 
+2. **Intermediate Articulation & Neuromuscular Scaffolding (Generations $100-200$)**: Biomechanical specialization (Strategy B for limbs, Strategy D for joints) allocates degrees of freedom and sensor-effector loops.
+3. **Late-Stage Convergence & Parametric Polish (Generations $200-400$)**: Suppressing structural perturbations while prioritizing Strategy A or neural tuning allows continuous metric refinement of limb lengths, muscle angles, and synaptic weights without destructive morphological mutations.
 
 #### Experiments 3-5: 
 1. **Experiment 3: Multi-Stage Scheduled Switching (Schemes 1–7)** (run on 24 workers)
@@ -649,35 +653,27 @@ In biological morphogenesis, organisms undergo distinct developmental phases: em
 #### Schemes tested in Experiments 3-5: 
 The following 16 variations of 12 schemes were tested (10 runs per each):
 
-  1. <span style="color: #c0d0fe; font-weight: 600; text-align: center;">Weaker Neural</span> $ \xrightarrow{\text{150 gens }} $ <span style="color: #b2dffd; font-weight: 600; text-align: center;">High-neural</span>_, in the experiment 4 this transition happens at gen 200_.
+  1. ${\color{#c0d0fe}\text{Weaker Neural}} \ \xrightarrow{\quad\text{150 gens}\quad} \; {\color{#b2dffd}\text{High-neural}}$ *(in Exp 4 this transition happens at gen 200)*
 
-  2. <span style="color: #f27282; font-weight: 600; text-align: center;">Equal weights</span> $ \xrightarrow{\text{150 gens }} $ <span style="color: #c0d0fe; font-weight: 600; text-align: center;">Weaker Neural</span> $\xrightarrow{\text{50 gens }} $ <span style="color: #b2dffd; font-weight: 600; text-align: center;">High-neural</span> - in experiment 5 these transitions happen at generations 100 and 150.
+  2. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{150 gens}\quad} \; {\color{#c0d0fe}\text{Weaker Neural}} \ \xrightarrow{\quad\text{50 gens}\quad} \; {\color{#b2dffd}\text{High-neural}}$ *(in Exp 5 at gens 100 & 150)*
 
-  3. <span style="color: #f27282; font-weight: 600; text-align: center;">Equal weights</span> $ \xrightarrow{\text{100 gens }} $ <span style="color: #ee5c73; font-weight: 600; text-align: center;">Strategy B</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #c0d0fe; font-weight: 600; text-align: center;">Weaker Neural</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #b2dffd; font-weight: 600; text-align: center;">High-neural</span>
+  3. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{100 gens}\quad} \; {\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{50 gens}\quad} \; {\color{#c0d0fe}\text{Weaker Neural}} \ \xrightarrow{\quad\text{50 gens}\quad} \; {\color{#b2dffd}\text{High-neural}}$
 
+  4. ${\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{150 gens}\quad} \; {\color{#b2dffd}\text{High-neural}}$
 
-  4. <span style="color: #ee5c73; font-weight: 600; text-align: center;">Strategy B</span> $\xrightarrow{\text{150 gens }}$ <span style="color: #b2dffd; font-weight: 600; text-align: center;">High-neural</span>
+  5. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{150 gens}\quad} \; {\color{#e8b6c7}\text{Strategy D}} \ \xrightarrow{\quad\text{75 gens}\quad} \; {\color{#c0d0fe}\text{Weaker Neural}}$
 
-  5. <span style="color: #f27282; font-weight: 600; text-align: center;">Equal weights</span> $\xrightarrow{\text{150 gens }}$ <span style="color: #e8b6c7; font-weight: 600; text-align: center;">Strategy D</span> $\xrightarrow{\text{75 gens }}$ <span style="color: #c0d0fe; font-weight: 600; text-align: center;">Weaker Neural</span>
-  
-  6. <span style="color: #f27282; font-weight: 600; text-align: center;">Equal weights</span> $\xrightarrow{\text{150 gens }} $ <span style="color: #e8b6c7; font-weight: 600; text-align: center;">Strategy D</span> $\xrightarrow{\text{75 gens }}$ <span style="color: #e6b7c9; font-weight: 600; text-align: center;">Strategy A</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #c0d0fe; font-weight: 600; text-align: center;">Weaker Neural</span>
+  6. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{150 gens}\quad} \; {\color{#e8b6c7}\text{Strategy D}} \ \xrightarrow{\quad\text{75 gens}\quad} \; {\color{#e6b7c9}\text{Strategy A}} \ \xrightarrow{\quad\text{50 gens}\quad} \; {\color{#c0d0fe}\text{Weaker Neural}}$
 
-  7. <span style="color: #f27282; font-weight: 600; text-align: center;">Equal weights</span> $\xrightarrow{\text{100 gens }}$  <span style="color: #ee5c73; font-weight: 600; text-align: center;">Strategy B</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #e8b6c7; font-weight: 600; text-align: center;">Strategy D</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #e6b7c9; font-weight: 600; text-align: center;">Strategy A</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #c0d0fe; font-weight: 600; text-align: center;">Weaker Neural</span> $\xrightarrow{\text{50 gens }}$ <span style="color: #b2dffd; font-weight: 600; text-align: center;">High-neural</span>
+  7. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{50 gens}\quad} \ {\color{#e8b6c7}\text{Strategy D}} \ \xrightarrow{\quad\text{50 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}} \ \xrightarrow{\quad\text{50 gens}\quad} \ {\color{#c0d0fe}\text{Weaker Neural}} \ \xrightarrow{\quad\text{50 gens}\quad} \ {\color{#b2dffd}\text{High-neural}}$
+  8. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{100 / 200 / 300 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}}$ *(3 schemes)*
 
+  9. ${\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{200 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}}$
+  10. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}} \ \xrightarrow{\quad\text{250 gens}\quad} \ {\color{#b2dffd}\text{High-neural}}$
 
+  11. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}}$
 
-
-
-
-8. <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100/200/300 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>  - 3 schemes 
-9. <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{200 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span> 
-
-
-
-
-10. <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span> $\xrightarrow{\text{250 gens }}$ <span style="color: #b2dffd; font-weight: 600;">High-neural</span> 
-11. <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span>  
-12. <span style="color: #f27282; font-weight: 600;">Equal weights</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #ee5c73; font-weight: 600;">Strategy B</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #92d4f8; font-weight: 600;">Strategy D</span> $\xrightarrow{\text{100 gens }}$ <span style="color: #e6b7c9; font-weight: 600;">Strategy A</span> 
+  12. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#92d4f8}\text{Strategy D}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}}$ 
 
 > *Rationale, detailed numerical tables, fitness curves, confidence intervals, and per-run logbooks can be found in the [Task 3 Report: Experiment 3](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-3-multi-stage-scheduled-switching-schemes-17), [Experiment 4](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-4-two-stage-exploration-schemes) and [Experiment 5](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-5-continuous-biomechanical-development--developmental-cascades).*
 
@@ -707,13 +703,16 @@ However, since different number of workers was used in different experiments, te
 
 <div align="center">
 
-![Champions Confidence Intervals](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/plots/logbooks_confidence_std_1.0.png)
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/plots/logbooks_confidence_std_1.0.png" width="80%" alt="Champions Confidence Intervals" />
+
 _Figure 5a: Mean best fitness and shaded confidence intervals over 400 generations for all experiment champions. Experiment 4 Scheme 8-100 and Experiment 5 Scheme 12 demonstrate the steepest sustained fitness ascent._
 
-![Global Boxplot Across All 24 Configurations](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_exp1_5/plots/boxplot_summary.png)
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_exp1_5/plots/boxplot_summary.png" width="85%" alt="Global Boxplot Across All 24 Configurations" />
+
 _Figure 5b: Comprehensive Hall-of-Fame final velocity (left) and run duration (right) distributions across all 24 configurations tested in Experiments 1–5 (240 total runs over 400 generations). Note the natural ordering by experiment [run folders](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/) and numerical [scheme indices](#schemes-tested-in-experiments-3-5)._
 
-![Champions Boxplot Summary](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/plots/boxplot_summary.png)
+<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/plots/boxplot_summary.png" width="80%" alt="Champions Boxplot Summary" />
+
 _Figure 5c: Hall-of-Fame velocity and duration distributions for the selected top-performing strategies (Experiments 1–5)._
 
 </div>
@@ -739,25 +738,17 @@ _Figure 5c: Hall-of-Fame velocity and duration distributions for the selected to
   - **Redudant but stable <u>neural struture</u>** where dormant or isolated nodes surround main functional pathway being _effectively_ **one gyroscope (2 twin gyroscopes) -> amplified assembled signal -> bending muscle**. in the center (light square on _Figure 6a_), which turns the rightmost stick into a leg. 
   - <u>Movement</u> is executed by **jumping rhythmically** (sinusoidal activation plots on _Figure 6b_) on the rightmost leg and forcefully pushing heavy 3-part torso forward along the trajectory. Torso serves as a stabilisation mass and prevents turning upside-down. Gyroscopes located at the center of torso thus read reliable data regarding stability of the creature, generating a movement by bending muscle at the moment static position of the torso is achieved.
 
-<div style="width: 80%; align-content: center; margin-left: auto; margin-right: auto;" >
+<p align="center">
+  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature.png" width="65%" alt="Champion Phenotype and Neural Structure" />
+  <br>
+  <em>Figure 6a: Phenotype and neural structure of the overall champion</em>
+</p>
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature.png">
-
-_Figure 6a: Phenotype and neural structure of the overall champion_
-
-</div>
-
-<div style="width: 100%; align-content: center; margin-left: auto; margin-right: auto;" >
-
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature-inspection.png">
-
-</div>
-
-<div style="width: 100%; align-content: center; margin-left: auto; margin-right: auto; " >
-
-_Figure 6b: Inspection of functioning of the best creature. The left side depicts the moment of jumping and lifting from the ground._
-
-</div>
+<p align="center">
+  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature-inspection.png" width="85%" alt="Champion Locomotion Inspection" />
+  <br>
+  <em>Figure 6b: Inspection of functioning of the best creature. The left side depicts the moment of jumping and lifting from the ground.</em>
+</p>
 
 
 #### 2. Mean Velocity Champion - [Experiment 4 Scheme 8-100](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen)
@@ -767,8 +758,11 @@ _Figure 6b: Inspection of functioning of the best creature. The left side depict
   ```
 - **Velocity**: $0.022688$
 
-![Benchmark Exp 4 Best Creature](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp4-best-creature-inspection.png)
-_Figure 7: Inspection of functioning of the experiment 4 champion. Compare to Figures 6._
+<p align="center">
+  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp4-best-creature-inspection.png" width="85%" alt="Experiment 4 Best Creature Inspection" />
+  <br>
+  <em>Figure 7: Inspection of functioning of the experiment 4 champion. Compare to Figures 6.</em>
+</p>
 
 - **Morphology, Neural Architecture & Dynamics**:
   - **Body** of this snake-like structure consists of one leg and three-part linear torso.
@@ -783,9 +777,11 @@ _Figure 7: Inspection of functioning of the experiment 4 champion. Compare to Fi
   ```
 - **Velocity**: $0.019239$
 
-![Exp 5 Best Creature Inspection](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp5-best-creature-inspection.png)
-
-_Figure 8: Inspection of functioning of the experiment 5 champion. Movement dynamics and technique are similar to the overall champion and experiment 4 champion (Figures 6, 7). On the left side the moment of jumping is depicted._
+<p align="center">
+  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp5-best-creature-inspection.png" width="85%" alt="Experiment 5 Best Creature Inspection" />
+  <br>
+  <em>Figure 8: Inspection of functioning of the experiment 5 champion. Movement dynamics and technique are similar to the overall champion and experiment 4 champion (Figures 6, 7). On the left side the moment of jumping is depicted.</em>
+</p>
 
 - **Morphology, Neural Architecture & Dynamics**:
   - **Dynamics** demonstrates hopping and pushing technique, directly comparable to the champions of Experiments 3 and 4 (Figures 6 and 7).
@@ -820,19 +816,15 @@ One of the reasons evolved creatures converge on such minimalist physical and ne
 #### Evolutionary Mechanisms Explaining Disconnected Neurons:
 1. **Entrenchment via Relative Indexing in $f_1$ (The Structural Spacer Effect)**:
    - In the $f_1$ genetic format, neural connections are encoded as **relative index offsets**.
-   - Every intervening neuron, even if unconnected, acts as a positional spacer in the gene sequence. _For instance, Node #10-N connects to Node #3-S with offset `-7` and the other nodes. If a mutation adds a new neuron #4-$*$, the relative index offset `-7` would point to index #4-$*$ instead of #3-S, instantly disrupting the CPG feedback loop or causing the locomotive gait to collapse. See Figure 9 below._
+   - Every intervening neuron, even if unconnected, acts as a positional spacer in the gene sequence. _For instance, Node #10-N connects to Node #3-S with offset `-7` and the other nodes. If a mutation adds a new neuron #4-$\ast$, the relative index offset `-7` would point to index #4-$\ast$ instead of #3-S, instantly disrupting the CPG feedback loop or causing the locomotive gait to collapse. See Figure 9 below._
    - Analagously, a deletion mutation may delete an unused sensor, breaking the connection and causing the gait to collapse, so unused nodes become **structurally entrenched**.
 
-<div align="center" style="display: grid; grid-template-columns: 1fr 1fr; justify-content: center; align-items: center; gap: 20px;">
-   <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/example-intervening-neuron-before-insertion.png" width="400px"/>
-   <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/example-intervening-neuron-inserted.png" width="400px"/>
-</div>
-
-<div align="center">
-
-_Figure 9: Disruption of the connection (in blue) between sensor and effector due to insertion of a new neuron._
-
-</div>
+<p align="center">
+  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/example-intervening-neuron-before-insertion.png" width="46%" alt="Before Insertion" />
+  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/example-intervening-neuron-inserted.png" width="46%" alt="After Insertion" />
+  <br>
+  <em>Figure 9: Disruption of the connection (in blue) between sensor and effector due to insertion of a new neuron.</em>
+</p>
 
 2. **Neutral Genetic Drift & Absence of Parsimony Pressure**:
    - The evolutionary fitness objective maximizes velocity, which is not influenced by parasitic neurons.
