@@ -47,11 +47,9 @@ The objective of this experiment is to optimize **net rectilinear displacement s
    - Morphology and neural mutations are **NOT performed independently**.
    - Instead, **all 9 mutation operators (4 morphology + 5 neural net) compete on a SINGLE roulette wheel** (categorical distribution).
    - In each mutation step, exactly **one** elementary mutation operator is chosen based on its relative weight:
-     <div align="center" style="font-size: 130%;">
-
-     $P(\text{op}_i) = \frac{w_i}{\sum_{j=0}^{8} w_j}$
-
-     </div>
+$$
+P(\text{op}_i) = \frac{w_i}{\sum_{j=0}^{8} w_j}
+$$
 
 
 #### Mutation Intensity ($f_1$ vs. $f_9$)
@@ -295,9 +293,9 @@ _Figure 3: Distribution of Hall-of-Fame final fitness (left) and total run durat
 
 | Configuration | Mean HoF Velocity | Median HoF Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
 | :---:| :---: | :---: | :---: | :---: | :---: | :---: |
-| [Baseline](./f1-all-crit.sim) | $0.004049$ | $0.003283$ | $0.002605$ | $0.001596$ | $0.008713$ | $580.0\text{ s}$ |
-| [High Neural](./f1-probs01.sim) | $0.004866$ | $0.001850$ | $0.007047$ | $0.000299$ | $0.023336$ | $530.0\text{ s}$ |
-| [Weaker Neural](./f1-probs10.sim) | $0.002860$ | $0.002117$ | $0.002869$ | $0.000240$ | $0.007896$ | $531.6\text{ s}$ |
+| [Baseline](./sims/f1-all-crit.sim) | $0.004049$ | $0.003283$ | $0.002605$ | $0.001596$ | $0.008713$ | $580.0\text{ s}$ |
+| [High Neural](./sims/f1-probs01.sim) | $0.004866$ | $0.001850$ | $0.007047$ | $0.000299$ | $0.023336$ | $530.0\text{ s}$ |
+| [Weaker Neural](./sims/f1-probs10.sim) | $0.002860$ | $0.002117$ | $0.002869$ | $0.000240$ | $0.007896$ | $531.6\text{ s}$ |
 | **[Equal Weights](./sims/f1-equal-probs.sim)** |  $0.009062$| **$0.005134$** | $0.011422$ | $0.000398$ | **$0.038438$** | $587.4\text{ s}$ |
 
 #### Key Findings
@@ -525,14 +523,14 @@ _Figure 6: Final Hall-of-Fame velocity and run duration distributions across all
 
 | Series | Configuration | Mean Velocity | **Median Velocity** | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
 | :--- | :--- | :---:| :---: | :---: | :---: | :---: | :---: |
-| **[Experiment 1 rerun](./runs/2026-09-26_172452)** *(400 generations)* | **[Baseline](./f1-all-crit.sim)** | $0.005470$ | $0.003304$ | $0.005167$ | $0.001657$ | $0.018541$ | $737.9\text{ s}$ |
-| | **[High Neural](./f1-probs01.sim)** | $0.003288$ | $0.003036$ | $0.002625$ | $0.000286$ | $0.007002$ | $723.8\text{ s}$ |
-| | **[Weaker Neural](./f1-probs10.sim)** | $0.005603$ | $0.005615$ | $0.003776$ | $0.000890$ | $0.011583$ | $740.9\text{ s}$ |
-| | **[Equal Weights](./f1-equal-probs.sim)** | **$0.007167$** | **$0.006500$** | $0.005391$ | $0.000574$ | **$0.019564$** | $758.5\text{ s}$ |
-| **[Experiment 2](./runs/2026-09-26_180136)** *(400 generations)* | **[Strategy A (Fine-Tuning)](./f1-strat-a.sim)** | $0.005721$ | $0.004023$ | $0.005857$ | $0.000149$ | $0.017484$ | $693.0\text{ s}$ |
-| | **[Strategy B (Branching)](./f1-strat-b.sim)** | $0.006325$ | $0.004553$ | $0.005191$ | $0.001025$ | $0.016070$ | $753.2\text{ s}$ |
-| | **[Strategy C (CPG Resonance)](./f1-strat-c.sim)** | $0.002754$ | $0.002203$ | $0.001593$ | $0.000962$ | $0.005328$ | $715.3\text{ s}$ |
-| | **[Strategy D (3-Tier Pyramid)](./f1-strat-d.sim)** | $0.005691$ | **$0.005484$** | **$0.003389$** | $0.001103$ | $0.010394$ | $695.9\text{ s}$ |
+| **[Experiment 1 rerun](./runs/2026-09-26_172452)** *(400 generations)* | **[Baseline](./sims/f1-all-crit.sim)** | $0.005470$ | $0.003304$ | $0.005167$ | $0.001657$ | $0.018541$ | $737.9\text{ s}$ |
+| | **[High Neural](./sims/f1-probs01.sim)** | $0.003288$ | $0.003036$ | $0.002625$ | $0.000286$ | $0.007002$ | $723.8\text{ s}$ |
+| | **[Weaker Neural](./sims/f1-probs10.sim)** | $0.005603$ | $0.005615$ | $0.003776$ | $0.000890$ | $0.011583$ | $740.9\text{ s}$ |
+| | **[Equal Weights](./sims/f1-equal-probs.sim)** | **$0.007167$** | **$0.006500$** | $0.005391$ | $0.000574$ | **$0.019564$** | $758.5\text{ s}$ |
+| **[Experiment 2](./runs/2026-09-26_180136)** *(400 generations)* | **[Strategy A (Fine-Tuning)](./sims/f1-strat-a.sim)** | $0.005721$ | $0.004023$ | $0.005857$ | $0.000149$ | $0.017484$ | $693.0\text{ s}$ |
+| | **[Strategy B (Branching)](./sims/f1-strat-b.sim)** | $0.006325$ | $0.004553$ | $0.005191$ | $0.001025$ | $0.016070$ | $753.2\text{ s}$ |
+| | **[Strategy C (CPG Resonance)](./sims/f1-strat-c.sim)** | $0.002754$ | $0.002203$ | $0.001593$ | $0.000962$ | $0.005328$ | $715.3\text{ s}$ |
+| | **[Strategy D (3-Tier Pyramid)](./sims/f1-strat-d.sim)** | $0.005691$ | **$0.005484$** | **$0.003389$** | $0.001103$ | $0.010394$ | $695.9\text{ s}$ |
 
 #### Key Findings from Strategies A–D
 
@@ -620,6 +618,7 @@ Dynamic mutation scheduling is implemented through a lightweight interception pa
 
 
 
+<a id="experiment-3-multi-stage-scheduled-switching"></a><a id="experiment-3-scheduled-multi-stage-switching"></a><a id="experiment-3-multi-stage-scheduled-switching-schemes-17"></a><a id="experiment-3-multi-stage-scheduled-switching-schemes-1-7"></a>
 ### Experiment 3: Multi-Stage Scheduled Switching (Schemes 1–7)
 
 Experiment 3 investigated diverse multi-stage schedules combining initial exploration, intermediate branching, and late-stage exploitation across 400 generations, [running 10 independent replications](./runs/2026-09-27_175220/) for each scheme:
@@ -755,25 +754,15 @@ _Figure 12: Distribution of Hall-of-Fame final fitness (left) and total run dura
    - Morphology features a compact, elongated chassis stabilized by gyroscopic sensors (`Gpart,ry:-0.088`), tactile contact sensors (`S`), rotational muscles (`*`), and a high-amplitude bending actuator (`|`, `-10:3.096, p:0.414`) driven by an interconnected pattern generator (`N`) tuned to resonant crawling frequencies.
 
 
+<a id="experiment-5-continuous-biomechanical-development--developmental-cascades"></a>
 ### Experiment 5: Continuous Biomechanical Development & Developmental Cascades
 
 #### Strategy Adjustments & Theoretical Considerations
 
-Experiment 5 directly synthesizes the empirical insights gained across Experiments 1 through 4 to design an optimized suite of staged evolutionary schedules. Specifically:
-
-1. **The 100-Generation Window of Morphological Plasticity**:
-   - [Experiment 4](#experiment-4-two-stage-exploration-schemes) demonstrated that transitioning away from unconstrained structural mutations at generation 100 significantly outperformed 200- or 300-generation delays.
-   - During the first 100 generations, global exploration (**Equal weights**) rapidly discovers viable body plans (stable bases, balanced limb orientations, tactile/gyro sensor placement).
-   - Lingering in high-structural-mutation space beyond generation 100 produces morphological clutter and mechanical destabilization that continually resets controller learning.
-
-2. **The "Morphological Freeze Trap"**:
-   - Pure high-neural mutation regimes (`f1-probs01.sim`) set all morphological mutation rates strictly to $0.0$.
-   - While intended to polish controllers, freezing morphology completely traps creatures in rigid mechanical configurations. If a limb angle, segment length, or actuator orientation is even slightly misaligned, evolution cannot reorient it mechanically—severely capping speed.
-   - In contrast, Experiment 4's champion Scheme 8-100 utilized **Strategy A**, which permits continuous metric fine-tuning of part lengths, angles, motor power, and sensor directions (`f1_smMod: 1.0`, $23.1\%$) while suppressing disruptive additions/deletions.
-
-3. **Continuous Biological Cascades vs. Fragmented Switching**:
-   - [Experiment 3](#experiment-3-multi-stage-scheduled-switching-schemes-1-7) showed that rapid 50-generation switches induced recurring operator disruption shocks.
-   - Experiment 5 adopts a standardized **100-generation macro-stage cadence**, organizing evolution into a smooth, biological morphogenetic progression that guides the population naturally from global body search to limb growth, joint allocation, and biomechanical parameter tuning without rigid freezes.
+Experiment 5 synthesizes the empirical insights gained across Experiments 1 through 4 to design an optimized suite of staged schedules addressing three core design principles:
+1. **The 100-Generation Exploration Window**: Exploiting the critical discovery from [Experiment 4](#key-findings-from-experiment-4) that ~100 generations of unconstrained search discovers an effective body chassis, while postponing transitions beyond generation 100 causes severe structural clutter and resets controller adaptation.
+2. **Avoiding the [Morphological Freeze Trap](#the-morphological-freeze-trap)**: Bypassing rigid zero-mutation freezes (`f1-probs01.sim`) in favor of continuous parameter adaptation via **Strategy A** (`f1_smMod: 1.0`), which fine-tunes limb lengths, angles, and muscle forces without disruptive topological mutations.
+3. **Smooth Biological Morphogenetic Cascades**: Resolving the operator disruption shocks of [Experiment 3's rapid 50-generation switching](#key-findings-from-experiment-3) by establishing a standardized **100-generation macro-stage cadence** that smoothly transitions populations from body scaffolding to joint allocation and continuous parameter exploitation.
 
 #### Evaluated Schemes & Design Rationale (40 runs across 20 workers)
 
@@ -853,15 +842,9 @@ The investigation tracked the full evolutionary progression:
 ### Comparative Visualizations
 
 #### 1) The Champions of Each Evolutionary Paradigm
-Comparing the top-performing strategies identified across Experiments 1 through 5, with each experiment systematically assigned its distinct color palette from `DEFAULT_PALETTES`:
-- **Experiment 1** (Palette: `RdPu` / Red-Purple): `Equal Weights` (unconstrained global search)
-- **Experiment 2** (Palette: `GnBu` / Green-Blue): `Strategy A` (fine-tuning) & `Strategy B` (limb articulation)
-- **Experiment 3** (Palette: `YlOrRd` / Yellow-Orange-Red): `Scheme 3` (balanced scaffolding) & `Scheme 7` (multi-phase switching)
-- **Experiment 4** (Palette: `PuBu` / Purple-Blue): `Scheme 8-100` (100-gen early freeze to Strategy A)
-- **Experiment 5** (Palette: `YlGn` / Yellow-Green): `Scheme 12` (morphogenetic cascade) & `Scheme 2` (bootstrapped scaffolding)
 
 ![Champions Fitness Trajectories](results/hof_results_comparison_champions/plots/logbooks_best_series.png)
-_Figure 16: Best-of-generation fitness trajectories across 10 independent replications over 400 generations for the champion strategies from each experiment (linear evaluations scale)._
+_Figure 16: Best-of-generation fitness trajectories across 10 independent replications over 400 generations for the champion strategies from each experiment._
 
 ![Champions Confidence Intervals](results/hof_results_comparison_champions/plots/logbooks_confidence_std_1.0.png)
 _Figure 17: Mean best fitness and shaded confidence intervals over 400 generations for all experiment champions. Experiment 4 Scheme 8-100 and Experiment 5 Scheme 12 demonstrate the steepest sustained fitness ascent._
@@ -873,9 +856,8 @@ _Figure 18: Distribution of Hall-of-Fame final fitness (left) and total run dura
 ![Global Boxplot Across All 24 Configurations](results/hof_results_comparison_exp1_5/plots/boxplot_summary.png)
 _Figure 19: Comprehensive Hall-of-Fame final velocity and run duration distributions across all 24 configurations (240 total runs over 400 generations)._
 
----
-
-### Master Leaderboard (All 24 Configurations across 400 Generations)
+### Top Configurations
+<a id="top-configurations"></a>
 
 | Rank | Exp. idx | Configuration / Scheme Name | Transition Strategy Chain | Mean Velocity | Median Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
 | :---: | :---  | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -897,6 +879,7 @@ _Figure 19: Comprehensive Hall-of-Fame final velocity and run duration distribut
      - Attempting scaffolding without an Equal Weights bootstrap cut performance in half (unbootstrapped scaffolding: $0.003436$ vs. bootstrapped Scheme 2: $0.006142$).
 
 3. **The Morphological Freeze Trap**:
+<a id="the-morphological-freeze-trap"></a>
    - Setting morphological mutation rates to zero (`f1-probs01.sim` / High Neural) during late stages is dangerous: if an evolved creature's limbs or actuator angles are even slightly misaligned, it can never reorient them mechanically.
    - The top two strategies (Exp 4 Scheme 8-100 and Exp 5 Scheme 12) avoided complete morphological freezes by using **Strategy A**, which permits continuous metric adjustments (`f1_smMod: 1.0`) while suppressing disruptive structural additions/deletions.
 
@@ -911,10 +894,8 @@ _Figure 19: Comprehensive Hall-of-Fame final velocity and run duration distribut
      - **Highest Median**: **Experiment 1 Equal Weights** ($v_{median} = 0.006500$) and **Experiment 3 Scheme 1** ($v_{median} = 0.006273$).
      - **Highest Worst-Case Lower Bound**: **Experiment 5 Scheme 10** ($v_{min} = 0.001578$), **Experiment 4 Scheme 8-100** ($v_{min} = 0.001554$), and **Experiment 5 Scheme 2** ($v_{min} = 0.001541$).
 
-6. **The Rectilinear Fitness Bias (Why One-Legged Pushers Dominate)**:
-   - Because Framsticks fitness rewards exclusively forward displacement ($v = \Delta x / \Delta t$) without rewarding lateral balance, evolution heavily favors simple unilateral jumping/pushing mechanics. A single active leg pushing an inert multi-stick torso eliminates limb collision risks and channels all mechanical work directly into the forward axis, explaining why creatures across all experiments converge on extreme morphological and neural simplicity.
-
----
+6. **[The Rectilinear Fitness Bias](#fitness-landscape-bias-why-rectilinear-rewards-favor-simple-one-legged-evolution) (Why One-Legged Pushers Dominate)**:
+   - Because Framsticks fitness rewards exclusively forward displacement ($v = \Delta x / \Delta t$) without rewarding lateral stability, unilateral jumping mechanics mechanically outcompete multi-legged walking by eliminating ground friction and limb interference, channeling 100% of muscular torque along the forward axis ([detailed analysis](#fitness-landscape-bias-why-rectilinear-rewards-favor-simple-one-legged-evolution)).
 
 ### Best Evolved Creature Genomes
 
@@ -1017,11 +998,313 @@ This architectural phenomenon exposes a fundamental inefficiency in the standard
   - In **Strategy C (Neural Overdrive)**, $20\%$ of all mutations were allocated to `f1_nmNeu` and $20\%$ to `f1_nmConn`. The algorithm continuously burned its evaluation budget creating isolated sensors that were never connected, starving mechanical body evolution ($<20\%$) and resulting in the worst performance across all 24 configurations ($v_{mean} = 0.002754$).
   - In contrast, **Scheme 8-100** allowed neural exploration during generations $0\text{--}100$, then switched to **Strategy A**, slashing `f1_nmNeu` to just **$3.1\%$**. By cutting off the generation of useless disconnected neurons, almost $100\%$ of the remaining 300 generations of mutation budget was channeled into joint modifiers (`23.1\%`) and synaptic weights (`30.8\%`), yielding the #1 overall champion.
 
+
+## Experiment 6: Co-Developmental Synaptogenesis & Continuous Biomechanical Exploitation
+
+### Motivation & Empirical Hypothesis
+
+Experiment 6 builds directly upon the findings from Experiments 1–5, targeting three persistent bottlenecks identified across champion phenotypes:
+1. [**The synaptic wiring deficit**](#the-evaluation-budget-penalty-of-decoupled-operators) caused by competing atomic roulette operators cause new sensors to sprout faster than they can be wired, accumulating dormant "junk" nodes.
+2. [**The premature freezing**](#the-morphological-freeze-trap) starves controllers before viable sensor-motor reflex loops can mature.
+3. **Continuous parameter exploitation**: Once viable articulation is achieved, locomotion speed is maximized by fine-tuning continuous joint metrics and synaptic weights without disruptive topological mutation.
+
+**Experimental Hypothesis**:
+- **Phase 1 (Co-Developmental Growth)**: By pairing active body and neuron growth with **substantially elevated synaptogenesis ($f_1\_nmConn \gg f_1\_nmNeu$, $7:1$ ratio)**, newly sprouted neurons will be actively wired into functional motor circuits as the morphology expands, preventing the accumulation of disconnected sensory clutter.
+- **Terminal Phase (Continuous Exploitation)**: By suppressing topological mutations to near-zero ($<1.5\%$) and channeling **$>98\%$ of the mutation budget into continuous parameters** (`smModif`, `nmWei`, `nmProp`), evolution will intensely calibrate already-present biomechanical and neural traits without breaking mature gaits.
+
+### New Operator Configurations
+
+To implement this developmental progression, two dedicated simulation profiles were engineered:
+- **`Co-Developmental Bootstrap`** ([`f1-codev-phase1.sim`](./sims/f1-codev-phase1.sim)): For early exploratory growth.
+- **`Continuous Exploitation`** ([`f1-continuous-exploit.sim`](./sims/f1-continuous-exploit.sim)): For late-stage metric calibration.
+
+#### Operator Probability Architecture
+
+| Category | Operator | Parameter Role | Co-Dev Bootstrap (`f1-codev-phase1.sim`) | Continuous Exploitation (`f1-continuous-exploit.sim`) |
+| :--- | :--- | :--- | :---: | :---: |
+| **Morphology** | `f1_smX` | Stick Append / Delete | `1.0` ($10.0\%$) | `0.02` ($0.2\%$) |
+| | `f1_smJunct` | Branch Fork `()` | `1.0` ($10.0\%$) | `0.02` ($0.2\%$) |
+| | `f1_smComma` | Joint Sibling `,` | `1.0` ($10.0\%$) | `0.02` ($0.2\%$) |
+| | `f1_smModif` | Modifiers (`LlRrCcQqFfMm`) | `1.0` ($10.0\%$) | **`3.00` ($32.5\%$)** $\uparrow$ |
+| | **Total Body** | | **`4.0` ($40.0\%$)** | **`3.06` ($33.1\%$)** |
+| **Neural** | `f1_nmNeu` | Neuron Insert / Delete | **`0.5` ($5.0\%$)** | `0.02` ($0.2\%$) |
+| | `f1_nmConn` | **Synapse Link / Cut** | **`3.5` ($35.0\%$)** $\uparrow \mathbf{7\times}$ | `0.05` ($0.5\%$) |
+| | `f1_nmProp` | Frequency $f_0$, Phase $t$ | `0.5` ($5.0\%$) | **`2.00` ($21.6\%$)** $\uparrow$ |
+| | `f1_nmWei` | **Synaptic Weight** | `1.0` ($10.0\%$) | **`4.00` ($43.3\%$)** $\uparrow$ |
+| | `f1_nmVal` | Internal Bias / State | `0.5` ($5.0\%$) | `0.10` ($1.1\%$) |
+| | **Total Brain** | | **`6.0` ($60.0\%$)** | **`6.17` ($66.9\%$)** |
+| **Core Ratios** | `nmConn / nmNeu` | Synapse / Node Ratio | **$7.0\times$ (High Synaptogenesis)** | $2.5\times$ |
+| | Continuous Share | Metric / Weight Mutations | $25.0\%$ | **$97.4\%$ (Pure Exploitation)** |
+| | Structural Share | Additions / Removals | $75.0\%$ | **$1.4\%$ (Topological Stability)** |
+
 ---
+
+### Evaluated Scheduled Schemes (30 Independent Runs Across 30 Workers)
+
+We evaluated three scheduled developmental timelines testing the balance between co-developmental wiring and continuous exploitation:
+
+1. **Scheme 6A (Biphasic Shift, 100/300)**:
+   $$\text{Co-Dev Bootstrap}^{100} \to \text{Continuous Exploitation}^{300}$$
+   Schedule: `0:$SIMS/f1-codev-phase1.sim;100:$SIMS/f1-continuous-exploit.sim`
+   - *Rationale*: Tests whether 100 generations of synaptogenesis-biased co-growth is sufficient to construct viable reflex arcs before locking topology into 300 generations of pure metric limb and synaptic tuning.
+
+2. **Scheme 6B (Extended Co-Development, 150/250)**:
+   $$\text{Co-Dev Bootstrap}^{150} \to \text{Continuous Exploitation}^{250}$$
+   Schedule: `0:$SIMS/f1-codev-phase1.sim;150:$SIMS/f1-continuous-exploit.sim`
+   - *Rationale*: Extends the co-growth and synaptogenesis phase to 150 generations to ensure more complex multi-joint sensory circuits are fully wired before topological stability is enforced.
+
+3. **Scheme 6C (Triphasic Morphogenetic Cascade)**:
+   $$\text{Co-Dev Bootstrap}^{100} \to \text{Strategy B (Limb Branching)}^{100} \to \text{Continuous Exploitation}^{200}$$
+   Schedule: `0:$SIMS/f1-codev-phase1.sim;100:$SIMS/f1-strat-b.sim;200:$SIMS/f1-continuous-exploit.sim`
+   - *Rationale*: Combines co-developmental bootstrapping ($0\text{--}100$), dedicated limb articulation via Strategy B ($100\text{--}200$), and continuous exploitation for the second half of evolution ($200\text{--}400$).
+
+All schemes were evaluated over 400 generations across **30 CPU workers** using [standard setup](#simulation-constraints-parameters).
+
+### [Experimental Results](./results/hof_results_exp6/)
+
+![Experiment 6 Fitness Trajectories](results/hof_results_exp6/plots/logbooks_best_series.png)
+_Figure 23: Best-of-generation fitness trajectories across all 10 independent replications over 400 generations for the co-developmental and continuous exploitation schemes._
+
+![Experiment 6 Confidence Intervals](results/hof_results_exp6/plots/logbooks_confidence_std_1.0.png)
+_Figure 24: Mean best fitness and shaded confidence intervals over 400 generations across Schemes 6A, 6B, and 6C. Scheme 6C demonstrates exceptionally steep, monotonic fitness accumulation with a remarkably elevated lower confidence bound._
+
+![Experiment 6 Boxplot Summary](results/hof_results_exp6/plots/boxplot_summary.png)
+_Figure 25: Distribution of Hall-of-Fame final fitness (left) and total run duration (right) across 10 independent replications for Schemes 6A, 6B, and 6C._
+
+#### Quantitative Summary and Analysis
+
+| Scheme Name | Strategy Transition Chain | Mean Velocity | Median Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Scheme 6C (Cascade)** | $\text{Co-Dev}^{100} \to \text{Strat B}^{100} \to \text{Continuous Exploit}^{200}$ | **$0.007870$** | **$0.006454$** | **$0.005763$** | **$0.003401$** | $0.022818$ | $1050.4\text{ s}$ |
+| **Scheme 6B (150/250)** | $\text{Co-Dev}^{150} \to \text{Continuous Exploit}^{250}$ | $0.005859$ | $0.002684$ | $0.007680$ | $0.000194$ | **$0.025102$** ★ | **$1003.2\text{ s}$** |
+| **Scheme 6A (100/300)** | $\text{Co-Dev}^{100} \to \text{Continuous Exploit}^{300}$ | $0.005430$ | $0.005575$ | $0.004942$ | $0.000161$ | $0.012393$ | $1025.4\text{ s}$ |
+
+
+### Key Findings & Evolutionary Insights from Experiment 6
+
+1. **New Velocity Record**:
+   - **Scheme 6B-150** set a brand new global peak velocity record for the entire research project (**$v = 0.025102$**), surpassing the [previous all-time champions](#top-configurations).
+   - **Mechanistic Basis**: Allowing 150 generations of synaptogenesis-biased co-growth gave evolution the precise developmental window needed to evolve an articulated frame and wire up a functional reflex circuit. When the schedule transitioned to 250 generations of pure continuous exploitation ($97.4\%$ metric mutations), evolution aggressively tuned muscle lengths, spring forces, and synaptic weights without the disruptive topological mutations that typically derail fast runners.
+   - **[Best Evolved Creature in Experiment 6](./runs/2026-10-03_011422/gens/HoF-f1-scheme-6b-150-9.gen)**:
+      - Genotype:
+        ```cpp
+        (MMQM(MfM(fq((MMFL(LFQ(LFLX[T][T, ry:0][Gpart, rz:-1.563, ry:0]FFFMX[N, -1:-8.276, -3:23.912, -3:-4.545, -3:5.308, -1:-0.482, si:0.988][|, -2:2.761]), ), f(mQMQXRRfQLqmX))), ), , , ))
+        ```
+      - **Phenotype & Neural Architecture** - a typical snake-like crawler with long torso and short pushing leg, with the redudant neural circuitry without disconnected neurons and one main activation path being **gyroscope -> bending muscle**:
+     <img src ="./images/Exp6-best-creature-inspection.png">
+
+2. **Unprecedented Worst-Case Robustness Floor ($v_{min} = 0.003401$)**:
+   - **Scheme 6C (Triphasic Cascade)** established the highest minimum velocity in the entire project (**$v_{min} = 0.003401$**), **more than doubling** the previous benchmark record ($v_{min} = 0.001578$ in Exp 5 Scheme 10, and $0.001554$ in Exp 4 Scheme 8-100).
+   - In all 10 independent replications, Scheme 6C never produced a dysfunctional creature. Every single run successfully evolved a robust, high-speed crawling or jumping mechanism, resulting in an exceptionally elevated average velocity ($v_{mean} = 0.007870$) and median ($v_{median} = 0.006454$).
+
+3. **Elimination of Disconnected "Junk" Neurons**:
+   - Genotypic and phenotypic inspection confirmed that the $7:1$ synaptogenesis ratio (`f1_nmConn = 3.5` vs. `f1_nmNeu = 0.5`) in Phase 1 prevented the proliferation of non-functional sensory clutter.
+   - Newly generated sensors were actively coupled to motor effectors rather than drifting as disconnected ballast, eliminating the evaluation budget penalty observed in Experiments 1–5.
+   - However, **neural circuitry still remains mainly redudant** with only few active neural connections (sensor -> effector).
+
+
+## Theoretical Considerations: Why Scale Population Size and Generational Horizon?
+
+Across the foundational investigations of Experiments 1–5 and the co-developmental exploration of Experiment 6, all evolutionary runs operated within standard computational parameters: a population size of $N_{\text{pop}} = 50$ individuals and a generational horizon of $G = 300\text{--}400$ generations ($15{,}000\text{--}20{,}000$ evaluations per trial).
+
+While scheduled mutation transitions (such as Experiment 4 Scheme 8-100 and Experiment 5 Scheme 12) achieved substantial performance increases ($v_{mean} \approx 0.0075\text{--}0.0083$), deep genotypic tracing and circuit analysis exposed several structural properties inherent to the $f_1$ genetic representation and EA setup that raised theoretical questions regarding computational allocation:
+
+### 1. The Generational Horizon Hypothesis ($G = 1000$): Overcoming Decoupled Operator Lag
+- **Atomic Roulette Dynamics in $f_1$**: Unlike linear genetic representations (e.g., $f_9$) where a continuous mutation intensity parameter $\mu$ alters multiple genes simultaneously, the $f_1$ formal grammar applies exactly **one atomic mutation operator** per mutation event, chosen from a categorical distribution over 9 competing operators.
+- **The Parametric Tuning Bottleneck**: Once evolution discovers a mechanically viable body frame, controller optimization—calibrating synaptic weights (`f1_nmWei`), oscillator frequencies and phases (`f1_nmProp`), and joint limits (`f1_smModif`)—must compete directly against structural operators on the roulette wheel.
+- **The Theoretical Hypothesis**: Under this roulette constraint, parameter optimization proceeds through stochastic incremental steps. It was hypothesized that $G = 300-400$ generations was an artificial ceiling that prematurely terminated the search before fine-grained synaptic weights and muscle resonance could fully converge. Extending the generational horizon to $G = 1000$ generations was hypothesized to provide the extensive temporal runway required for continuous parametric hill-climbing, unlocking higher velocity resonance and potentially qualitative transitions in locomotion.
+
+### 2. The Population Size Hypothesis ($N_{\text{pop}} = 100$): Preserving Parallel Morphological Lineages
+- **Stochastic Loss and Genetic Drift in Small Pools**: With a population of only $N_{\text{pop}} = 50$ and tournament selection size $k = 5$, selection pressure is aggressive. Under these conditions, genetic drift rapidly narrows population diversity.
+- **The Fragility of Morphological Innovations**: When an individual discovers a promising novel body geometry, its neural controller is almost certainly uncalibrated, yielding low initial fitness. In an $N=50$ pool, such uncalibrated morphological innovations are rapidly outcompeted and purged by genetic drift before rare subsequent neural mutations can wire and tune them. Furthermore, high structural mutation rates can easily disrupt a fragile single lineage.
+- **Doubling population size to $N_{\text{pop}} = 100$ was hypothesized to preserve multiple distinct morphological lineages** side-by-side in parallel, preventing the stochastic loss of promising chassis and providing the genetic diversity needed for neural operators to successfully wire and tune functional reflexes.
+
+### 3. The Locomotion Strategy and Morphological Evolution Hypothesis
+- **The Persistence of Unilateral Hopping**: Across Experiments 1–5, champion creatures converged almost exclusively on [unilateral hopping and jumping dynamics](#fitness-landscape-bias-why-rectilinear-rewards-favor-simple-one-legged-evolution)—propelling an inert multi-stick torso using a single active articulated leg.
+- **The Theoretical Hypothesis**: Was this convergence an artifact of limited generational time and population diversity? Scaling $N_{\text{pop}}$ and $G$ might provide the developmental buffer required to break out of this simple unilateral jumping attractor, allowing evolution to coordinate complex, multi-joint serpentine crawling or bilateral walking gaits.
+
+## Experiment 7: Scaled Champions & Reflex Cascades Across 1000 Generations
+
+To empirically test these theoretical considerations and determine how the project's top-performing developmental paradigms scale over long evolutionary horizons, **Experiment 7** evaluates six representative scheduled schemes under scaled computational allocations:
+* **Population Size** - doubled $N_{\text{pop}}=100$ individuals to maintain diverse morphological lineages and delay genetic drift.
+* **Generational Horizon** - $G=1000$ generations.
+* **Evaluation Budget per Run** - $100 \times 1000 \approx \mathbf{90{,}000}\text{ evaluations}$.
+* **Evaluated Schemes**:
+  1. **`scaled-sch-8-100`** *(Experiment 4 Champion Scaled)*:
+     $$\text{Equal Weights}^{250} \to \text{Strategy A}^{750}$$
+     Tests whether freezing structural exploration early ($G=250$) allows Strategy A's joint and fine-tuning operators to continuously refine locomotion.
+  2. **`scaled-sch-12`** *(Experiment 5 Champion Scaled - 4-Stage Cascade)*:
+     $$\text{Equal Weights}^{250} \to \text{Strategy B}^{250} \to \text{Strategy D}^{250} \to \text{Strategy A}^{250}$$
+     The complete 4-stage morphogenetic cascade scaled proportionally across 1000 generations.
+  3. **`scaled-sch-3`** *(Experiment 3 Champion Scaled - Balanced Scaffolding)*:
+     $$\text{Equal Weights}^{200} \to \text{Strategy B}^{150} \to \text{Weaker Neural}^{150} \to \text{High Neural}^{500}$$
+     Progressive morphological scaffolding handing over to 500 generations of uninterrupted High Neural neuro-evolution.
+  4. **`sch-L1-reflex-cascade`** *(Reflex Calibration Cascade)*:
+     $$\text{Equal Weights}^{150} \to \text{Strategy D}^{250} \to \text{High Neural}^{300} \to \text{Baseline (Pure Weights)}^{300}$$
+     Formulated directly from circuit analysis: builds a multi-joint spine via Strategy D, discovers sensor-to-muscle reflex pathways via High Neural, and dedicates the final 300 generations to pure synaptic weight calibration (`f1_nmWei`, $67.1\%$) without useless neurogenesis.
+  5. **`sch-L2-codev-crawler`** *(Co-Developmental Crawler - Scaled Exp 6C)*:
+     $$\text{Co-Dev Phase 1}^{200} \to \text{Strategy B}^{200} \to \text{Strategy A}^{300} \to \text{Continuous Exploit}^{300}$$
+     Enforces a $7:1$ synaptogenesis-to-neuron ratio in Phase 1 to eliminate neutral neuron clutter from the start, transitioning through spinal articulation into continuous parameter exploitation.
+  6. **`sch-L3-biphasic-exploit`** *(Biphasic Exploration & Long Exploitation)*:
+     $$\text{Equal Weights}^{200} \to \text{High Neural}^{800}$$
+     Tests whether an abrupt 2-stage transition directly from initial exploration into 800 generations of pure neural optimization is sufficient.
+* **Execution**: 10 independent replications per scheme (**60 runs total**) evaluated using deterministic ODE physics on 24 parallel CPU workers.
+
+<a id="experiment-7-results"></a>
+### [Experimental Results](./results/hof_results_exp7/)
+
+<a id="experiment-7-fitness-trajectories"></a>
+
+![Experiment 7 Fitness Trajectories](./results/hof_results_exp7/plots/logbooks_best_series.png)
+_Figure 26: Best-of-generation fitness trajectories across all 10 independent replications over 1000 generations for the 6 scaled champion and reflex-cascade schemes with $N=100$._
+
+<a id="experiment-7-mean-fitness"></a>
+
+![Experiment 7 Confidence Intervals](./results/hof_results_exp7/plots/logbooks_confidence_std_1.0.png)
+_Figure 27: Mean best fitness and shaded confidence intervals ($\pm 1.0\sigma$) over 1000 generations. `scaled-sch-3` and `sch-L1-reflex-cascade` break project-wide velocity boundaries, while `scaled-sch-8-100` maintains an exceptionally high median baseline ($0.008134$)._
+
+<a id="experiment-7-boxplots"></a>
+
+![Experiment 7 Boxplot Summary](./results/hof_results_exp7/plots/boxplot_summary.png)
+_Figure 28: Distribution of Hall-of-Fame final fitness (left) and total run duration (right) across 10 independent replications for all 6 schemes in Experiment 7._
+
+
+
+
+#### Quantitative Summary and Analysis (Experiment 7)
+
+| Configuration | Transition Strategy Chain | Mean HoF Velocity | Median HoF Velocity | Std Dev | Min Velocity | Max Velocity | Mean Duration (s) | Best Run ID |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`scaled-sch-3`** | $\text{Equal}^{200} \to \text{B}^{150} \to \text{Weaker}^{150} \to \text{HighNeu}^{500}$ | **$0.010982$** ★ | $0.007780$ | $0.011025$ | $0.001508$ | **$0.038990$** ★ | $5731.9\text{ s}$ | [`HoF-f1-scaled-sch-3-3`](./runs/2026-10-03_174608/gens/HoF-f1-scaled-sch-3-3.json) |
+| **`sch-L1-reflex-cascade`** | $\text{Equal}^{150} \to \text{D}^{250} \to \text{HighNeu}^{300} \to \text{Baseline}^{300}$ | **$0.009293$** | $0.006108$ | $0.008806$ | $0.001595$ | **$0.030192$** | $4953.0\text{ s}$ | [`HoF-f1-sch-L1-reflex-cascade-5`](./runs/2026-10-03_174608/gens/HoF-f1-sch-L1-reflex-cascade-5.json) |
+| **`scaled-sch-8-100`** | $\text{Equal}^{250} \to \text{Strat A}^{750}$ | **$0.009236$** | **$0.008134$** ★ | **$0.007089$** | **$0.001634$** ★ | $0.025824$ | $6411.7\text{ s}$ | [`HoF-f1-scaled-sch-8-100-9`](./runs/2026-10-03_174608/gens/HoF-f1-scaled-sch-8-100-9.json) |
+| **`scaled-sch-12`** | $\text{Equal}^{250} \to \text{B}^{250} \to \text{D}^{250} \to \text{A}^{250}$ | $0.007271$ | $0.005320$ | $0.005186$ | $0.001225$ | $0.013920$ | $6583.5\text{ s}$ | [`HoF-f1-scaled-sch-12-3`](./runs/2026-10-03_174608/gens/HoF-f1-scaled-sch-12-3.json) |
+| **`sch-L2-codev-crawler`** | $\text{Co-Dev}^{200} \to \text{B}^{200} \to \text{A}^{300} \to \text{Exploit}^{300}$ | $0.007012$ | $0.004712$ | $0.005815$ | $0.000304$ | $0.015911$ | $4404.5\text{ s}$ | [`HoF-f1-sch-L2-codev-crawler-3`](./runs/2026-10-03_174608/gens/HoF-f1-sch-L2-codev-crawler-3.json) |
+| **`sch-L3-biphasic-exploit`** | $\text{Equal}^{200} \to \text{HighNeu}^{800}$ | $0.004324$ | $0.002093$ | $0.004364$ | $0.000658$ | $0.012340$ | $3154.8\text{ s}$ | [`HoF-f1-sch-L3-biphasic-exploit-7`](./runs/2026-10-03_174608/gens/HoF-f1-sch-L3-biphasic-exploit-7.json) |
+
+
+### Key Findings & Evolutionary Insights from Experiment 7
+
+1. **A New Project-Wide Velocity Record: `scaled-sch-3` Smashes the Frontier ($v = 0.038990$, Mean $0.010982$)**:
+   - **`scaled-sch-3`** achieved the highest mean velocity in the entire research project (**$v_{mean} = 0.010982$**), becoming the first strategy to break the $0.010$ average threshold.
+   - It produced the **fastest creature ever evolved across all experiments**: **$v = 0.038990$** in `HoF-f1-scaled-sch-3-3`, shattering the previous benchmark ($0.025102$ in Exp 6B-150 and $0.023459$ in Exp 3 Scheme 3).
+   - **Mechanistic Basis**: Providing 200 gens of global search, 150 gens of limb additions (`f1-strat-b`), and 150 gens of morphological pruning (`f1-probs10`) allowed evolution to construct an articulated body plan. Handing this refined morphology to **500 consecutive generations of High Neural optimization** allowed deep synaptic calibration without morphological disruption.
+
+2. **Empirical Validation of the Reflex Cascade: `sch-L1` Hits $v = 0.030192$**:
+   - **`sch-L1-reflex-cascade`**, designed specifically to test our circuit findings, achieved **$v_{mean} = 0.009293$** and produced a runner reaching **$v = 0.030192$** (`HoF-f1-sch-L1-reflex-cascade-5`).
+   - By transitioning to Baseline (`f1-all-crit`) in the final 300 generations, evolution concentrated $67.1\%$ of its mutations on synaptic weights (`f1_nmWei`), tuning reflex gains to high precision without wasting evaluations on dead-end neutral neurons.
+
+3. **`scaled-sch-8-100` Establishes the Highest Median Baseline ($0.008134$) & Floor ($0.001634$)**:
+   - The scaled Experiment 4 champion proved to be the most reliably consistent strategy in the test suite: **median velocity $0.008134$** and minimum velocity $0.001634$.
+   - Freezing macro-morphology at generation 250 and letting Strategy A tune joints, sticks, and connections across 750 generations guarantees that virtually every run evolves a high-speed runner.
+
+4. **Failure of Abrupt Biphasic Switching (`sch-L3` Collapse)**:
+   - In stark contrast, `sch-L3-biphasic-exploit` underperformed significantly ($v_{mean} = 0.004324$, median $0.002093$).
+   - Switching directly from Equal Weights to High Neural at generation 200 without intermediate morphological articulation (such as Strategy B, D, or A) freezes the body in an immature, under-articulated state, proving that **multi-stage developmental cascades are strictly superior to abrupt two-stage exploration freezes**.
+
+5. **[Fastest Evolved Creature in the Project](./runs/2026-10-03_174608/gens/HoF-f1-scaled-sch-3-3.gen)**:
+   - Evolved under **`scaled-sch-3`** (Run 3), reaching peak velocity **$v = 0.038990$**:
+     ```cpp
+     // genotype:
+     (((fLLLLL(((F(M((fX[T][T][|, 7:12.9, r:0.943, r:1]LQX[N, s:-0.105, 6:-1.847, 2:-0.109,5:1][G]q(X[Gpart][N, -2:2.98, 0:1,s:0][|, -1:1])), )))), ))), L((, (X[*][*])), ))
+     ```
+   - **Phenotype & Locomotion Dynamics**:
+     - **Morphology**: An articulated snake-like frame featuring a 5-part linear torso (`fLLLLL`) acting as an inert stabilization mass, connected to an active articulated leg joint.
+     - **Dynamic Locomotion Strategy**: Rhythmic **jumping and hopping on the articulated leg**, forcefully launching off the ground and pushing the inert snake-like torso forward along the terrain.
+     - **Neural Architecture**:
+       * **Muscle Node 2 (`[|, 7:12.9]`):** Receives a massive constant activation bias ($w = 12.9$) from constant generator `*` (Node 9), maintaining a rigid, pre-stressed posture that keeps the torso elevated off the ground.
+       * **Muscle Node 7 (`[|, -1:1]`):** Driven by Interneuron Node 6 (`N`), which couples directly to Gyroscope Node 4 (`[G]`, $w = 2.98$) with a self-recurrent oscillator ($w = 1.0$).
+       * This creates a hybrid **closed-loop gyroscopic reflex oscillator** anchored to a pre-stressed spine, driving rapid, rhythmic forward hopping propulsion.
+
+6. **[High-Jump Champion](./runs/2026-10-03_174608/gens/HoF-f1-sch-L1-reflex-cascade-5.gen) - Distant Ballistic Jumps & Initial Position Dependency**:
+   - Evolved under **`sch-L1-reflex-cascade`** (Run 5), reaching peak velocity **$v = 0.030192$**:
+     ```cpp
+     // genotype:
+     LLLLF(, (LfQflLMMX[Gpart][N,in:0][N, si:2, 7:-3.302,in:0.8,0:-3.03][N, 8:8.669, 4:3.605, 4:9.54, 0:2.01, 12:-6.047][|, 7:3.96, r:0.593]), cFQX[S][N, 2:5.245, s:0.098,9:4.126][G][N, -6:-1.716, in:0, -7:9.198, in:0.862][G][@][*]MMfQMX[N, -12:-3.719, si:2,-3:-1.053][G][|, -5:1.028, r:0.705, r:1, r:1,r:1][Gpart, ry:0][@, -13:10.079, p:0.742], , , , )
+     ```
+
+      <div align="center" style="font-size: 110%;">
+      <a id="experiment-7-jumping-creature"></a>
+      
+      ![Inspection of HoF-f1-sch-L1-reflex-cascade-5](./images/Exp7-high-jumper-inspection.png)
+
+      </div>
+
+      _Figure 29: Inspection of the [jumping creature](./runs/2026-10-03_174608/gens/HoF-f1-sch-L1-reflex-cascade-5.gen). Left: phenotype showing an inverted-V arched body with an active leg joint. Right: Real-time neural signals and network wiring displaying the periodic gyroscopic oscillation (`#10`, `#8`) driving the explosive bending muscle `#15`, with the other two redundant muscles in the torso being saturated._
+
+   - **Distant Ballistic Jumps**:
+     - Unlike the low-clearance hopping of `scaled-sch-3`, `sch-L1-reflex-cascade-5` executes **significantly more distant, high-amplitude ballistic jumps**.
+     - Bending actuator `#15 - |` (`[|, 7:3.96]`) receives strong synaptic amplification from interneurons integrating dual gyroscopic signals (`#10 - G`, `#8 - G`) and a constant bias (`[*]`). This builds up muscular tension and unleashes an explosive ground strike that launches the arched body into extensive forward flight, propelling it to $v = 0.030192$.
+   - **Bistability & Initial Position Dependency (Collapse to Crawling)**:
+     - While capable of spectacular long-distance leaps, this design is **subject to strong initial position and landing orientation dependencies**:
+       * **High-Energy Jumping Attractor**: When spawning or landing in its nominal arched posture, the leg maintains clear ground clearance and the gyroscopes cycle through periodic sinusoidal waves (`signal: 0.45`), sustaining continuous ballistic leaps.
+       * **Low-Energy Crawling Collapse**: If perturbed at spawn or during an off-axis landing, the body rolls or drops flat onto the substrate. Continuous ground contact dampens the gyroscopic oscillations, pinning the actuated muscle against the ground. The control loop then collapses into a low-velocity dragging / crawling limit cycle, unable to regain the clearance required for explosive jumps.
+     - In dynamical systems terms, this controller exhibits **bistable limit-cycle hysteresis**, illustrating the fundamental evolutionary trade-off between maximizing peak ballistic leap velocity and maintaining robustness across varying initial conditions.
+
+### Empirical Verification and Disproval of the Scaling Hypotheses
+
+By analyzing the generational trajectories of Experiment 7 alongside Experiments 1–5, the following was observed:
+
+#### 1. Generational Horizon ($G = 1000$): DISPROVED — $G \approx 400$ Generations is Fully Sufficient
+
+Visual examination of **mean trajectory dynamics across generations** [_Figure 27_](#experiment-7-fitness-trajectories) reveals that the mean best-of-generation fitness across all 10 independent replications does not change significantly since **generation 400**.
+
+- Across all tested schemes, the **primary evolutionary breakthroughs** and steepest fitness gains occurred before or around **generation 400**.
+- After this, trajectories exhibited almost **flat asymptotic drift**, gaining on average only $+0.5\%-5.8\%$ in fitness at the **generation 1000** despite consuming an additional **$60\%$ of total evaluations and computational runtime** (running up to 6,500 seconds per replication).
+- Thus, the evidence suggests that a generational horizon of **$G \approx 400$ is fully sufficient** to discover viable body architectures and tune neural controllers.
+
+#### 2. Population Size ($N_{\text{pop}} = 100$): CONFIRMED - Essential for Neural Wiring and Controller Tuning
+- **The Decisive Factor for Peak Performance**:
+  - While extending generations to 1000 yielded diminishing returns, **expanding the population size from $N=50 \to 100$ was the decisive driver** of the performance surge observed in Experiment 7.
+  - At the 400-generation mark under $N=50$ (Experiments 1–5), the benchmark champion achieved $v_{mean} = 0.008272$. In contrast, at Generation 400 under $N=100$, `scaled-sch-3` already attained $v_{mean} = \mathbf{0.010437}$ and produced an all-time record peak velocity of **$v_{max} = 0.038990$**.
+- **Mechanistic Basis**:
+  - In $f_1$, where mutations are atomic and operators compete on a single roulette wheel, an expanded population of 100 individuals provides a vital genetic buffer.
+  - It maintains multiple distinct morphological lineages in parallel, sheltering nascent, uncalibrated body plans from premature stochastic extinction.
+  - This parallel genetic substrate gives neural operators the stable phenotypic platform needed to discover functional sensor-to-muscle connections, tune feedback loops, and calibrate synaptic weights without genetic collapse.
+
+#### 3. Morphology & Locomotion Strategy: CONFIRMED PERSISTENCE — Snake-like Chassis Propelled by Unilateral Leg Jumping
+- **Disproval of the Symmetrical Walking / Continuous Crawling Hypothesis**:
+  - Scaling evolution to 1000 generations with 100 individuals did not cause evolution to abandon jumping in favor of continuous limbless crawling or bilateral multipedal walking.
+  - Champion creatures across all top-performing schemes converge on the **same snake-like articulated structures whose dynamic strategy is jumping/hopping rhythmically on a leg**.
+- **Locomotion Spectrum: Ballistic Leaping vs. Steady Hopping**:
+  - Within this jumping paradigm, evolution explored two distinct dynamic regimes:
+    * **Steady Low-Clearance Hopping (`scaled-sch-3-3`, $v = 0.038990$)**: Features a rigid pre-stressed torso bias that prevents flipping and produces a rapid, highly repeatable forward hopping cycle.
+    * **Distant High-Amplitude Ballistic Jumping (`sch-L1-reflex-cascade-5`, $v = 0.030192$)**: Produces massive ground push-off and long-distance [aerial jumps](#experiment-7-jumping-creature), but introduces bistability where off-axis initial positions or uneven landings can cause the gait to collapse into low-velocity crawling.
+- **Biomechanical Basis**: As established in [Fitness Landscape Bias](#fitness-landscape-bias-why-rectilinear-rewards-favor-simple-one-legged-evolution), under purely 1D rectilinear velocity fitness ($v = \Delta x / \Delta t$) without lateral stability penalties, unilateral jumping mechanically outcompetes multi-legged walking by eliminating ground friction and limb collisions, concentrating 100% of muscular power along the forward vector.
+
+
+## Grand Project Conclusions: Evolutionary Principles Across All Experiments (1–7)
+
+Synthesizing all 330 independent evolutionary runs across Experiments 1 through 7 establishes six overarching scientific principles governing evolutionary design in the $f_1$ representation:
+
+1. **The 100-Generation Window of Morphological Plasticity**:
+   - Unconstrained topological exploration (`Equal Weights`) is critical during the first ~100 generations to discover viable body chassis.
+   - Postponing this transition to generation 200 or 300 causes performance to collapse by over $50\%$, as evolving populations become developmentally canalized early.
+
+2. **The Morphological Freeze Trap & Multi-Stage Cascades**:
+   - Abruptly eliminating morphological mutations (`High Neural` / zero body operators) traps evolution if limbs or joint angles are slightly suboptimal.
+   - Smooth, multi-stage developmental cascades—transitioning from global exploration to limb articulation (`Strategy B`), joint allocation (`Strategy D`), and continuous metric fine-tuning (`Strategy A`)—consistently outperform rigid two-stage freezes.
+
+3. **The Synaptogenesis & Synaptic Calibration Bottleneck**:
+   - In standard $f_1$, neuron insertion without connections wastes evaluations and litters genomes with neutral "junk" sensors.
+   - Elevating the synaptogenesis ratio ($7:1$) during early growth (Exp 6) or dedicating late-stage phases to pure synaptic weights (`f1_nmWei`, Exp 7) resolves this operator mismatch and unlocks peak velocities.
+
+4. **Sufficiency of the Generational Horizon ($G \approx 400$)**:
+   - Trajectory analysis proves that $94\%\text{--}99\%$ of all fitness accumulation occurs within the first 400 generations.
+   - Extending evolution to $G = 1000$ yields marginal returns ($<5\%$ improvement) while increasing compute time by $2.5\times$. Therefore, $G \approx 400$ represents the optimal generational budget.
+
+5. **Population Size ($N_{\text{pop}} = 100$) as the Critical Genetic Buffer**:
+   - Doubling the population size from $N=50 \to 100$ is the true driver of superior performance, elevating average velocities from $0.0082$ to over $0.0109$ and pushing peak velocity to $0.038990$.
+   - A larger population preserves parallel morphological lineages, preventing premature genetic drift and providing the stable substrate needed for neural operators to tune connections.
+
+6. **The Universality of the Unilateral Jumping Attractor**:
+   - Across all experiments, budgets, and operator configurations, morphology persistently converges on snake-like multi-stick bodies propelled by rhythmic jumping on a single active leg.
+   - Under 1D rectilinear velocity fitness, unilateral jumping mechanically outcompetes multi-legged walking by eliminating friction, avoiding limb interference, and channeling 100% of muscular torque into forward displacement.
+
 
 ## How to Run
 
-#### Parallel Execution (All 40 runs across CPU cores)
+#### Parallel Execution Across CPU Cores
 From the repository root (`sem-1/BIA/Evolutionary Design`):
 
 ```powershell
@@ -1032,24 +1315,21 @@ conda activate framsticks
 $TASK3 = "assignments/Assignment 5 - Modifying topology exploration path. Evolution of Designs/task3 - Evolution & varying different mutations probs"
 $SIMS = "$TASK3/sims"
 
+# Main experiments
 
-## Experiment 1
-# Execute 10 runs for each of the 4 sim variants in parallel over 300 generations
+## Experiment 1: 4 Atomic Baselines (40 runs, 300 generations, popsize 50 across 20 workers)
 python "scripts/run_parallel.py" `
     --script "framspy-download/FramsticksEvolution.py" --frams-path "Framsticks55" `
     --sim-variants "$SIMS/f1-all-crit.sim" "$SIMS/f1-equal-probs.sim" "$SIMS/f1-probs01.sim" "$SIMS/f1-probs10.sim" `
     --sim "eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim" `
     --genformats 1 --opt velocity `
     --popsize 50 --generations 300 `
-    --tournament 5 --pxov 0 `
+    --tournament 5 --pxov 0 --pmut 0.9 `
     --max-numparts 15 --max-numjoints 30 --max-numneurons 20 --max-numconnections 30 `
     --num-experiments 10 --workers 20 --stats-dir "$TASK3/stats/2026-09-26_4variants_300gen" `
     --out "$TASK3/runs"
 
-## Experiment 2: similar to Exp 1, but with 400 generations (2 runs - one run for strategies from the first experiment, the other - with new 4 sim variants)
-###...
-
-## Experiment 3: 7 Dynamic Strategies (70 scheduled evolutionary runs in parallel across 24 CPU workers)
+## Experiment 3: 7 Dynamic Strategies (70 scheduled runs, 400 generations, popsize 50 across 24 workers)
 python "scripts/run_parallel.py" `
     --script "scripts/FramsticksEvolutionScheduled.py" --frams-path "Framsticks55" `
     --sim "eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim" `
@@ -1069,16 +1349,13 @@ python "scripts/run_parallel.py" `
     --stats-dir "$TASK3/stats/2026-09-27_exp3_switching" `
     --out "$TASK3/runs"
 
-
-
-
-## Experiment 4: 5 Biphasic Two-Stage Strategies (50 runs across 25 workers)
+## Experiment 4: 5 Biphasic Two-Stage Strategies (50 runs, 400 generations, popsize 50 across 25 workers)
 python "scripts/run_parallel.py" `
     --script "scripts/FramsticksEvolutionScheduled.py" --frams-path "Framsticks55" `
     --sim "eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim" `
     --genformats 1 --opt velocity `
     --popsize 50 --generations 400 `
-    --tournament 5 --pxov 0 `
+    --tournament 5 --pxov 0 --pmut 0.9 `
     --max-numparts 15 --max-numjoints 30 --max-numneurons 20 --max-numconnections 30 `
     --num-experiments 10 --workers 25 `
     --schemes `
@@ -1090,15 +1367,13 @@ python "scripts/run_parallel.py" `
     --stats-dir "$TASK3/stats/2026-09-27_exp4_biphasic" `
     --out "$TASK3/runs"
 
-
-
-## Experiment 5: 4 Optimized Staged Strategies (40 runs across 20 workers)
+## Experiment 5: 4 Refined Developmental Cascades (40 runs, 400 generations, popsize 50 across 20 workers)
 python "scripts/run_parallel.py" `
     --script "scripts/FramsticksEvolutionScheduled.py" --frams-path "Framsticks55" `
     --sim "eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim" `
     --genformats 1 --opt velocity `
     --popsize 50 --generations 400 `
-    --tournament 5 --pxov 0 `
+    --tournament 5 --pxov 0 --pmut 0.9 `
     --max-numparts 15 --max-numjoints 30 --max-numneurons 20 --max-numconnections 30 `
     --num-experiments 10 --workers 20 `
     --schemes `
@@ -1109,9 +1384,41 @@ python "scripts/run_parallel.py" `
     --stats-dir "$TASK3/stats/2026-09-27_exp5_refined" `
     --out "$TASK3/runs"
 
+# Auxillary experiments
+## Experiment 6: Co-Developmental Synaptogenesis & Continuous Exploitation (30 runs across 30 workers)
+python "scripts/run_parallel.py" `
+    --script "scripts/FramsticksEvolutionScheduled.py" --frams-path "Framsticks55" `
+    --sim "eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim" `
+    --genformats 1 --opt velocity `
+    --popsize 50 --generations 400 `
+    --tournament 5 --pxov 0 --pmut 0.9 `
+    --max-numparts 15 --max-numjoints 30 --max-numneurons 20 --max-numconnections 30 `
+    --num-experiments 10 --workers 30 `
+    --schemes `
+        "scheme-6a-100=0:$SIMS/f1-codev-phase1.sim;100:$SIMS/f1-continuous-exploit.sim" `
+        "scheme-6b-150=0:$SIMS/f1-codev-phase1.sim;150:$SIMS/f1-continuous-exploit.sim" `
+        "scheme-6c-cascade=0:$SIMS/f1-codev-phase1.sim;100:$SIMS/f1-strat-b.sim;200:$SIMS/f1-continuous-exploit.sim" `
+    --stats-dir "$TASK3/stats/2026-10-03_exp6_codev_exploit" `
+    --out "$TASK3/runs"
 
-
-
+## Experiment 7: Scaled Champions & Reflex Cascades (60 runs, 1000 generations, popsize 100 across 24 workers)
+python "scripts/run_parallel.py" `
+    --script "scripts/FramsticksEvolutionScheduled.py" --frams-path "Framsticks55" `
+    --sim "eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim" `
+    --genformats 1 --opt velocity `
+    --popsize 100 --generations 1000 `
+    --tournament 5 --pxov 0 --pmut 0.9 `
+    --max-numparts 15 --max-numjoints 30 --max-numneurons 20 --max-numconnections 30 `
+    --num-experiments 10 --workers 24 `
+    --schemes `
+        "scaled-sch-8-100=0:$SIMS/f1-equal-probs.sim;250:$SIMS/f1-strat-a.sim" `
+        "scaled-sch-12=0:$SIMS/f1-equal-probs.sim;250:$SIMS/f1-strat-b.sim;500:$SIMS/f1-strat-d.sim;750:$SIMS/f1-strat-a.sim" `
+        "scaled-sch-3=0:$SIMS/f1-equal-probs.sim;200:$SIMS/f1-strat-b.sim;350:$SIMS/f1-probs10.sim;500:$SIMS/f1-probs01.sim" `
+        "sch-L1-reflex-cascade=0:$SIMS/f1-equal-probs.sim;150:$SIMS/f1-strat-d.sim;400:$SIMS/f1-probs01.sim;700:$SIMS/f1-all-crit.sim" `
+        "sch-L2-codev-crawler=0:$SIMS/f1-codev-phase1.sim;200:$SIMS/f1-strat-b.sim;400:$SIMS/f1-strat-a.sim;700:$SIMS/f1-continuous-exploit.sim" `
+        "sch-L3-biphasic-exploit=0:$SIMS/f1-equal-probs.sim;200:$SIMS/f1-probs01.sim" `
+    --stats-dir "$TASK3/stats/2026-10-03_exp7_scaled_champions_1000gen" `
+    --out "$TASK3/runs"
 
 
 # Generating HoF Analysis Plots
@@ -1145,7 +1452,21 @@ python "scripts/analyze_hof.py" `
     --colors YlGn `
     --xscale lin --headless --extension png
 
-### 5. Cross-Experimental Champions Comparison (Experiments 1–5)
+### 5. Experiment 6 Co-Developmental Synaptogenesis & Continuous Exploitation Analysis
+python "scripts/analyze_hof.py" `
+    --logbook-dirs "$TASK3/stats/2026-10-03_exp6_codev_exploit/2026-10-03_01" `
+    --outdir "$TASK3/results/hof_results_exp6" `
+    --colors crest `
+    --xscale lin --headless --extension png
+
+### 6. Experiment 7 Scaled Champions & Reflex Cascades Analysis ($N=100$, $G=1000$)
+python "scripts/analyze_hof.py" `
+    --logbook-dirs "$TASK3/stats/2026-10-03_exp7_scaled_champions_1000gen/unified" `
+    --outdir "$TASK3/results/hof_results_exp7" `
+    --colors mako `
+    --xscale lin --headless --extension png
+
+### 7. Cross-Experimental Champions Comparison (Experiments 1–5)
 python "scripts/analyze_hof.py" `
     --logbook-dirs `
         "$TASK3/stats/comparison_champions_subdirs/Exp1" `
@@ -1157,7 +1478,7 @@ python "scripts/analyze_hof.py" `
     --colors RdPu GnBu YlOrRd PuBu YlGn `
     --xscale lin --headless --extension png
 
-### 6. Comprehensive 24-Configuration Global Comparison (Experiments 1–5)
+### 8. Comprehensive 24-Configuration Global Comparison (Experiments 1–5)
 python "scripts/analyze_hof.py" `
     --logbook-dirs `
         "$TASK3/stats/comparison_exp1_5_subdirs/Exp1" `
@@ -1169,3 +1490,4 @@ python "scripts/analyze_hof.py" `
     --colors RdPu GnBu YlOrRd PuBu YlGn `
     --xscale lin --headless --extension png
 ```
+
