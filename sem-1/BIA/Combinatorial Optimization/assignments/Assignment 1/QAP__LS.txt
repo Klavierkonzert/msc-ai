@@ -1,0 +1,374 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+
+
+%\documentclass[letterpaper,10pt]{article}
+\usepackage[style=numeric, sorting=none]{biblatex} %Imports biblatex package
+\addbibresource{sample.bib} %Import the bibliography file
+
+
+
+\title{Quadratic Assignment Problem - Local Search and Random Methods}
+\author{Aliaksandr Kladneu, Master's student, PUT}
+
+\begin{document}
+\maketitle
+\section{Introduction}
+
+The quadratic assignment problem (QAP) is one of the fundamental combinatorial optimization problems in optimization and operations research. 
+
+It can be described as follows: given a set of $n$ facilities and $n$ locations, minimize the sum of distances multiplied by flow between facilities (cost function), by assigning facilities to a dedicated location. Mathematically this can be represented as \cite{MK}:
+
+\[
+\min_\pi \xleftarrow{}{ c(\pi) := \sum{a_{ij} b_{\pi(i)\pi(j)}}}\] 
+where $A=(a_{ij})\ge0$ - matrix of distances between locations and $B_\pi=(b_{\pi(i)\pi(j)})$ - is a permutation $\pi$ of rows and columns of matrix of flows between facilities $B=(b_{ij})\ge 0$, and $c(\pi)$ is the cost of permutation $\pi$, i.e. the value of the objective function for the corresponding assignment. 
+
+This is an \textbf{NP-hard} problem since the solution space has $n!$ permutations, and even small changes to an assignment affect many terms in the objective value, thus yielding a lot of local optima. Thus it's usually not feasible to find an optimal solution for large $n$.
+
+The applications of the problem include circuit design (placing interconnected electronic components onto a printed circuit board) and flow problems (optimization of flows between facilities) \cite{Wiki}. QAP also generalizes TSP and many other standard combinatorial optimization problems.
+
+\subsection{QAP instances}
+The following instances were chosen, which are available in \cite{QAPLIB}:
+
+\textbf{With known optimal solution:}
+\begin{itemize}
+\item esc16d
+\item bur26h
+\item esc32e
+\item lipa40a
+\item lipa80b
+\end{itemize}
+
+\textbf{With best solution found using heuristics (gap between known lower bound and best cost \%):}
+\begin{itemize}
+\item tai80b (12.28\%)
+\item wil100 (3.15\%), tai100b (10.78\%)
+\item tai150b (11.45\%), tho150 (6.3\%)
+\item tai256c (2.03\%)
+\end{itemize}
+
+The problems of different size were chosen to investigate the impact of problem size $n$ on the quality of solutions and performance of algorithms. Additionally, "twin" problems were added to investigate how a problem's structure influences these characteristics. 
+
+Worth noticing that two of these problems appeared to be "flat", that is sparse or mostly constant, which means one of two things: it's very easy to construct almost an ideal solution (minimal cost, \textit{esc32e}) or it's unfeasible or impossible to decrease the cost (\textit{lipa40}). 
+\subsubsection{Description of the problems}
+\textit{esc-x} problems correspond to the circuit testing problem.
+\textit{tai-b} are uniformly generated random problems,\textit{ tai-c} is found in analysis of grey patterns.
+\textit{lipa-x} are generated asymetric problems with known optimal solutions.
+\textit{bur-x} problem represents the time and distance of typing on a keyboard.
+\textit{tho-x} and \textit{wil-x} problems have rectangular distances.
+
+\subsection{Implementation}
+The implementation is in C++ (20) and is modular: data loading, problem representation, permutation operations, cost/delta evaluation, search algorithms, quality metrics, and statistics, plotting are separated into dedicated components. 
+
+Several methods are implemented and compared: heuristic local search (\textbf{H}), steepest local search (\textbf{S}), greedy local search (\textbf{G}), random search (\textbf{RS}), and random walk (\textbf{RW}). For convenience, they will be referred according to the indicated abbreviations.
+
+Heuristic algorithm (\textbf{H}) is defined as follows: 
+\begin{enumerate}
+    \item match the lowest and the largest elements in matrices
+    \item swap if it improves the cost
+    \item search for a new pair in submatrices
+    \item repeat until no improving moves are available/max number of iterations reached.
+\end{enumerate}
+In practice this algorithm terminates very fast, in milliseconds even for the largest problem instance. It can be further improved by matching not particular elements, but whole rows/columns.
+
+10 runs of each method were executed in parallel on 10 threads of machine with 32 logical processors, using OpenMP library. Each thread executes the problems in the same order, with random generators independent for each thread. Thus corresponding "wall-clock" timing function from the library is used to measure the "practical" time of the execution as opposed to measuring cpu time.
+
+Methods in \textit{statistics} module aggregate data from multiple experiments and provide functions for plotting using a Matplotlib wrapper \cite{MPLCPP}.
+
+\section{Neighbourhood}
+Neighbourhood operator used in \textbf{H, S, G, RW} - pairwise $swap(i,j)$ on a permutation. A neighbor is obtained by selecting two positions i and j and exchanging the assigned locations/facilities at those positions. 
+
+The neighbourhood size is the number of possible swaps - number of unique unordered pairs, which is calculated as:
+\[|N(x)|=C^N_2 = \frac{n(n-1)}{2}\]
+Neighbor cost calculation in \textbf{H, S, G, RW} is done using a delta update: instead of recomputing the full QAP objective for each neighbor, one computes the change in objective after swapping i and j using a delta formula \cite{TLS}.
+If $\pi$ is the current solution and $\pi'$ is the solution after $swap(i,j)$, then
+
+\[c(\pi') = c(\pi) + \Delta_{ij}\]
+
+where \(\Delta_{ij}\) is computed from terms involving rows/columns $i, j$ and $\forall k \neq i,j$.
+This reduces one neighbor evaluation from full objective recomputation to an incremental update, making local-search iterations significantly faster (especially for larger n).
+
+\section{Comparison of the performance of 5 algorithms on all problem instances}
+\subsubsection{Reporting results and statistical considerations}
+The comparison of algorithms is mainly done using box-plots for different methods and problems. 
+Since for some statistics ($time, norm\_cost$) distributions can't have negative values and high deviations in the results are expected, the median value with IQRs are reported as box-plots instead of reporting mean values with confidence intervals.
+
+When providing the plots, the results are sorted by the size of the problem, if not specified otherwise.
+
+\subsection{Quality}
+The first quality metric for comparison of the algorithms is the \textit{relative cost} defined as
+\[ rel\_cost(\pi) := \frac{c(\pi) - c_{best}}{c_{best}} \in [0; +\infty)\]
+where $\pi$ is a solution found by an algorithm, $c_{best}$ is the best cost - cost of the best known solution $\pi_{best}$. One can interpret this metric as a (percentage) gap between the cost of found solution and the best known cost: the lower the value the better the quality of the solution regarding to the best known cost.
+
+The objective function $c(\pi)$ can be thought of as Frobenious scalar product of matrices $A$ and $B_\pi$, which following Cauchy–Bunyakovsky–Schwarz inequality, should yield the following definition of the secondary quality metric -\textit{ normalized cost}:
+\[norm\_cost(\pi) := \frac{c(\pi)}{||A||_F ||B_\pi||_F} \equiv
+\frac{\langle A,B_\pi \rangle_F}{||A||_F ||B_\pi||_F} \equiv  \frac{\langle A,B_\pi \rangle_F}{||A||_F ||B||_F} \in [0;1]\ \ (\forall A, B\ge 0)\]
+This is referred to as \textit{cos quality} in the code since it's equal to the cosine of the angle between matrices in Frobenius terms. This is useful metric since it does not require the "ground truth" optimal value for comparison and allows direct comparison of different problems, keeping values below $1$.
+
+\begin{figure}
+\centering
+\includegraphics[width=1\linewidth]{Figure_1_3.png}
+\caption{(truncated) Relative cost }
+\label{fig:RelCost}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_2.png}
+    \caption{Normalized cost}
+    \label{fig:NormCost}
+\end{figure}
+Visual examination of the plots shows significant superiority of both \textbf{G} and \textbf{S} algorithms to solve the problem against proposed heuristic \textbf{H} and random algorithms \textbf{RW}, \textbf{RS}. In all of the given problem instances but one (\textbf\textit{lipa80b}) \textbf{G} and \textbf{S} achieve best known solution with lesser than 10\% precision (Figure 1), where \textbf{G} demonstrates slightly better quality values probably due to better exploration properties.
+
+\subsection{Running time}
+
+ \begin{figure}
+     \centering
+     \includegraphics[width=1\linewidth]{Figure_5.png}
+     \caption{Running time}
+     \label{fig:RunningTime}
+ \end{figure}
+As expected, time taken by \textbf{H} is the lowest one, while \textbf{S} requires the most time to thoroughly examine all the solutions in the neighbourhood, and \textbf{G} balances quality and time consumption. Random methods were given mean time of the runs of \textbf{G} and \textbf{S}.
+
+\subsection{Efficiency}
+I introduce two metrics of efficiency which both characterize how fast an algorithm can reduce relative or normalized cost over time. This characteristic - the relative or normalized difference between costs at two consecutive timepoints - over time, should be then calculated as a single number, which is area under the curve divided by time. To visualise the use of this characteristic, one can compare the simple heuristic algorithm which can immediately decrease the cost in much shorter time against a random algorithm, which decrease-time curve would look more like noisy straight line. 
+
+
+\[rel\_eff_T := \frac{1}{T}\sum_{i=0}^{L}{[t_{i+1} - t_{i}] \cdot rel\_cost(\pi_{i})} \equiv \frac{1}{T \cdot c_{best}}\sum_{i=0}^{L}{[t_{i+1} - t_{i}] \cdot c(\pi_{i})} -1 \]
+The formula for \textit{normalized efficiency} is similar but subtracts normalized best cost
+\[norm\_eff_T := \frac{1}{T}\sum_{i=0}^{L}{[t_{i+1} - t_{i}] \cdot norm\_cost(\pi_{t_i}) - norm\_cost(\pi_{best})} \equiv \]
+\[ \equiv \frac{1}{T \cdot ||A||_F ||B||_F} \sum_{i=0}^{L}{[t_{i+1} - t_{i}]\cdot c(\pi_{i})} - \frac{c_{best}}{||A||_F ||B||_F}\]
+
+where $\pi_i$ is a solution (permutation) found and accepted at time $t_i$;  $t_0=0$,  $c(\pi_{0})$ - cost of the initial (random) permutation, $T=\sum_{i=0}^{L+1}[t_i - t_{i-1}]\equiv t_{L+1}$ - time interval between the beginning and the end of a single experiment (run) of an algorithm for a given problem instance, and $t_i$ is a time moment when the cost changes (and this change is accepted), $L$ - number of such changes during the experiment, $t_L$ - time of the last cost change, $t_{L+1} \equiv T$ - time of the end of an experiment (or time budget).
+Since both metric indicate how fast the cost decreases, \textit{the lower the value of these metrics the better}.
+
+It should be noted that this metric allows comparison only when time intervals are identical or very close, and thus time budgets should be the same for such comparison. Below are results for different time budgets determined based on running time of \textbf{H}, \textbf{G} and \textbf{S} respectively.
+
+For visual comparison the second metric is more suitable since it keeps plots strictly below $1$ on $y$ axis.
+
+Below is the comparison of efficiency of all the 5 algorithms given "strict" (determined by running time of \textbf{H}) and "generous" (determined by running time of \textbf{S}) time budgets. In the second efficiency analysis \textbf{H} is given for reference only and shall not be analysed since proposed efficiency metrics require an algorithm to operate on the whole time interval, while \textbf{H} always terminates early and cannot show further improvements, while demonstrating inferior results almost always. 
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_6_2.png}
+    \caption{(truncated) Relative Efficiency for minimal time budgets}
+    \label{fig:RelEffMin}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_7.png}
+    \caption{Normalized Efficiency for minimal time budgets}
+    \label{fig:NormEffMin}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_12_2.png}
+    \caption{(truncated) Relative Efficiency for generous time budgets}
+    \label{fig:RelEffMax}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_13.png}
+    \caption{Normalized Efficiency for generous time budgets}
+    \label{fig:NormEffMax}
+\end{figure}
+The figures demonstrate superiority of \textbf{G} over the rest of the algorithms in both time budget settings, even though "strict" time budget is determined by running time of \textbf{H}, and "generous" time budget is determined by running time of \textbf{S}, making these conditions sub-optimal for \textbf{G}.
+
+\subsection{Total number of algorithm steps}
+The \textbf{step} is determined as a swap of two elements in the current solution (permutation). 
+\textbf{G} performs much more swaps than \textbf{S}, and thus shows that exploratory behaviour (driven by choices that are not necessarily locally optimal) is beneficial when solving all the problems, given the fact that \textbf{G} also showed superior quality.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_14.png}
+    \caption{Total number of Swaps}
+    \label{fig:TotSwaps}
+\end{figure}
+\subsection{Total number of evaluated solutions}
+An evaluated (fully or partially) solution is a solution (permutation) for which a cost value were obtained. 
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_15.png}
+    \caption{Number of evaluated solutions}
+    \label{fig:EvalNum}
+\end{figure}
+Despite the visual discrepancy between total number of evaluated solutions between \textbf{S} and \textbf{G}, the former evaluates all of the solutions in a current neighbourhood, while \textbf{G} evaluates solutions on a much more distant scale given the same processing time, though in more stochastic manner. 
+\textbf{RS} seems to evaluate orders of magnitude lower solutions due to the costly evaluations of the objective function (cost) of each random solution. 
+
+\subsection{Conclusions}
+Given all the evidence demonstrated so far, one can conclude the following:
+\begin{enumerate}
+    \item Exploratory behaviour is beneficial when solving QAP.
+    \item Prior information should be utilized to make exploration more efficient.
+    \item Greedy strategy outperforms all the other algorithms (\textbf{H, S, RW, RS}).
+\end{enumerate}
+
+\section{Discovering the structure of the search space and the optimized function}
+The following instances were chosen for the analysis:
+\begin{enumerate}
+    \item \textit{lipa80b}, since all the methods demonstrated sub-optimal solutions compared to the optimal solution (which is equal to the identity permutation).
+    \item \textit{tai100b}, due to noticeable variability in relative cost. 
+\end{enumerate}
+The other problems are not very interesting due to the lack of variability in final quality metrics. 
+1000 independent runs were performed of \textbf{G} and \textbf{S} for each of the problems above.
+
+The following plots demonstrate relationships between initial and final quality. For this purpose \textit{relative} and \textit{normalised} cost can be used interchangeably when analyzing particular problems since each of the points on one plot can be linearly translated to the other plot. This doesn't hold for multiple problems. Spearman correlations are provided per each method and per each instance.
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{task3__Figure_1.png}
+    \caption{Initial vs Final Normalised cost of 1000 runs of \textbf{G} and \textbf{S}}
+    \label{fig:NormCost}
+\end{figure}
+\begin{figure}
+\centering
+    \includegraphics[width=1\linewidth]{task3__Figure_2.png}
+    \caption{Initial vs Final Relative cost of 1000 runs of \textbf{G} and \textbf{S}}
+    \label{fig:RelCost}
+\end{figure}
+
+In both cases clouds of points were obtained without any visible structure. There is an isolated point (\textit{outlier}) in \textit{lipa80b} problem, which is equal to the optimal solution. This happened few times when thousands of runs were performed. 
+The distinct feature of these clouds is that the cloud corresponding to \textbf{G} lies consistently lower, which supports the earlier conclusions that \textbf{G} performs better than \textbf{S}.
+Spearman correlations show close to 0 values (i.e. within -0.05.. +0.05 interval), meaning that there is no direct, monotonic "better in the beginning - better at the end" relationship between initial and final costs. 
+Local search can map very different starts to very similar final costs. So runs with bad initial ranks and good initial ranks end up mixed in final ranks. Possible explanations of the observed low Spearman correlation are determined by landscape of the problems:
+\begin{enumerate}
+    \item Multiple local minima/basins with different depths.
+    \item Large basins around some minima.
+    \item Plateaus or many near-ties in final quality.
+\end{enumerate}
+ 
+\section{Discovering the preferred number of repetitions of LS. }
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{task4__Figure_7.png}
+    \caption{Best and Average relative cost plot for 1000 independent runs}
+    \label{BestAvgRelCost}
+\end{figure}
+In this experiment, the horizontal axis is the number of independent starts \textit{k=0..1000}, and for each \textit{k} 2 values are plotted: \textit{best-so-far relative cost quality} and\textit{ average-so-far relative cost quality} over the first \textit{k} starts. 
+
+As was mentioned before, \textit{lipa80b} has a significant improvement in the cost once during a few thousands restarts, and thus it makes sense to repeat \textbf{S} few thousands times (then the algorithm will find an optimal solution).
+At the same time \textit{tai100b} demonstrates better improvement during few hundreds starts. Based on the visual characteristics of the \textbf{G} curve, it's better to stop early at $t=200$ as plateau-based practical cutoff.
+
+Hence, repeating LS is worthwhile, but the preferred number of restarts is instance- and algorithm-dependent: moderate budget is proposed for tai100b, and larger budget for lipa80b when chasing rare best-case gains.
+
+\section{Objective assessment of the similarity of locally optimal solutions found }
+
+\textbf{Cayley similarity} between two permutations $\pi_1$ and $\pi_2$ is defined through \textit{Cayley distance} which is the minimum number of swaps necessary to obtain $\pi_2$ from $\pi_1$:
+\[ Cayley\_sim(\pi_1, \pi_2) := 1 - Normalized\ Cayley\ distance (\pi_1, \pi_2) =\]
+\[= 1 - \frac{1}{N-1} min|\{k:\ s_k=swap_{i_kj_k},\ \pi_2 = (\prod_ks_k) \cdot \pi_1 \}|
+\]
+This similarity measure is proposed due to the natural definition of a metric on the space of permutations of length $N$ (\textit{permutohedron}) as it reflects how far are two permutations in the solutions space.
+
+Since both \textit{Cayley and Hamming distances} are valid mathematical metrics, these similarity functions, for a given problem size $N$, naturally map distances into similarities.
+
+The following two plots demonstrate relationship between Cayley similarity and \textit{relative cost} (as it is more informative for multiple problems plots): 
+\begin{enumerate}
+    \item Data with a found outlier in \textit{lipa80b}:
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_13_outlier.png}
+    \caption{Cayley similarity vs. Relative Cost on data with an outlier in \textit{lipa80b}}
+    \label{fig:CayleySimVsRelCostOutlier}
+\end{figure}
+
+\item Data without an outlier, obtained by new 1000 restarts of algorithms:
+\item \end{enumerate}
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_13_nooutlier.png}
+    \caption{Cayley similarity vs. Relative Cost on data without outlier in \textit{lipa80b}}
+    \label{fig:CayleySimVsRelCostOutlier}
+\end{figure}
+
+The figures demonstrate that there is from \textit{moderate to strong linear relationship} between the similarity of a found solution (local optima) and the quality in \textit{tai100b} problem. However, no such conclusion can be made in the case of \textit{lipa80b} as this problem is likely to have only one distinct global optima (isolated point on the plot, which corresponds to the identity permutation). At the same time \textit{tai100b} seems to have a lot of local optima with cost close to the best known one, and the closer these local optima to the best known solution, the lower the cost.
+
+The following heatmaps show relationships between separate positions, matched with the positions of the best known solution, and the quality of the solution (same for both \textit{relative cost} and \textit{normalized cost} quality metrics).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_19.png}
+    \caption{\textit{lipa80b}: Dependency of position-matches with the best known solution and the quality of solutions}
+    \label{fig:lipa80bHeatmap}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_20.png}
+    \caption{\textit{tai100b}: Dependency of position-matches with the best known solution and the quality of solutions}
+    \label{fig:tai100b}
+\end{figure}
+
+Hence \textit{lipa80b} has no particular position in the solution which would be responsible for a significant cost reduction, however there are few of such positions in \textit{tai100b} (namely all of the positions from 1 to 31 have low negative correlation with the cost, and positions 27,29, and 30 have moderate negative correlation with the cost).
+
+\textit{\textbf{Note: } The best-known solutions from .sln files use 1-based indices, which were converted to 0-based before computing similarity - when loading data into  Problem class, and then passing the solution into  Permutation structure.}
+
+\section{Conclusions}
+\subsection{General}
+\begin{itemize}
+    \item \textbf{QAP is NP-hard} with a \textbf{rugged landscape}. Pure random methods (\textbf{RS, RW}) are insufficient to find competitive solutions even for moderate-sized instances. 
+    \item \textbf{Problem structure matters}: it strongly influences algorithm behaviour. "Flat" instances (\textit{lipa40a, esc32e}) are degenerate cases where either a near-optimal solution is trivial to construct or cost improvement is structurally infeasible. 
+\end{itemize}
+\subsection{Specific}
+\begin{itemize}
+    \item \textbf{Algorithm ranking:} Local search methods (\textbf{G, S}) significantly outperform \textbf{H, RS, RW} on solution quality across all instances. \textbf{G} outperforms \textbf{S} in both quality and efficiency under all tested time budgets, attributed to its exploratory behaviour enabling broader landscape coverage per unit time. 
+    \item \textbf{Initial solution irrelevance}: Near-zero Spearman correlation between initial and final cost (within $\pm 0.05$) across 1000 runs confirms that initial solution quality does not predict final quality, which is consistent with a landscape of many basins of varying depth.
+    \item \textbf{Multi-start strategy}: Repeating LS is worthwhile but the optimal restart budget is instance-dependent:
+    \begin{itemize}
+        \item around 200 restarts suffice for G on \textit{tai100b}; 
+        \item several thousand are needed for S on \textit{lipa80b} to encounter the rare optimal basin.
+    \end{itemize}
+    \item \textbf{Search space structure (similarity analysis):} 
+    \begin{itemize}
+        \item \textit{tai100b} exhibits a structured landscape where closer local optima (higher Cayley similarity to the best known) have  lower cost (Pearson correlation between < -0.6)
+        \item \textit{lipa80b} has a near-flat landscape with a single isolated global optimum (identity permutation), with no such correlation. Specific positions 27–30 in \textit{tai100b} account for disproportionate cost reductions.
+    \end{itemize}
+\end{itemize}
+
+
+\section{Challenges encountered}
+\begin{enumerate}
+\item Debugging \textit{Matplotlib-cpp} errors in C++ was difficult and time-consuming.
+\item Containerization and dependency setup (C++/Python/plotting) required significant effort.
+\item Refactoring core structures introduced temporary performance regressions.
+\item \textit{int} overflow caused invalid results (e.g., negative costs), so wider integer types were needed.
+\item Parallelization improved speed but complicated fair benchmarking and determinism.
+\item Final figures (with low number of restarts) required strict reproducibility settings (single-core runs, fixed seeds).
+\item Randomness quality of \textit{reshuffle} and \textit{get\_random\_pair} had to be validated; two Fisher-Yates passes worked better in practice.
+\end{enumerate}
+
+\section{Justification and Future Improvements}
+
+\textbf{Justification.}
+The introduced improvements were necessary to make results valid, comparable, and efficient:
+\begin{enumerate}
+\item Fixed arithmetic issues (overflow) to avoid invalid objective values.
+\item Improved reproducibility (fixed seeds, controlled runs) for fair method comparison.
+\item Improved random operators quality, which stabilized multi-start behavior.
+\item Optimized core implementation to run larger experiments in the same time.
+\end{enumerate}
+
+\textbf{Future improvements and expected effects:}
+\begin{enumerate}
+\item Better initialization heuristic (instead of matching single elements rows or columns with the highest/lowest norms can be matched) \textit{for} better starting solutions.
+\item Additional caching in cost/delta-cost loops \textit{for} faster iterations.
+\item Adaptive restart budget instead of fixed restarts \textit{for} better time-quality trade-off.
+\item Hybrid methods (e.g., LS + diversification/perturbation) \textit{for} better escape from local minima.
+\item Parallel independent restarts \textit{for} lower wall-clock time.
+\end{enumerate}
+
+\printbibliography %Prints bibliography
+
+\end{document}
