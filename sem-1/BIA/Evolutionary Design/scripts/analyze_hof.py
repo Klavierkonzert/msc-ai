@@ -342,8 +342,19 @@ def main():
     ap.add_argument('--linestyles', nargs='+', default=None, help='List of linestyles to use for curves (e.g. -. : - --). Must belong to DEFAULT_LINESTYLES.')
     ap.add_argument('--headless', action='store_true', help='Run headless without interactive GUI popups')
     ap.add_argument('--extension', default='png', choices=['png', 'pdf', 'svg'], help='Image extension for plots (default: png)')
-    ap.add_argument('--xscale', default='linlog', choices=['linlog', 'lin', 'log', 'linear', 'symlog'], help='X-axis scale for history and confidence plots: linlog (default), lin, log')
+    ap.add_argument('--xscale', nargs='+', default=['linlog'], help='X-axis scale for history and confidence plots: linlog (default), linlog<N> (e.g. linlog 400), lin, log, symlog')
     args = ap.parse_args(clean_argv)
+
+    # Parse --xscale scale type and optional linear threshold
+    raw_xscale = " ".join(args.xscale) if isinstance(args.xscale, list) else str(args.xscale)
+    m_scale = re.match(r'^(linlog|symlog|lin|log|linear)(?:[\s_:-]?(\d+))?$', raw_xscale.strip(), re.IGNORECASE)
+    if m_scale:
+        xscale_type = m_scale.group(1).lower()
+        if xscale_type == 'linear':
+            xscale_type = 'lin'
+        xscale_threshold = int(m_scale.group(2)) if m_scale.group(2) else None
+    else:
+        ap.error(f"Invalid --xscale value: '{raw_xscale}'. Supported: linlog, linlog<N>, lin, log, symlog.")
 
     # Validate that user-supplied colors belong to DEFAULT_PALETTES
     if args.colors is not None and any(c not in DEFAULT_PALETTES for c in args.colors):
@@ -383,9 +394,10 @@ def main():
                 # plot and save curves
                 print(f"Subgroup variable for analysis: {subgroup_var}")
                 plots_dir = os.path.join(args.outdir, 'plots')
-                active_linestyles = args.linestyles or DEFAULT_LINESTYLES
-                plot_HoF_history(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, linestyles=active_linestyles, extension=args.extension, xscale=args.xscale)
-                plot_HoF_confidence(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, linestyles=active_linestyles, extension=args.extension, xscale=args.xscale)
+                hist_thresh = xscale_threshold if xscale_threshold is not None else 3500
+                conf_thresh = xscale_threshold if xscale_threshold is not None else 50
+                plot_HoF_history(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, linestyles=active_linestyles, extension=args.extension, xscale=xscale_type, _symlog_threshold=hist_thresh)
+                plot_HoF_confidence(df, param=subgroup_var, outdir=plots_dir, palettes=active_palettes, linestyles=active_linestyles, extension=args.extension, xscale=xscale_type, _symlog_threshold=conf_thresh)
 
 
                 # aggregated summary and boxplots
@@ -433,30 +445,37 @@ def extract_scheme_group(s: Any) -> str:
     """Extracts base scheme group up to and including the scheme index digit(s).
     Groups together schemes with alphabetic/refinement postfixes (e.g. scheme-3b, scheme-3_b)
     as well as trailing numeric variation postfixes like '-\\d+' (e.g. scheme-8-100, scheme-8-200 -> scheme-8).
+    Also strips leading prefixes (e.g. scaled-, scale-, ext-, extended-) and normalizes shorthand 'sch' -> 'scheme'
+    so that scaled and extended variants group identically with their base counterparts.
     e.g. 'scheme-3' -> 'scheme-3'
-         'scheme-3b' -> 'scheme-3'
+         'scaled-sch-3' -> 'scheme-3'
          'scheme-8-100' -> 'scheme-8'
-         'scheme-8-200' -> 'scheme-8'
-         'scheme-8-300' -> 'scheme-8'
-         'scheme-10b' -> 'scheme-10'
-         'sch-7c' -> 'sch-7'
+         'scaled-sch-8-100' -> 'scheme-8'
+         'scheme-12' -> 'scheme-12'
+         'scaled-sch-12' -> 'scheme-12'
+         'sch-7c' -> 'scheme-7'
          'Baseline' -> 'Baseline'
     """
     if s is None:
         return ''
-    s_str = str(s)
+    s_str = str(s).strip()
+    # Strip leading prefixes: scaled-, scale-, ext-, extended-
+    s_clean = re.sub(r'^(?:scaled?|ext(?:ended)?)[_-]', '', s_str, flags=re.IGNORECASE)
+    # Normalize shorthand prefix 'sch' to 'scheme'
+    s_clean = re.sub(r'^(?:scheme|sch)[_-]?', 'scheme-', s_clean, flags=re.IGNORECASE)
+
     # 1. Trailing -\\d+ variation (e.g. scheme-8-100, scheme-8-200 -> scheme-8)
-    if (m_num:= re.match(r'^(.*?(?:scheme|sch)[_-]?\d+)-(\d+)$', s_str, re.IGNORECASE)):
+    if (m_num := re.match(r'^(.*?(?:scheme|sch)[_-]?\d+)-(\d+)$', s_clean, re.IGNORECASE)):
         return m_num.group(1)
     # 2. Trailing alphabetic or non-digit postfix (e.g. scheme-3b, scheme-3_refined -> scheme-3)
-    if (m := re.match(r'^(.*?(?:scheme|sch)[_-]?\d+)([-_a-zA-Z].*)$', s_str, re.IGNORECASE)):
+    if (m := re.match(r'^(.*?(?:scheme|sch)[_-]?\d+)([-_a-zA-Z].*)$', s_clean, re.IGNORECASE)):
         return m.group(1)
     # 3. Short format s3b or s8-100
-    if (m2_num := re.match(r'^(s?\d+)-(\d+)$', s_str, re.IGNORECASE)):
+    if (m2_num := re.match(r'^(s?\d+)-(\d+)$', s_clean, re.IGNORECASE)):
         return m2_num.group(1)
-    if (m2 := re.match(r'^(s?\d+)([-_a-zA-Z].*)$', s_str, re.IGNORECASE)):
+    if (m2 := re.match(r'^(s?\d+)([-_a-zA-Z].*)$', s_clean, re.IGNORECASE)):
         return m2.group(1)
-    return s_str
+    return s_clean
 
 
 def shorten_scheme_label(s: Any) -> str:
@@ -504,10 +523,11 @@ def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:Non
 
 def get_colormaps(palettes:list[str], param_vals:list[str|None], directories:list[str|None]|None=None, df:pd.DataFrame|None=None, param:str|None=None) ->Any:
     """Returns dict of dir->colormap if list of directories is not dummy, otherwise returns one colormap"""
+    is_custom_palettes = (palettes != DEFAULT_PALETTES)
     if directories is not None:
         res = {}
         for d_idx, d in enumerate(directories):
-            pal_name = get_experiment_palette(d, palettes[d_idx % len(palettes)])
+            pal_name = palettes[d_idx % len(palettes)] if is_custom_palettes else get_experiment_palette(d, palettes[d_idx % len(palettes)])
             cmap = sns.color_palette(pal_name, as_cmap=True)
             if df is not None and param is not None and 'dir' in df.columns and param in df.columns:
                 d_params = sorted(df[df['dir'] == d][param].dropna().unique(), key=natural_sort_key)
@@ -581,14 +601,18 @@ def set_scale_ticks(symlog_threshold: int, max_x_value: int = None, xscale: str 
     scale = (xscale or 'linlog').lower()
     if scale in ('linlog', 'symlog'):
         ax.set_xscale('symlog', linthresh=symlog_threshold)
-        ticks = list(ax.get_xticks())
+        raw_ticks = [t for t in ax.get_xticks() if t >= 0]
         if max_x_value is not None:
-            ticks.append(max_x_value)
-        if symlog_threshold not in ticks:
-            ticks.append(symlog_threshold)
-        ticks = sorted(ticks)
-        ax.set_xticks(sorted(set(ticks)))
+            raw_ticks = [t for t in raw_ticks if t <= max_x_value * 1.01]
+            raw_ticks.append(max_x_value)
+        if symlog_threshold not in raw_ticks:
+            raw_ticks.append(symlog_threshold)
+        ticks = sorted(set(int(round(t)) for t in raw_ticks))
+        ax.set_xlim(left=0, right=max_x_value * 1.02 if max_x_value else None)
+        ax.set_xticks(ticks)
         ax.set_xticklabels([str(int(t)) if t != symlog_threshold else f'.. lin scale.. {symlog_threshold}.. log scale..' for t in ticks])
+        if max_x_value and symlog_threshold < max_x_value:
+            ax.axvline(symlog_threshold, color='#64748b', linestyle='--', linewidth=1.2, alpha=0.7)
     elif scale in ('log',):
         ax.set_xscale('log', nonpositive='clip')
         if max_x_value is not None:
@@ -1021,8 +1045,9 @@ def plot_boxplot_summary(df_summary: pd.DataFrame, outdir: str = 'hof_results', 
     is_multi_dir = len(directories) > 1
 
     if is_multi_dir:
+        is_custom_palettes = (palettes != DEFAULT_PALETTES)
         dir_palette = {
-            d: sns.color_palette(get_experiment_palette(d, palettes[i % len(palettes)]), as_cmap=True)(0.7)
+            d: sns.color_palette(palettes[i % len(palettes)] if is_custom_palettes else get_experiment_palette(d, palettes[i % len(palettes)]), as_cmap=True)(0.7)
             for i, d in enumerate(directories)
         }
     else:

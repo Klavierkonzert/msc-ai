@@ -1174,6 +1174,8 @@ With a small population of $N_{\text{pop}} = 50$ and tournament size $k = 5$, se
 ### 3. The Locomotion Strategy and Morphological Evolution Hypothesis
 Across Experiments 1–6, champion creatures converged almost exclusively on unilateral hopping and jumping dynamics governed by the [rectilinear fitness landscape bias](#fitness-landscape-bias-why-rectilinear-rewards-favor-simple-one-legged-evolution). It was hypothesized that limited search time and genetic drift prematurely trapped evolution in this simple jumping attractor, and that scaling both population size ($N=100$) and generational horizon ($G=1000$) would provide the genetic buffer and developmental runway necessary to discover coordinated, multi-joint serpentine crawling or bilateral walking gaits.
 
+<a id="experiment-7"></a><a id="experiment-7-scaled-champions--reflex-cascades-across-1000-generations"></a>
+
 ## Experiment 7: Scaled Champions & Reflex Cascades Across 1000 Generations
 
 To empirically test these theoretical considerations and determine how the project's top-performing developmental paradigms scale over long evolutionary horizons, **Experiment 7** evaluates six representative scheduled schemes under scaled computational allocations:
@@ -1530,5 +1532,19 @@ python "scripts/analyze_hof.py" `
     --outdir "$TASK3/results/hof_results_comparison_exp1_5" `
     --colors RdPu GnBu YlOrRd PuBu YlGn `
     --xscale lin --headless --extension png
+
+### 9. Scaled Champions vs. Original Counterparts Comparison (Assignment 5 Figures 12 & 13)
+python "scripts/analyze_hof.py" `
+    --logbook-dirs `
+        "$TASK3/stats/hof_stats_exp3_top" `
+        "$TASK3/stats/hof_stats_exp4_top" `
+        "$TASK3/stats/hof_stats_exp5_top" `
+        "$TASK3/runs/2026-10-03_174608/stats" `
+    --outdir "$TASK3/results/hof_results_scaled_vs_champions_400gen" `
+    --colors YlOrRd PuBu YlGn `
+    --xscale linlog 400 `
+    --include-schemes "scheme-3" "scheme-8-100" "scheme-12" "scaled-sch-3" "scaled-sch-8-100" "scaled-sch-12" `
+    --headless --extension png
 ```
+
 
