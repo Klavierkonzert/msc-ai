@@ -342,13 +342,13 @@ _Figure 3: Distribution of Hall-of-Fame final fitness (left) and total run durat
 To move beyond blunt global morphology-vs-brain ratios, **four tuned operator probability distributions** based on the mechanical roles of the 9 operators in $f_1$:
 
 <a id="f1-strategy-a"></a>
-1. **[Strategy A (Continuous Fine-Tuning)](./sims/f1-strat-a.sim)**: Heavy suppression of catastrophic structural additions/deletions (`smX`, `smJunct`, `nmNeu` at $0.2$) while prioritizing continuous physical and neural scaling (`smModif: 1.5`, `nmProp: 1.5`, `nmWei: 2.0`). Protects working gaits from being ripped apart.
+1. **[Strategy A (Fine-Tuning)](./sims/f1-strat-a.sim)** heavily suppresses catastrophic structural additions/deletions (`smX`, `smJunct`, `nmNeu` at 0.2) while prioritizing continuous physical and neural scaling (`smModif: 1.5`, `nmWei: 2.0`) to protect mature gaits from dismemberment.
 <a id="f1-strategy-b"></a>
-2. **[Strategy B (Branching & Morphology Exploration)](./sims/f1-strat-b.sim)**: Strongly promotes structural branching (`smJunct: 1.5`, `smComma: 1.5`) alongside balanced neural operators ($1.0$). Encourages bilateral limbs, outriggers, and multi-legged chassis.
+2. **[Strategy B (Branching)](./sims/f1-strat-b.sim)** strongly promotes structural branching (`smJunct: 1.5`, `smComma: 1.5`) alongside balanced neural operators (1.0), encouraging bilateral limbs, outriggers, and multi-jointed articulated frames.
 <a id="f1-strategy-c"></a>
-3. **[Strategy C (CPG Resonance & Control Dynamics)](./sims/f1-strat-c.sim)**: Minimizes body alterations ($20\%$ body share) and concentrates on central pattern generator frequency/phase coordination ($80\%$ brain share).
+3. **[Strategy C (Neural Tuning)](./sims/f1-strat-c.sim)** minimizes body alterations (_22.6%_ morphology share) and concentrates on neural frequency and synaptic weight coordination (_77.4%_ neural share).
 <a id="f1-strategy-d"></a>
-4. **[Strategy D (3-Tier Evolutionary Pyramid)](./sims/f1-strat-d.sim)**: Hierarchical architecture allocating ~15% to macro-topology jumps, ~35% to mesoscale wiring and modifiers, and ~50% to continuous neural calibration.
+4. **[Strategy D (Morphology)](./sims/f1-strat-d.sim)** provides a uniform morphology exploration distribution, allocating ~16% to macro-topology jumps, _~17%_ to limbs articulation, resulting in _33%_ of morphology operators, and _~51%_ to continuous fine-tuning of neural parameters.
 
 <table tableId="table2">
   <thead>
@@ -556,29 +556,29 @@ _Figure 6: Final Hall-of-Fame velocity and run duration distributions across all
 | | **[Equal Weights](./sims/f1-equal-probs.sim)** | **0.007167** | **0.006500** | 0.005391 | 0.000574 | **0.019564** | 758.5 s |
 | **[Experiment 2](./runs/2026-09-26_180136)** *(400 generations)* | **[Strategy A (Fine-Tuning)](./sims/f1-strat-a.sim)** | 0.005721 | 0.004023 | 0.005857 | 0.000149 | **0.017484** | **693.0 s** |
 | | **[Strategy B (Branching)](./sims/f1-strat-b.sim)** | **0.006325** | 0.004553 | 0.005191 | 0.001025 | 0.016070 | 753.2 s |
-| | **[Strategy C (CPG Resonance)](./sims/f1-strat-c.sim)** | 0.002754 | 0.002203 | **0.001593** | 0.000962 | 0.005328 | 715.3 s |
-| | **[Strategy D (3-Tier Pyramid)](./sims/f1-strat-d.sim)** | 0.005691 | **0.005484** | 0.003389 | **0.001103** | 0.010394 | 695.9 s |
+| | **[Strategy C (Neural Tuning)](./sims/f1-strat-c.sim)** | 0.002754 | 0.002203 | **0.001593** | 0.000962 | 0.005328 | 715.3 s |
+| | **[Strategy D (Morphology)](./sims/f1-strat-d.sim)** | 0.005691 | **0.005484** | 0.003389 | **0.001103** | 0.010394 | 695.9 s |
 
 #### Key Findings from Strategies A–D
 
-1. **[Strategy A](./sims/f1-strat-a.sim)  (Continuous Fine-Tuning) achieves the highest peak fitness in Experiment 2 ($0.017484$)**:
+1. **[Strategy A](./sims/f1-strat-a.sim) (Fine-Tuning) achieves the highest peak fitness in Experiment 2 ($0.017484$)**:
    - <u>Strategy A produced the fastest individual among strategies A-D</u>.
    - By suppressing structural additions/deletions ($<10\%$) and emphasizing modifier scaling (`f1_smMod: 1.5`, $23.1\%$) and synaptic weights ($30.8\%$), it reliably protected established locomotive patterns from catastrophic dismemberment while continuously tuning lever arms and actuation phases.
 
-2. **[Strategy B](./sims/f1-strat-b.sim) (Branching & Articulation) Championed Static Structural Exploration**:
+2. **[Strategy B](./sims/f1-strat-b.sim) (Branching) Championed Static Structural Exploration**:
    - <u>Strategy B achieved the highest average velocity among Strategies A–D</u> ($v_{mean} = 0.006325, v_{max} = 0.016070$), closely tracking **Equal Weights**.
    - *It shows a rapid increase in average fitness, observed during generations 100-150.*
-   - Promoting branch forks and joint separators (`smJunct: 1.5`, `smComma: 1.5`) alongside balanced neural mutation rates ($1.0$) reliably provides populations with stable, multi-point ground contact early in evolution.
+   - Promoting branch forks and joint separators (_31.6%_ in total) alongside balanced neural mutation rates reliably provides populations with stable, multi-point ground contact early in evolution.
 
 3. **Comparison with [Equal Weights](./sims/f1-equal-probs.sim)**:
    - **Equal Weights** achieves the highest overall median ($0.006500$) and peak velocity ($0.019564$), benefiting from balanced structural and neural exploration. Across almost all the 400 generations this strategy retains the best average velocity.
    - *It demonstrates the highest increase in average fitness during the first 50 generations.*
 
-4. **[Strategy C](./sims/f1-strat-c.sim)** behaves similar to [**High Neural**](./sims/f1-probs01.sim)- both demonstrate underperforming (though with different orders of variance):
+4. **[Strategy C](./sims/f1-strat-c.sim) (Neural Tuning)** behaves similar to [**High Neural**](./sims/f1-probs01.sim)- both demonstrate underperforming (though with different orders of variance):
    - Heavily suppressing morphological mutations ($<23\%$) caused noticeable stagnation.
    - This suggests that neural networks cannot compensate for a mechanically flawed or unarticulated body chassis: controllers require mechanical degrees of freedom to produce propulsion.
 
-5. **[Strategy D](./sims/f1-strat-d.sim)** behaves similar to [**Weaker Neural**](./sims/f1-probs10.sim) - both demonstrate similar performance trajectories with some noticeable gap during the course of evolution, which is closes at the end, showing similar final results in terms of median and variance. The latter performs better during the main part of the evolution, however the former shows accelerated improvement after 100th generation.
+5. **[Strategy D](./sims/f1-strat-d.sim) (Morphology)** behaves similar to [**Weaker Neural**](./sims/f1-probs10.sim) - both demonstrate similar performance trajectories with some noticeable gap during the course of evolution, which closes at the end, showing similar final results in terms of median and variance. The latter performs better during the main part of the evolution, however the former shows accelerated improvement after 100th generation.
 
    - It achieved high median velocity ($v^D_{median} = 0.005484$), demonstrating that balancing joint insertion with synaptic tuning yields consistent locomotion, though without the exploratory breakthroughs of **Strategy B**.
 
@@ -614,7 +614,7 @@ _where_ $\vec{w}(t)$ _is the vector of mutation weights at generation_ $t$, $\ve
 
 In biological morphogenesis, organisms undergo distinct developmental phases: embryonic body plan formation precedes neuromuscular differentiation and fine motor tuning. In evolutionary robotics, applying a uniform operator distribution throughout all 400 generations forces an artificial compromise. Scheduled schemes resolve this by decomposing the search into stages that mimic biological development:
 1. **Initial Bootstrapping (Generations $0-100$)**: Unconstrained morphological exploration (**Equal Weights**, showing the best performance among constant regimes — *see [*Figures 4, 5*](#comparative-results)*) discovers viable multi-jointed body plans and limb branching.
-2. **Intermediate Articulation & Neuromuscular Scaffolding (Generations $100-200$)**: Biomechanical specialization (Strategy B for limbs, Strategy D for joints) allocates degrees of freedom and sensor-effector loops.
+2. **Intermediate Articulation & Neuromuscular Scaffolding (Generations $100-200$)**: Biomechanical specialization (Strategy B for limbs, Strategy D for articulated joints) allocates degrees of freedom and sensor-effector loops.
 3. **Late-Stage Convergence & Parametric Polish (Generations $200-400$)**: Suppressing structural perturbations while prioritizing Strategy A or neural tuning allows continuous metric refinement of limb lengths, muscle angles, and synaptic weights without destructive morphological mutations.
 
 
@@ -732,9 +732,9 @@ To address the disruptive operator shocks observed in the multi-stage schedules 
      - 200: mid freeze timing
      - 300: late freeze timing
 
-- **Scheme 9: Articulated Gait (Limb Branching $\to$ Neuromuscular Tuning)**:
+- **Scheme 9: Articulated Gait (Branching $\to$ Fine-Tuning)**:
    ${\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{200 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}}$
-   - *Rationale*: Leverages Strategy B's branching and segmentation operators (`f1-strat-b.sim`) to synthesize multi-jointed articulated limbs, followed by 200 generations of Strategy A (`f1-strat-a.sim`) to coordinate joint angles and muscle actuation phases.
+   - *Rationale*: Leverages Strategy B's branching and segmentation operators (`f1-strat-b.sim`) to synthesize multi-jointed articulated limbs, followed by 200 generations of Strategy A Fine-Tuning (`f1-strat-a.sim`) to coordinate joint angles and muscle actuation phases.
 
 #### [Experimental Results](results/hof_results_exp4)
 
@@ -804,13 +804,13 @@ Under the unified global numbering system, Experiment 5 evaluates four staged ev
 
 - **Scheme 11: Continuous Articulated Development**
    ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}}$
-   - *Rationale*: Replaces rigid freezes with continuous Strategy A fine-tuning: 100 gens of unconstrained body search $\to$ 100 gens of limb branching (Strategy B) $\to$ 200 continuous generations of Strategy A biomechanical optimization (tuning part lengths, angles, and control signals without part bloat).
+   - *Rationale*: Replaces rigid freezes with continuous Strategy A fine-tuning: 100 gens of unconstrained body search $\to$ 100 gens of branching (Strategy B) $\to$ 200 continuous generations of Strategy A fine-tuning (tuning part lengths, angles, and control signals without part bloat).
 
 <a id="scheme-12"></a>
 
 - **Scheme 12: Morphogenetic Cascade (Gradual Anatomical Annealing)**
    ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#92d4f8}\text{Strategy D}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}}$
-   - *Rationale*: Tests a 4-stage biological morphogenetic progression without any freeze: global exploration $\to$ limb expansion $\to$ joint/muscle actuation focus $\to$ biomechanical fine-tuning.
+   - *Rationale*: Tests a 4-stage biological morphogenetic progression without any freeze: global exploration $\to$ branching (Strategy B) $\to$ morphology / articulated joints (Strategy D) $\to$ fine-tuning (Strategy A).
 
 #### [Experimental Results](./results/hof_results_exp5/)
 
@@ -859,7 +859,7 @@ This section synthesizes all **240 independent evolutionary runs** across **24 d
 
 The investigation tracked the full evolutionary progression:
 1. **Experiment 1 (Atomic Baselines)**: Unchanging relative operator probability profiles.
-2. **Experiment 2 (Targeted Biomechanical Strategies)**: Specialization toward limb branching, joint allocation, and parameter tuning.
+2. **Experiment 2 (Targeted Biomechanical Strategies)**: Specialization toward branching, morphology, neural tuning, and fine-tuning.
 3. **Experiment 3 (Scheduled Multi-Stage Switching)**: Dynamic transitions across development.
 4. **Experiment 4 (Exploration Timing & Scaffolding)**: Isolating the critical 100-generation morphological plasticity window.
 5. **Experiment 5 (Refined Developmental Cascades)**: Unbroken morphogenetic progressions bypassing the rigid morphological freeze trap.
@@ -909,9 +909,9 @@ _Figure 20: Comprehensive Hall-of-Fame final velocity and run duration distribut
 <a id="grand-cross-experimental-insights--key-conclusions"></a><a id="key-findings-from-stationary--staged-exploration-experiments-1-5"></a>
 ### Key Findings from Stationary & Staged Exploration (Experiments 1–5)
 
-1. **Benchmark Champion**: [Scheme 8-100](#scheme-8-100-200-300) ($v_{mean} = 0.008272$) proved that a 100-generation unconstrained bootstrap followed by 300 generations of continuous [Strategy A](#f1-strategy-a) metric tuning achieves the best trade-off between structural exploration and fine-tuning.
+1. **Benchmark Champion**: [Scheme 8-100](#scheme-8-100-200-300) ($v_{mean} = 0.008272$) proved that a 100-generation unconstrained bootstrap followed by 300 generations of continuous [Strategy A (Fine-Tuning)](#f1-strategy-a) metric tuning achieves the best trade-off between structural exploration and fine-tuning.
 2. **100-Generation Plasticity Window**: Initial [Equal Weights](#f1-equal-probs) during generations 0–100 was decisive across all top-4 strategies. Delaying transitions to generation 200 or 300 caused performance to collapse by over $50\%$, while unbootstrapped scaffolding halved final velocity.
-3. <a id="the-morphological-freeze-trap"></a>**The Morphological Freeze Trap**: Completely eliminating morphological mutations ([High Neural](#f1-probs01)) arrests topological adaptation; maintaining metric mutations via [Strategy A](#f1-strategy-a) prevents this trap.
+3. <a id="the-morphological-freeze-trap"></a>**The Morphological Freeze Trap**: Completely eliminating morphological mutations ([High Neural](#f1-probs01)) arrests topological adaptation; maintaining metric mutations via [Strategy A (Fine-Tuning)](#f1-strategy-a) prevents this trap.
 4. **Developmental Cascades vs. Rapid Switching**: Smooth multi-stage transitions ([Scheme 12](#scheme-12)) avoided the operator disruption shocks observed in 50-generation switching schemes.
 5. **Robust Baselines**: [Equal Weights](#f1-equal-probs) achieved the highest median ($0.006500$), while [Scheme 10](#scheme-10-11-12) delivered the strongest worst-case lower bound ($v_{min} = 0.001578$).
 6. **Rectilinear Locomotion Bias**: All top strategies evolved unilateral jumping or pushing mechanics to maximize forward displacement, as analyzed in [Fitness Landscape Bias](#fitness-landscape-bias-why-rectilinear-rewards-favor-simple-one-legged-evolution).
@@ -1040,7 +1040,7 @@ This architectural phenomenon exposes a fundamental inefficiency in the standard
 - When `f1_nmNeu` triggers, it inserts a raw sensor (`[G]`, `[S]`, `[T]`) with **zero connections**. Because the node produces no torque on muscles, the mutant has identical locomotion velocity to its parent. The evaluation budget spent generating that offspring is wasted in the short term.
 - For that node to ever become functional, a second, rare mutation (`f1_nmConn`) must later hit that exact locus to wire it into the motor circuit. If this second event never occurs, the node remains dead weight.
 - **Why Strategy C Collapsed vs. Scheme 8-100 Succeeded**:
-  - In **Strategy C (Neural Overdrive)**, $20\%$ of all mutations were allocated to `f1_nmNeu` and $20\%$ to `f1_nmConn`. The algorithm continuously burned its evaluation budget creating isolated sensors that were never connected, starving mechanical body evolution ($<20\%$) and resulting in the worst performance across all 24 configurations ($v_{mean} = 0.002754$).
+  - In **Strategy C (Neural Tuning)**, $20\%$ of all mutations were allocated to `f1_nmNeu` and $20\%$ to `f1_nmConn`. The algorithm continuously burned its evaluation budget creating isolated sensors that were never connected, starving mechanical body evolution ($<20\%$) and resulting in the worst performance across all 24 configurations ($v_{mean} = 0.002754$).
   - In contrast, **Scheme 8-100** allowed neural exploration during generations $0\text{--}100$, then switched to **Strategy A**, slashing `f1_nmNeu` to just **$3.1\%$**. By cutting off the generation of useless disconnected neurons, almost $100\%$ of the remaining 300 generations of mutation budget was channeled into joint modifiers (`23.1\%`) and synaptic weights (`30.8\%`), yielding the #1 overall champion.
 
 
@@ -1099,9 +1099,9 @@ We evaluated three scheduled developmental timelines testing the balance between
    - *Rationale*: Extends the co-growth and synaptogenesis phase to 150 generations to ensure more complex multi-joint sensory circuits are fully wired before topological stability is enforced.
 
 3. **Scheme 6C (Triphasic Morphogenetic Cascade)**:
-   $$\text{Co-Dev Bootstrap}^{100} \to \text{Strategy B (Limb Branching)}^{100} \to \text{Continuous Exploitation}^{200}$$
+   $$\text{Co-Dev Bootstrap}^{100} \to \text{Strategy B (Branching)}^{100} \to \text{Continuous Exploitation}^{200}$$
    Schedule: `0:$SIMS/f1-codev-phase1.sim;100:$SIMS/f1-strat-b.sim;200:$SIMS/f1-continuous-exploit.sim`
-   - *Rationale*: Combines co-developmental bootstrapping ($0\text{--}100$), dedicated limb articulation via Strategy B ($100\text{--}200$), and continuous exploitation for the second half of evolution ($200\text{--}400$).
+   - *Rationale*: Combines co-developmental bootstrapping ($0\text{--}100$), dedicated limb branching via Strategy B ($100\text{--}200$), and continuous exploitation for the second half of evolution ($200\text{--}400$).
 
 All schemes were evaluated over 400 generations across **30 CPU workers** using [standard setup](#simulation-constraints-parameters).
 
@@ -1338,7 +1338,7 @@ By analyzing the generational trajectories of Experiment 7 alongside Experiments
 Synthesizing all 330 independent evolutionary runs across Experiments 1 through 7 establishes six overarching scientific principles governing evolutionary design in the $f_1$ representation:
 
 1. [**The 100-Generation Window of Morphological Plasticity**](#key-findings-from-stationary--staged-exploration-experiments-1-5): Unconstrained topological exploration ([Equal Weights](#f1-equal-probs)) must occur during the first ~100 generations before developmental canalization locks the body chassis. Delaying transitions to generation 200–300 cut performance by over $50\%$.
-2. [**The Morphological Freeze Trap & Multi-Stage Cascades**](#the-morphological-freeze-trap): Completely freezing morphological mutations arrests adaptation if topologies are slightly suboptimal. Smooth developmental cascades ([Scheme 12](#scheme-12)) interleaving limb branching ([Strategy B](#f1-strategy-b)), joint growth ([Strategy D](#f1-strategy-d)), and continuous parameter scaling ([Strategy A](#f1-strategy-a)) consistently outperform rigid two-stage freezes.
+2. [**The Morphological Freeze Trap & Multi-Stage Cascades**](#the-morphological-freeze-trap): Completely freezing morphological mutations arrests adaptation if topologies are slightly suboptimal. Smooth developmental cascades ([Scheme 12](#scheme-12)) interleaving branching ([Strategy B](#f1-strategy-b)), morphology/joints ([Strategy D](#f1-strategy-d)), and continuous fine-tuning ([Strategy A](#f1-strategy-a)) consistently outperform rigid two-stage freezes.
 3. [**The Synaptogenesis & Synaptic Tuning Bottleneck**](#key-findings--evolutionary-insights-from-experiment-6): Decoupled operators in standard $f_1$ create unconnected neutral nodes. Elevating the synaptogenesis ratio ([Experiment 6](#experiment-6-co-developmental-synaptogenesis--continuous-biomechanical-exploitation)) and dedicating late-stage phases to synaptic weights ([Experiment 7](#experiment-7-scaled-champions--reflex-cascades-across-1000-generations)) resolves this operator mismatch and unlocks peak velocities.
 4. [**Sufficiency of the Generational Horizon ($G \approx 400$)**](#exp7-hypothesis-horizon): Search plateaus by generation 400 across all schemes; extending evolution to $G = 1000$ yields marginal gains ($<5\%$) while increasing computational runtime by $2.5\times$.
 5. [**Population Size ($N_{\text{pop}} = 100$) as Critical Genetic Buffer**](#exp7-hypothesis-popsize): Scaling population from 50 to 100 was the decisive factor, lifting average velocity from $0.0082$ to over $0.0104$ and unlocking an all-time peak velocity of $0.038990$ by sheltering parallel morphological lineages.

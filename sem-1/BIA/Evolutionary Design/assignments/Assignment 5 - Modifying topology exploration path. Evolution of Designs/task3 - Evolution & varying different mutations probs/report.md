@@ -1,139 +1,13 @@
+---
+puppeteer:
+  timeout: 3000
+---
+
 # Evolutionary Design #3: Modifying Topology Exploration Path
 
-This assignment explores the space of possible designs - both structural and neural - by manipulating mutation types, operator probabilities, and fitness landscape definitions.
-
-The optimization objective in all tasks is to maximize the creature's `velocity`.
-
-## Setup
-
-Earlier tasks used only passive structures, now [active elements](https://www.framsticks.com/muscles_and_receptors) are introduced:
-
-- **Active sensors**:
-    - **G - gyroscope** - returns signed relative difference of a vertical position of a stick's parts ($[-1, 1]$)
-    - **T - touch** - returns relative depth of a sensor touching the ground ($(-1, 1]$)
-    - **S - smell** - returns normalized aggregate value related to the amount of energy-to-squared-distance in the vicinity ($[0, 1]$)
-- **Effectors**:
-    - **@ - rotating muscle** - rotates connected part around the other joint's part's axis.
-    - **| - bending muscle** - changes the angle between two joint's parts.
-- **Generators**:
-    - $\sin$ - sine wave generator neuron
-    -  $*$ - constant $1$ generator neuron
-- **Neurons with parameters**
-
-## Task 1: Changing Neighbourhood Shape
-
-This experiment investigates how enlarging the mutation neighborhood definition influences evolutionary performance on locomotion velocity (following [Framsticks Tutorial II.1](http://www.framsticks.com/common/tutorial/index.html)).
-
-<p align="center">
-  <img src="./task1%20-%20Neighbourhood%20shape%20and%20operators/image.png" width="55%" alt="Neighborhood shape and operators" />
-</p>
-
-### Velocity Across Different Neighborhood [Configurations](./task1%20-%20Neighbourhood%20shape%20and%20operators/)
-
-| Configuration | Mutation Neighborhood Definition | Number of simulations (until convergence) | Velocity ($v$) |
-| :--- | :--- | :---: | :--- |
-| Original Baseline, starting genotype (`X[*][Sin]...`) | - | - | $0.001849$ |
-|  Manual adjustment of two parameters | (one  $\sin$ neuron property) $\times$ (one $*$ neuron property) | - | $0.003163$ |
-| **Neural weights and properties**, $\text{NW}$ | Mutating only neural weights and properties | 2k–3k | $0.005015$ |
-| **Stick length**, $\text{L}$ | Neural weights/props $\times$ stick length modifiers (`L`/`l`) | 2k | $0.004677$ |
-| **Neural topology and weights/properties**, $\text{N} := \text{NT} \times \text{NW} $ | Neural weights/props $\times$ add/remove neurons/sensors/effectors (no stick length) | 2k | $0.007255$ |
-| **Combined Full**, $\text{N} \times \text{L} $ | Stick length modifiers $\times$ add/remove neurons, sensors, effectors | 10k | **$0.011536$** |
-
-### Conclusions
-
-1. The **combined neighborhood** - allowing simultaneous stick length modifications and neural topological mutations - **achieved the largest velocity increase** ($\Delta v \approx +0.00969$ over the original creature on the screenshot).
-   - Structural stick scaling and neural topology exploration are complementary rather than antagonistic. Enlarging neural topology provides new oscillators and sensory feedback loops, while stick length adjustments mechanically tune lever-arm proportions and ground clearance to effectively translate muscle actuation into propulsion. Restricting evolution to isolated neighbourhood subspaces ($\text{NW, NT, L}$) caused premature stagnation after ~2k evaluations.
-
-2. **Morphological Shape vs. Control Network Changes**:
-   - The **macro-morphology** (body topology) was not altered drastically; evolution selectively adjusted stick lengths via `L` (lengthen) and `l` (shorten) modifiers to tune stride mechanics.
-   - In contrast, the **control network topology was substantially restructured** - novel neurons, sensory inputs, and synaptic links were integrated to govern rhythmic muscle actuation.
-
-
-<a id="simulation-settings-lifespan"></a><a id="simulation-environment--lifespan"></a>
-## Simulation Settings & Lifespan 
-Across all the following experiments, fitness evaluations utilize the deterministic benchmark `eval-allcriteria.sim;deterministic.sim`  (deterministic evaluation, active neural networks and physics):
-- In Framsticks, **Lifespan** is governed by energy depletion. Initial energy is proportional to body size: $E_0 = \text{Energy0} \times n$ (with $\text{Energy0} = 10\,000.0$, $n = \text{number of joints/sticks}$). Each step consumes an idle metabolic cost of $e\_\text{meta} \times n$ energy (with $e\_\text{meta} = 1.0$):
-
-
-<div align="center" style="font-size: 110%;">
-
-  $\displaystyle\text{{lifespan}} = \frac{\text{{Energy0}} \times n}{e\_\text{{meta}} \times n} = \frac{10\,000.0}{1.0} = 10\,000 \text{{ simulation steps}}$
-
-</div>
-
-- **Performance Sampling (`perfperiod`)** determines how often positions are sampled to calculate `velocity`:
-    - In [Task 2](#task-2-varying-landscape-definition-height), `perfperiod` is varied across values up to $10\,000$ ($\text{lifespan}$). 
-    - In [Task 3](#task-3), `sample-period-longest.sim` (`perfperiod` $=999999 \gg \text{lifespan}$) samples strictly at birth and death to evaluate net rectilinear displacement speed.
-
-## [Task 2: Varying Landscape Definition (Height)](./task2%20-%20Varying%20landscape%20definition/README.md)
-
-In Framstics, the definition of `velocity` relies on the average distance traveled by a creature during its lifespan, thus it is a scalar value. By [changing performance sampling frequency](https://www.framsticks.com/a/al_params.html#exper-perfcalc) ( `perfperiod` ) from 1 to `lifespan`, one changes the definition of the fitness landscape.
-
-
-### Analysis
-
-1. **Continuous Limit**:
-   - As sampling interval $\Delta t \to 0$, discrete trajectory curve chord lengths converge to the line integral of instantaneous speed over lifespan $T$:
-
-   <div align="center" style="font-size: 110%;">
-
-     $\displaystyle\lim_{\Delta t \to 0}  \frac{1}{T} \sum_{k} \lVert \mathbf{x}(t_{k+1}) - \mathbf{x}(t_k) \rVert = \frac{1}{T} \int_0^T \lVert \dot{\mathbf{x}}(t) \rVert \mathrm{d}t$
-
-    </div>
-
-   - The numerator represents total **arc length (path taken)**. Setting `perfperiod = 1` in discretisized Framsticks time is equivalent to evaluating the average scalar speed.
-
-2. **Monotonic Surface Degradation & Denoising**:
-   - By the triangle inequality, sampling less frequently cuts across curved trajectories and omits high-frequency vibrations. Measured **velocity monotonically drops as `perfperiod` increases**, systematically lowering the landscape height.
-   - At small `perfperiod`, absolute physical contact noise is accumulated across all $10\,000$ simulation steps, producing a rugged, noisy landscape. **Increasing `perfperiod` acts as a low-pass filter**, removing accumulated high-frequency fluctuations and smoothing the global fitness surface.
-
-3. **Common Points Between Landscapes**:
-   - Fitness values across different `perfperiod` definitions coincide **if and only if** a creature moves along a straight line at constant speed ($\dot{\mathbf{x}}(t) \approx {\text{const}}$), such that total path arc length equals net displacement: 
-
-    <div align="center" style="font-size: 110%;">
-
-      $\displaystyle\int_0^T \lVert \dot{\mathbf{x}}(t) \rVert \mathrm{d}t \approx \lVert \mathbf{x}(T) - \mathbf{x}(0) \rVert$
-    </div>
-
-   - Highly directional creatures like **Fast Lizard** and **Basic Quadruped** retain virtually unchanged velocities across all sampling periods, forming invariant fixed points between landscapes. In contrast, creatures that twist or veer (e.g., **Speedy**) show dramatic fitness decay.
-
-4. **Navigability**:
-   - **Noisy landscapes ($\text{perfperiod} \to 1$)** are difficult to navigate because additive physical noise pollutes the fitness signal, causing similar genotypes to differ randomly and rewarding stationary wobblers.
-   - **Overly denoised landscapes ($\text{perfperiod} \to T$)** aggregate the whole lifespan into a single boundary chord $\lVert\mathbf{x}(T) - \mathbf{x}(0)\rVert T^{-1}$, completely masking intermediate accelerations. Fast circular or undulating gaits yield near-zero net displacement, producing flat, uninformative plateaus.
-   - **Optimal balance** - intermediate sampling ($\text{perfperiod} \approx 50...100$) filters contact jitter while retaining sufficient gradient information to guide early locomotion evolution.
-
-### Empirical verification
-
-<p align="center">
-  <img src="./task2%20-%20Varying%20landscape%20definition/velocity_vs_perfperiod.png" width="75%" alt="Velocity vs. Perfperiod" />
-  <br>
-  <em><b>Figure 2:</b> Measured velocity for each of the 28 walking genotypes across 13 different <code>perfperiod</code> values. Straight-line movers maintained flat curves, whereas turning or wriggling creatures experienced steep velocity drops as <code>perfperiod</code> increased.</em>
-</p>
-
-#### Config
-28 walking creatures with diverse locomotion kinematics taken from [`walking.gen`](../../Framsticks55/data/walking.gen) were evaluated in batch mode using FramsticksLib with [standard settings](#simulation-settings-lifespan).
-
-* **Sampling Periods Tested**:
-  $$\text{perfperiod} \in \left\lbrace 1, 2, \dots, 100, \dots, 10\,000 \right\rbrace$$
-  where:
-  - $\text{perfperiod} = 1$ - maximum continuous sampling (every single simulation step).
-  - $\text{perfperiod} = 100$ - default Framsticks sampling period.
-  - $\text{perfperiod} = 10\,000$: Sampling only at birth and death ($T = \text{lifespan}$), representing [**net rectilinear displacement speed**](#task-3).
-
-#### Running
-``` bash
-python "assignments\Assignment 5 - Modifying topology exploration path. Evolution of Designs\task2 - Varying landscape definition\run_task2.py" `
-    --num-creatures 28 `
-    --perfperiods 1 2 5 10 25 50 100 250 500 1000 2000 5000 10000 `
-    --outdir "."
-```
-
-
-
-
-
 <a id="task-3"></a><a id="task-3-varying-different-mutations-probs-nonstationary-categorical-distribution-over-mutation"></a>
-## [Task 3: Varying Different Mutations Probs. Non‑stationary categorical distribution over mutation ](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md) 
+
+## [Task 3: Varying Different Mutations Probs. Non‑stationary categorical distribution over mutation ](./README.md) 
 
 The objective of experiments in this task is to optimize **net rectilinear displacement speed**: 
 <div align="center" style="font-size: 110%;">
@@ -141,12 +15,12 @@ The objective of experiments in this task is to optimize **net rectilinear displ
    $\displaystyle v = \frac{\lVert \mathbf{x}(T) - \mathbf{x}(0) \rVert}{T}$
 </div>
 
-by varying the relative probabilities (weights,[ `.sim`](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims)) of applying different mutation operators, forming different distributions over these operators, and thus representing different mutation strategies. In this task, we analyze how these strategies influence the evolutionary dynamics and the performance of the evolved solutions for locomotion velocity.
+by varying the relative probabilities (weights,[ `.sim`](./sims)) of applying different mutation operators, forming different distributions over these operators, and thus representing different mutation strategies. 
 
 <a id="task3-setup"></a>
 
 ### Setup
-- **[Simulation Environment](#simulation-settings-lifespan):** `eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim;` + varying `*.sim` files from [`sims`](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims) directory.
+- **[Simulation Environment](#simulation-settings-lifespan):** `eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim;` + varying `*.sim` files from [`sims`](./sims) directory.
 - **Morphological & Neural Limits**:
   - Max parts: `15`
   - Max joints: `30`
@@ -162,9 +36,9 @@ by varying the relative probabilities (weights,[ `.sim`](./task3%20-%20Evolution
   - Replications per setting: `10` independent runs with distinct random seeds
 
 
+<div style="break-after: page;"></div>
 ### Mutation Mechanics & Operators
-
-In $f_1$ representation, a creature is subject to a mutation with probability `pmut` = 0.9 (by default). Each probability is drawn from a categorical distribution over mutation operators.
+Each probability is drawn from a categorical distribution over mutation operators.
 **Morphology mutation operators** concern physical structure parts in genotypes. 
 **Neuron net mutation operators** concern neuron net parts in genotypes. 
 
@@ -180,10 +54,13 @@ $$
 #### Batch 1 (Tested in Experiment 1 and 2)
 ##### Settings and Rationale
 Four baseline configurations were evaluated to investigate global trade-offs between physical body exploration and neural controller optimization:
-   1. **[Baseline](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-all-crit.sim)** emphasizes synaptic weight tuning (`f1_nmWei = 1.0`, _67.1%_) alongside modest modifier adjustments, prioritizing the calibration of muscle activation phases and sensory feedback loops over drastic body reorganization (morphology total: _12.8%_).
-   2. **[High Neural](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs01.sim)** doubles neural operator weights (brain total: _93.2%_), heavily suppressing structural modifications to test pure controller optimization on an initial body plan.
-   3. **[Weaker Neural](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs10.sim)** doubles morphological operator weights relative to neural operators (body total: _22.6%_), encouraging wider body geometry exploration at the expense of slower neural adaptation.
-   4. **[Equal Weights](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-equal-probs.sim)** assigns equal uniform weight (_11.1%_ each) across all 9 operators, establishing a balanced 4-to-5 ratio between morphology (_44.4%_) and brain (_55.5%_).
+   1. **[Baseline](./sims/f1-all-crit.sim)** emphasizes synaptic weight tuning (`f1_nmWei = 1.0`, _67.1%_) alongside modest modifier adjustments, prioritizing the calibration of muscle activation phases and sensory feedback loops over drastic body reorganization (morphology total: _12.8%_).
+   2. **[High Neural](./sims/f1-probs01.sim)** doubles neural operator weights (brain total: _93.2%_), heavily suppressing structural modifications to test pure controller optimization on an initial body plan.
+   3. **[Weaker Neural](./sims/f1-probs10.sim)** doubles morphological operator weights relative to neural operators (body total: _22.6%_), encouraging wider body geometry exploration at the expense of slower neural adaptation.
+   4. **[Equal Weights](./sims/f1-equal-probs.sim)** assigns equal uniform weight (_11.1%_ each) across all 9 operators, establishing a balanced 4-to-5 ratio between morphology (_44.4%_) and brain (_55.5%_).
+
+
+<div style="break-after: page;"></div>
 
 The following table summarizes the weight settings for each operator in each configuration:
    
@@ -193,10 +70,10 @@ The following table summarizes the weight settings for each operator in each con
        <tr>
          <th rowspan="2">Operator</th>
          <th rowspan="2">Description</th>
-         <th colspan="2"><a href="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-all-crit.sim"><b>Baseline</b></a></th>
-         <th colspan="2"><a href="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs01.sim"><b>High Neural</b></a></th>
-         <th colspan="2"><a href="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs10.sim"><b>Weaker Neural</b></a></th>
-         <th colspan="2"><a href="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-equal-probs.sim"><b>Equal Weights</b></a></th>
+         <th colspan="2"><a href="./sims/f1-all-crit.sim"><b>Baseline</b></a></th>
+         <th colspan="2"><a href="./sims/f1-probs01.sim"><b>High Neural</b></a></th>
+         <th colspan="2"><a href="./sims/f1-probs10.sim"><b>Weaker Neural</b></a></th>
+         <th colspan="2"><a href="./sims/f1-equal-probs.sim"><b>Equal Weights</b></a></th>
        </tr>
        <tr>
          <th>w<sub>i</sub></th>
@@ -361,8 +238,11 @@ The following table summarizes the weight settings for each operator in each con
    </table>
 </div>
 
+
+<div style="break-after: page;"></div>
+
 ##### Key findings in Batch 1
-- **[Equal Operator Weights](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-equal-probs.sim)** achieved roughly double the median velocity of the baseline, maintaining the highest performance trajectory across almost the entire run ([Figure 3](#comparative-results-experiment-2)) and decisively outperforming the three asymmetric configurations.
+- **[Equal Operator Weights](./sims/f1-equal-probs.sim)** achieved roughly double the median velocity of the baseline, maintaining the highest performance trajectory across almost the entire run ([Figure 3](#comparative-results-experiment-2)) and decisively outperforming the three asymmetric configurations.
 - In $f_1$, **equal weights** establish a balanced 4-to-5 ratio between morphological and neural mutations. This maintains continuous structural innovation while ensuring sufficient synaptic weight mutations (_11.1%_) to coordinate emerging limbs without premature gait destabilization.
 
 #### Batch 2 (Experiment 2)
@@ -371,10 +251,13 @@ To move beyond blunt global morphology-vs-brain ratios, **four tuned operator pr
 
 
 ##### Settings & Rationales
-1. **[Strategy A (Fine-Tuning)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-a.sim)** heavily suppresses catastrophic structural additions/deletions (`smX`, `smJunct`, `nmNeu` at 0.2) while prioritizing continuous physical and neural scaling (`smModif: 1.5`, `nmWei: 2.0`) to protect mature gaits from dismemberment.
-2. **[Strategy B (Branching)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-b.sim)** strongly promotes structural branching (`smJunct: 1.5`, `smComma: 1.5`) alongside balanced neural operators (1.0), encouraging bilateral limbs, outriggers, and multi-jointed articulated frames.
-3. **[Strategy C (Neural Tuning)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-c.sim)** minimizes body alterations (_22.6%_ morphology share) and concentrates on neural frequency and synaptic weight coordination (_77.4%_ neural share).
-4. **[Strategy D (Morphology)](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-d.sim)** provides a uniform morphology exploration distribution, allocating ~16% to macro-topology jumps, _~17%_ to limbs articulation, resulting in _33%_ of morphology operators, and _~51%_ to continuous fine-tuning of neural parameters.
+1. **[Strategy A (Fine-Tuning)](./sims/f1-strat-a.sim)** heavily suppresses catastrophic structural additions/deletions (`smX`, `smJunct`, `nmNeu` at 0.2) while prioritizing continuous physical and neural scaling (`smModif: 1.5`, `nmWei: 2.0`) to protect mature gaits from dismemberment.
+2. **[Strategy B (Branching)](./sims/f1-strat-b.sim)** strongly promotes structural branching (`smJunct: 1.5`, `smComma: 1.5`) alongside balanced neural operators (1.0), encouraging bilateral limbs, outriggers, and multi-jointed articulated frames.
+3. **[Strategy C (Neural Tuning)](./sims/f1-strat-c.sim)** minimizes body alterations (_22.6%_ morphology share) and concentrates on neural frequency and synaptic weight coordination (_77.4%_ neural share).
+4. **[Strategy D (Morphology)](./sims/f1-strat-d.sim)** provides a uniform morphology exploration distribution, allocating ~16% to macro-topology jumps, _~17%_ to limbs articulation, resulting in _33%_ of morphology operators, and _~51%_ to continuous fine-tuning of neural parameters.
+
+
+<div style="break-after: page;"></div>
 
 The table below summarises the main differences between the 4 strategies:
 
@@ -384,10 +267,10 @@ The table below summarises the main differences between the 4 strategies:
     <tr>
       <th rowspan="2">Operator</th>
       <th rowspan="2">Role in f<sub>1</sub> Phenotype</th>
-      <th colspan="2"><a href="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-a.sim"><b>Strategy A</b></a></th>
-      <th colspan="2"><a href="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-b.sim"><b>Strategy B</b></a></th>
-      <th colspan="2"><a href="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-c.sim"><b>Strategy C</b></a></th>
-      <th colspan="2"><a href="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-d.sim"><b>Strategy D</b></a></th>
+      <th colspan="2"><a href="./sims/f1-strat-a.sim"><b>Strategy A</b></a></th>
+      <th colspan="2"><a href="./sims/f1-strat-b.sim"><b>Strategy B</b></a></th>
+      <th colspan="2"><a href="./sims/f1-strat-c.sim"><b>Strategy C</b></a></th>
+      <th colspan="2"><a href="./sims/f1-strat-d.sim"><b>Strategy D</b></a></th>
     </tr>
     <tr>
       <th>w<sub>i</sub></th>
@@ -552,23 +435,27 @@ The table below summarises the main differences between the 4 strategies:
 </table>
 </div>
 
-<a id="comparative-results-experiment-2"></a>
-#### [Comparative results](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/) (Experiment 2)
 
-Each strategy was evaluated across 10 independent runs of strategies from [**Batch 1**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-26_172452/) and [**Batch 2**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-26_180136/) over 400 generations (20 CPU workers), summarised in the following figures.
+<div style="break-after: page;"></div>
+
+<a id="comparative-results-experiment-2"></a>
+
+#### [Comparative results](./results/hof_results_comparison/) (Experiment 2)
+
+Each strategy was evaluated across 10 independent runs of strategies from [**Batch 1**](./runs/2026-09-26_172452/) and [**Batch 2**](./runs/2026-09-26_180136/) over 400 generations (20 CPU workers), summarised in the following figures.
 
 
 <div align="center">
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_best_series.png" width="80%" alt="Comparative Best Series" />
+<img src="./results/hof_results_comparison/plots/logbooks_best_series.png" width="80%" alt="Comparative Best Series" />
 
 _Figure 1: Comparative best-of-generation fitness trajectories._
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/logbooks_confidence_std_1.0.png" width="80%" alt="Confidence Intervals" />
+<img src="./results/hof_results_comparison/plots/logbooks_confidence_std_1.0.png" width="80%" alt="Confidence Intervals" />
 
 _Figure 2: Mean fitness and confidence intervals._
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison/plots/boxplot_summary.png" width="80%" alt="Comparative Boxplots" />
+<img src="./results/hof_results_comparison/plots/boxplot_summary.png" width="80%" alt="Comparative Boxplots" />
 
 _Figure 3: Final Hall-of-Fame velocity and run duration distributions._
 
@@ -579,24 +466,26 @@ _Figure 3: Final Hall-of-Fame velocity and run duration distributions._
 #### Findings: Stationary Mutation Strategies (Batches 1 & 2)
 
 Comparing the varied baseline and equal weights strategies ([Batch 1](#tested-stationary-mutation-strategies-experiments-1-and-2)) and adjusted strategies ([Batch 2](#batch-2-experiment-2)) reveals how static operator allocations shape the evolutionary trajectory:
-1. **[Strategy A](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-a.sim) (Fine-Tuning) achieved the highest peak fitness in Batch 2**:
+1. **[Strategy A](./sims/f1-strat-a.sim) (Fine-Tuning) achieved the highest peak fitness in Batch 2**:
    - Strategy A produced the <u>fastest individual</u> ($v_{max} = 0.017484$) among <u>strategies A-D</u>.
    - By heavily penalizing destructive topology changes and favoring continuous phenotypic tuning (`f1_smModif: 1.5`, `f1_nmWei: 2.0`), evolution refines functional oscillatory gaits to high speeds without suffering recurrent structural collapses.
 
-2. **[Strategy B](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-b.sim) (Branching) championed static structural exploration**:
-   - Strategy B achieved the <u>highest average velocity among Strategies A–D</u> ($v_{mean} = 0.006325, v_{max} = 0.016070$), closely tracking [**Equal Weights**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-equal-probs.sim).
+2. **[Strategy B](./sims/f1-strat-b.sim) (Branching) championed static structural exploration**:
+   - Strategy B achieved the <u>highest average velocity among Strategies A–D</u> ($v_{mean} = 0.006325, v_{max} = 0.016070$), closely tracking [**Equal Weights**](./sims/f1-equal-probs.sim).
    - *It shows a rapid increase in average fitness, observed during generations 100-150.*
    - Promoting branch forks and joint separators (_31.6%_ in total) alongside balanced neural mutation rates reliably provides populations with stable, multi-point ground contact early in evolution.
 
-3. **[Strategy D](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-d.sim) (Morphology) provided robust baseline mechanics**:
+3. **[Strategy D](./sims/f1-strat-d.sim) (Morphology) provided robust baseline mechanics**:
    - **Strategy D** achieved <u>high median velocity</u> ($v_{median} = 0.005484$), demonstrating that balancing joint insertion with synaptic tuning yields consistent locomotion, though without the exploratory breakthroughs of **Strategy B**.
-   - Shows similar to [**Weaker Neural**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs10.sim) performance (in terms of mean, median and performance trajectory behaviour).
+   - Shows similar to [**Weaker Neural**](./sims/f1-probs10.sim) performance (in terms of mean, median and performance trajectory behaviour).
 
-4. **[Strategy C](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-c.sim) (Neural Tuning)** stagnates alongside [**High Neural**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs01.sim):
+<div style="break-after: page;"></div>
+
+4. **[Strategy C](./sims/f1-strat-c.sim) (Neural Tuning)** stagnates alongside [**High Neural**](./sims/f1-probs01.sim):
    - Heavily suppressing morphological mutations (_<23%_) caused noticeable stagnation.
    - This suggests that neural networks cannot compensate for a mechanically flawed or unarticulated body chassis: controllers require mechanical degrees of freedom to produce propulsion.
 
-5. **[Equal Weights](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-equal-probs.sim)**:
+5. **[Equal Weights](./sims/f1-equal-probs.sim)**:
    - **Equal Weights** achieves the highest overall median (_0.006500_) and peak velocity (_0.019564_), benefiting from balanced structural and neural exploration. Across almost all the 400 generations this strategy retains the best average velocity.
    - *It demonstrates the highest increase in average fitness during the first 50 generations.*
 
@@ -604,7 +493,7 @@ Comparing the varied baseline and equal weights strategies ([Batch 1](#tested-st
    - <u>High structural exploration</u> (**Equal Weights, Strategy B**) discovers innovative body plans early, but repeatedly destabilizes mature, functional gaits in late generations.
    - <u>Conservative fine-tuning</u> (**Strategy A, Baseline**) protects mature gaits, but cannot construct complex articulated morphologies from scratch.
 
-7. **[Best Evolved Creature](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-26_180136/gens/HoF-f1-f1-strat-a-7.gen)  in Experiment 2 - found by Strategy A**:
+7. **[Best Evolved Creature](./runs/2026-09-26_180136/gens/HoF-f1-f1-strat-a-7.gen)  in Experiment 2 - found by Strategy A**:
    - Achieved $v = 0.017484$:
      ```cpp
      //genotype: 
@@ -613,11 +502,13 @@ Comparing the varied baseline and equal weights strategies ([Batch 1](#tested-st
    - Highly articulated snake-like morphology with one muscled leg in the front. Movement is acomplished by crawling.
 
    <p align="center">
-     <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp2-best-creature.png" width="60%" alt="Experiment 2 Best Creature" />
+     <img src="./images/Exp2-best-creature.png" width="60%" alt="Experiment 2 Best Creature" />
      <br>
      <em>Figure 4: Phenotype of the fastest creature evolved in Experiment 2.</em>
    </p>
 
+
+<div style="break-after: page;"></div>
 
 ### Scheduled Mutation Schemes: Non-Stationary Developmental Exploration (Experiments 3-5)
 
@@ -641,6 +532,8 @@ In biological morphogenesis, organisms undergo distinct developmental phases: em
       - Schemes 1–2 test classic two- and three-stage scaffolding; 
       - Schemes 3–4 evaluate limb branching (Strategy B) with and without global bootstrap;
       - Schemes 5–7 evaluate multi-tier pipelines (interleaving Strategy D joint growth and Strategy A continuous scaling) to test whether fine-grained transitions mitigate operator disruption shocks.
+
+<div style="break-after: page;"></div>
 
 2. **Experiment 4: Biphasic Strategies (Schemes 1, 8, 9)** (run on 25 workers)
    - **Idea**: Evaluates cleaner, single-transition biphasic exploration schemes to mitigate operator disruption shocks (early strategy change), isolating the optimal duration of the initial morphological exploration window.
@@ -686,9 +579,10 @@ The following 16 variations of 12 schemes were tested (10 runs per each):
 
   12. ${\color{#f27282}\text{Equal weights}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#ee5c73}\text{Strategy B}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#92d4f8}\text{Strategy D}} \ \xrightarrow{\quad\text{100 gens}\quad} \ {\color{#e6b7c9}\text{Strategy A}}$ 
 
-> *Rationale, detailed numerical tables, fitness curves, confidence intervals, and per-run logbooks can be found in the [Task 3 Report: Experiment 3](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-3-multi-stage-scheduled-switching-schemes-17), [Experiment 4](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-4-two-stage-exploration-schemes) and [Experiment 5](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-5-continuous-biomechanical-development--developmental-cascades).*
 
-#### Implementation ([details](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#implementation)):
+<div style="break-after: page;"></div>
+
+#### Implementation ([details](./README.md#implementation)):
 
 Dynamic mutation scheduling is implemented through a lightweight interception pattern across two core scripts:
 - [`scripts/FramsticksEvolutionScheduled.py`](../../scripts/FramsticksEvolutionScheduled.py) extends and reuses the [standard Framsticks-DEAP evolutionary runner](../../framspy-download/FramsticksEvolution.py), introducing argument `--schedule` in the format
@@ -700,8 +594,8 @@ Dynamic mutation scheduling is implemented through a lightweight interception pa
 ### Summary of Scheduled Mutation Experiments
 
 1. **The Critical 100-Generation Exploration Window**: Unconstrained morphological exploration (Equal Weights) is essential during the initial 100 generations to discover articulated, stable body plans. Curtailing or skipping this window cripples evolutionary potential, whereas extending it beyond 100 generations delays convergence.
-2. **The Hazard of Rigid Morphological Freezes**: Completely zeroing morphological mutations (as in [**High Neural**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-probs01.sim)) traps creatures in rigid mechanical configurations where even minor joint misalignments cannot be remedied.
-3. **The Power of Continuous Fine-Tuning**: Replacing rigid freezes with continuous metric tuning ([**Strategy A (Fine-Tuning)**](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/sims/f1-strat-a.sim)) preserves developmental plasticity, reliably driving gaits to superior speeds while suppressing destructive topology mutations.
+2. **The Hazard of Rigid Morphological Freezes**: Completely zeroing morphological mutations (as in [**High Neural**](./sims/f1-probs01.sim)) traps creatures in rigid mechanical configurations where even minor joint misalignments cannot be remedied.
+3. **The Power of Continuous Fine-Tuning**: Replacing rigid freezes with continuous metric tuning ([**Strategy A (Fine-Tuning)**](./sims/f1-strat-a.sim)) preserves developmental plasticity, reliably driving gaits to superior speeds while suppressing destructive topology mutations.
 
 
 
@@ -710,19 +604,19 @@ Dynamic mutation scheduling is implemented through a lightweight interception pa
 In total, there were **24 configurations** of _mutation probabilities_ tested over **400 generations** each, with **10 independent runs** for each configuration, summarized and analyzed below.
 However, since different number of workers was used in different experiments, temporal performance is not analyzed between different experiments.
 
-#### [Comparative Analysis](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/)
+#### [Comparative Analysis](./results/hof_results_comparison_champions/)
 
 <div align="center">
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/plots/logbooks_confidence_std_1.0.png" width="80%" alt="Champions Confidence Intervals" />
+<img src="./results/hof_results_comparison_champions/plots/logbooks_confidence_std_1.0.png" width="80%" alt="Champions Confidence Intervals" />
 
 _Figure 5: Mean best fitness and confidence intervals over 400 generations for all experiment champions. Experiment 4 Scheme 8-100 and Experiment 5 Scheme 12 demonstrate the steepest sustained fitness ascent._
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_exp1_5/plots/boxplot_summary.png" width="85%" alt="Global Boxplot Across All 24 Configurations" />
+<img src="./results/hof_results_comparison_exp1_5/plots/boxplot_summary.png" width="85%" alt="Global Boxplot Across All 24 Configurations" />
 
-_Figure 6: Comprehensive Hall-of-Fame final velocity and run duration distributions across all 24 configurations tested in Experiments 1–5 (240 total runs over 400 generations). Note the natural ordering by experiment [run folders](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/) and numerical [scheme indices](#schemes-tested-in-experiments-3-5)._
+_Figure 6: Comprehensive Hall-of-Fame final velocity and run duration distributions across all 24 configurations tested in Experiments 1–5 (240 total runs over 400 generations). Note the natural ordering by experiment [run folders](./runs/) and numerical [scheme indices](#schemes-tested-in-experiments-3-5)._
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_comparison_champions/plots/boxplot_summary.png" width="80%" alt="Champions Boxplot Summary" />
+<img src="./results/hof_results_comparison_champions/plots/boxplot_summary.png" />
 
 _Figure 7: Hall-of-Fame velocity and duration distributions for the selected top-performing strategies (Experiments 1–5)._
 
@@ -739,13 +633,20 @@ _Figure 7: Hall-of-Fame velocity and duration distributions for the selected top
 | 4 | **1** | **Equal Weights** | 0.007167 | **0.006500** | **0.005391** | 0.000574 | 0.019564 | $758.5\text{ s}$ |
 
 
+
+
+<div style="break-after: page;"></div>
+
 <a id="best-creatures"></a>
+
 ### Best Evolved Creature Genomes
 
-#### 1. Best overall result - [Experiment 3 Scheme 3](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_175220/gens/HoF-f1-scheme-3-3.gen)
+#### 1. Best overall result - [Experiment 3 Scheme 3](./runs/2026-09-27_175220/gens/HoF-f1-scheme-3-3.gen)
 - **genotype**:
   ```cpp
-  qMLL(X[N, 12:12.399, 9:-1.407, 9:6.412, 12:4.867, fo:0.887,4:3.922][|, 8:1, r:0.929], (X[Gpart, ry:2.129]X[S]m((X[S][Gpart][Gpart]X[N, -4:-0.547, -1:1, -3:-1.7,3:11.708][|, -3:1, r:1][N, 0:0.987, -3:1.684, -4:-0.029, -4:1.827, fo:1, -6:12.219, -2:2.178, -6:3.295], , X[S][@, -9:1][Gpart]))))
+  qMLL(X[N, 12:12.399, 9:-1.407, 9:6.412, 12:4.867, fo:0.887,4:3.922][|, 8:1, r:0.929], (X[Gpart, ry:2.129]
+  X[S]m((X[S][Gpart][Gpart]X[N, -4:-0.547, -1:1, -3:-1.7,3:11.708][|, -3:1, r:1]
+  [N, 0:0.987, -3:1.684, -4:-0.029, -4:1.827, fo:1, -6:12.219, -2:2.178, -6:3.295], ,X[S][@, -9:1][Gpart]))))
   ```
 - **Velocity**: $0.023459$
 - **Morphology, Neural Architecture & Dynamics**:
@@ -753,27 +654,28 @@ _Figure 7: Hall-of-Fame velocity and duration distributions for the selected top
   - <u>Movement</u> is executed by **jumping rhythmically** (sinusoidal activation plots on _Figure 8b_) on the rightmost leg and forcefully pushing heavy 3-part torso forward along the trajectory. Torso serves as a stabilisation mass and prevents turning upside-down. Gyroscopes located at the center of torso thus read reliable data regarding stability of the creature, generating a movement by bending muscle at the moment static position of the torso is achieved.
 
 <p align="center">
-  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature.png" width="65%" alt="Champion Phenotype and Neural Structure" />
+  <img src="./images/Final-best-creature.png" width="65%" alt="Champion Phenotype and Neural Structure" />
   <br>
   <em>Figure 8a: Phenotype and neural structure of the overall champion</em>
 </p>
 
 <p align="center">
-  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Final-best-creature-inspection.png" width="85%" alt="Champion Locomotion Inspection" />
+  <img src="./images/Final-best-creature-inspection.png" width="85%" alt="Champion Locomotion Inspection" />
   <br>
   <em>Figure 8b: Inspection of functioning of the best creature. The left side depicts the moment of jumping and lifting from the ground.</em>
 </p>
 
 
-#### 2. Mean Velocity Champion - [Experiment 4 Scheme 8-100](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen)
+#### 2. Mean Velocity Champion - [Experiment 4 Scheme 8-100](./runs/2026-09-27_193443/gens/HoF-f1-scheme-8-100-2.gen)
 - **Genotype**:
   ```cpp
-  QMmQCX[S][S][*][G]X[T][Gpart,ry:-0.088,rz:0][S][Gpart][N, -1:-1.725, -4:2.469, -7:-3.609, -5:-0.702, 0:3.422,-2:1.862,in:0,0:0.885,-7:-0.332][S]FLLLX[T]rX[S][@, -6:1.078][|, -10:3.096, p:0.414,r:0.93]
+  QMmQCX[S][S][*][G]X[T][Gpart,ry:-0.088,rz:0][S][Gpart][N, -1:-1.725, -4:2.469, -7:-3.609, -5:-0.702, 
+    0:3.422,-2:1.862,in:0,0:0.885,-7:-0.332][S]FLLLX[T]rX[S][@, -6:1.078][|, -10:3.096, p:0.414,r:0.93]
   ```
 - **Velocity**: $0.022688$
 
 <p align="center">
-  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp4-best-creature-inspection.png" width="85%" alt="Experiment 4 Best Creature Inspection" />
+  <img src="./images/Exp4-best-creature-inspection.png" width="85%" alt="Experiment 4 Best Creature Inspection" />
   <br>
   <em>Figure 9: Inspection of functioning of the experiment 4 champion. Compare to Figure 8.</em>
 </p>
@@ -784,15 +686,16 @@ _Figure 7: Hall-of-Fame velocity and duration distributions for the selected top
   - **The main activation path, movement dynamics and technique** are similar to the overall champion. However, stabilization-acting torso suffers from snake-shaped form of the creature which less stable positioning. 
   - This creature  has the same morphological traits as the experiment 2 champion (**Strategy A**, see [_Figure 4_](#findings-stationary-mutation-strategies-batches-1-2)), however the body dynamics is completely different.
 
-#### 3. Morphogenetic Cascade Champion - [Experiment 5 Scheme 12](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-09-27_230717/gens/HoF-f1-scheme-12-9.gen)
+#### 3. Morphogenetic Cascade Champion - [Experiment 5 Scheme 12](./runs/2026-09-27_230717/gens/HoF-f1-scheme-12-9.gen)
 - **Genotype**:
   ```cpp
-  MqMqqq((mrqMCMqLX[N, 13:0.523][G][G][|, 2:1.92][S][S][T, ry:1.482]m(QRmLq(, (MX[Gpart][T][G][T])))), X[S][@, -3:-0.432][N, -4:-3.21, -13:3.814, si:1.753, in:0.8, si:-4.394][|, -8:3.533])
+  MqMqqq((mrqMCMqLX[N, 13:0.523][G][G][|, 2:1.92][S][S][T, ry:1.482]m(QRmLq(, (MX[Gpart][T][G][T])))), 
+            X[S][@, -3:-0.432][N, -4:-3.21, -13:3.814, si:1.753, in:0.8, si:-4.394][|, -8:3.533])
   ```
 - **Velocity**: $0.019239$
 
 <p align="center">
-  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp5-best-creature-inspection.png" width="85%" alt="Experiment 5 Best Creature Inspection" />
+  <img src="./images/Exp5-best-creature-inspection.png" width="85%" alt="Experiment 5 Best Creature Inspection" />
   <br>
   <em>Figure 10: Inspection of functioning of the experiment 5 champion. Movement dynamics and technique are similar to the overall champion and experiment 4 champion (Figures 8, 9). On the left side the moment of jumping is depicted.</em>
 </p>
@@ -815,6 +718,9 @@ Inspection of champion genotypes across experiments 1-5 (see [_Figures 8-10_](#b
 4. **Useless neural traits**:
     - Smell sensors are present in all champions, but are useless in the current simulation setting as there are no energy sources. Their presence in neural networks is a neutral mutation which does not affect fitness of a creature, except the case when it gets connected to an effector - then it rather prevents more useful neurons to futher connect to the effector, and hinders evolution.
 
+
+<div style="break-after: page;"></div>
+
 #### Fitness Landscape Bias
 One of the reasons evolved creatures converge on such minimalist physical and neural architectures may lie in the **fitness function formulation**:
 
@@ -834,8 +740,8 @@ One of the reasons evolved creatures converge on such minimalist physical and ne
    - Analagously, a deletion mutation may delete an unused sensor, breaking the connection and causing the gait to collapse, so unused nodes become **structurally entrenched**.
 
 <p align="center">
-  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/example-intervening-neuron-before-insertion.png" width="46%" alt="Before Insertion" />
-  <img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/example-intervening-neuron-inserted.png" width="46%" alt="After Insertion" />
+  <img src="./images/example-intervening-neuron-before-insertion.png" width="46%" alt="Before Insertion" />
+  <img src="./images/example-intervening-neuron-inserted.png" width="46%" alt="After Insertion" />
   <br>
   <em>Figure 11: Disruption of the connection (in blue) between sensor and effector due to insertion of a new neuron.</em>
 </p>
@@ -855,8 +761,9 @@ This architectural phenomenon exposes a fundamental inefficiency in the standard
 - **In practice**, **Strategy C (Neural Tuning)**, with its $20\%$ `f1_nmNeu` allocation continuously burned evaluation budget on isolated, uninnervated sensors that starved mechanical body evolution, resulting in the lowest velocity across all static runs ($v_{mean} = 0.002754$).
 
 
+<div style="break-after: page;"></div>
 
-### Researching the Influence of Increased Generations and Population Size ([Experiment 7](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md#experiment-7))
+### Researching the Influence of Increased Generations and Population Size ([Experiment 7](./README.md#experiment-7))
 
 To evaluate whether the evolutionary dynamics and morphological solutions identified in Experiments 1–5 were artifacts of the [standard setting](#task3-setup) constraints (_N<sub>pop</sub> = 50_, _G = 300–400_), **Experiment 7** scaled top-performing scheduled schemes across **1000 generations** with **doubled population size (_N<sub>pop</sub> = 100_)**. 
 
@@ -868,11 +775,11 @@ To isolate the precise effect of doubling population size versus extending evolu
 <a id="figure-12"></a>
 <div align="center">
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_scaled_vs_champions_400gen/plots/logbooks_confidence_std_1.0.png" width="85%" alt="Original vs Scaled Champions Confidence Intervals" />
+<img src="./results/hof_results_scaled_vs_champions_400gen/plots/logbooks_confidence_std_1.0.png" width="85%" alt="Original vs Scaled Champions Confidence Intervals" />
 
 _Figure 12: Mean best fitness and confidence intervals over 1000 generations on a lin-log scale._
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/results/hof_results_scaled_vs_champions_400gen/plots/boxplot_summary.png" width="85%" alt="Original vs Scaled Champions Boxplot Summary" />
+<img src="./results/hof_results_scaled_vs_champions_400gen/plots/boxplot_summary.png" width="85%" alt="Original vs Scaled Champions Boxplot Summary" />
 
 _Figure 13: Hall-of-Fame velocity and duration distributions for original vs scaled champions._
 
@@ -881,7 +788,7 @@ _Figure 13: Hall-of-Fame velocity and duration distributions for original vs sca
 <a id="doubling-popsize-effect"></a>
 #### 1. Population Size ($N \to 100$): The Decisive Performance Catalyst
 - As shown in [_Figures 12, 13_](#figure-12), doubling population size consistently elevates median and peak performance within the same 400-generation timeline across all three scheduled schemes:
-  - **Scheme 3** demonstrates the most profound breakthrough, with mean velocity surging by +44.7% (_0.007213_ $\to$ _0.010440_) and median leaping by +42.6% (_0.005296_ $\to$ _0.007554_), discovering the highest velocity record (_v = 0.038990_) before generation 400.
+  - **Scheme 3** demonstrates the most profound breakthrough, with mean velocity surging by +44.7% (_0.007213_ -> _0.010440_) and median leaping by +42.6% (_0.005296_ -> _0.007554_), discovering the highest velocity record (_v = 0.038990_) before generation 400.
   - **Scheme 8-100**: Median velocity increases by _+34.8%_, with peak velocity reaching _0.025824_ (vs. _0.022688_).
   - **Scheme 12**: Median rises from _0.004367_ to _0.004875_, while variance narrows, suggeseting more reliable convergence.
 - An expanded population serves as a crucial genetic buffer: tournament selection (size 5) is prevented from prematurely discarding uncalibrated body plans before neural mutations can wire and tune functional reflex arcs.
@@ -890,23 +797,29 @@ _Figure 13: Hall-of-Fame velocity and duration distributions for original vs sca
 - Extending evolutionary search beyond generation 400 produces flat asymptotic drift: the remaining 600 generations yielded a maximum velocity gain of only _5.8%_ across any scheme despite consuming _60%_ of the total computational budget and runtime.
 - In the $f_1$ genetic representation, search progress is constrained by early topological canalization rather than temporal starvation; thus, **$G \approx 400$ is fully sufficient** for locomotion optimization.
 
+
+
+<div style="break-after: page;"></div>
+
 #### 3. Visual Confirmation of Morphological Convergence: Unilateral Jumping Persists
 Rather than abandoning hopping in favor of multi-legged walking or limbless crawling, scaled evolution specialized into two distinct single-legged dynamic hopping regimes:
 
 <div align="center">
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp7-best-creature-inspection.png" width="85%" alt="Fastest Evolved Creature Inspection" />
+<img src="./images/Exp7-best-creature-inspection.png" width="85%" alt="Fastest Evolved Creature Inspection" />
 
-_Figure 14: Inspection of [the all-time fastest creature evolved in Experiment 7](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-10-03_174608/gens/HoF-f1-scaled-sch-3-3.gen) (_v = 0.039_). Demonstrates the classic snake-like torso with a single active locomotive leg driven by a closed-loop gyroscopic reflex oscillator._
+_Figure 14: Inspection of [the all-time fastest creature evolved in Experiment 7](./runs/2026-10-03_174608/gens/HoF-f1-scaled-sch-3-3.gen) (_v = 0.039_). Demonstrates the classic snake-like torso with a single active locomotive leg driven by a closed-loop gyroscopic reflex oscillator._
 
-<img src="./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/images/Exp7-high-jumper-inspection.png" width="85%" alt="High Jump Champion Inspection" />
+<img src="./images/Exp7-high-jumper-inspection.png" width="85%" alt="High Jump Champion Inspection" />
 
-_Figure 15: Inspection of the [high-jump champion](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/runs/2026-10-03_174608/gens/HoF-f1-sch-L1-reflex-cascade-5.gen) (_v = 0.0302_). Arched frame with an explosive single-leg joint executing long-distance ballistic leaps, illustrating the bistable trade-off between peak leap velocity and landing orientation stability._
+_Figure 15: Inspection of the [high-jump champion](./runs/2026-10-03_174608/gens/HoF-f1-sch-L1-reflex-cascade-5.gen) (_v = 0.0302_). Arched frame with an explosive single-leg joint executing long-distance ballistic leaps, illustrating the bistable trade-off between peak leap velocity and landing orientation stability._
 
 </div>
 
 As shown in [_Figures 14 and 15_](#researching-the-influence-of-increased-generations-and-population-size-experiment-7), scaling computational resources proves that unilateral hopping and jumping are not premature convergence traps, but the **optimal mechanical solution** under the [rectilinear fitness landscape bias](#fitness-landscape-bias). Unilateral hopping eliminates ground friction and joint collisions, directing 100% of muscular power forward.
 
+
+<div style="break-after: page;"></div>
 
 ### Final Conclusions
 
@@ -930,5 +843,3 @@ As shown in [_Figures 14 and 15_](#researching-the-influence-of-increased-genera
 5. **Universality of the Unilateral Jumping Attractor**:
    - Unidimensional rectilinear fitness definition suppresses multi-legged gaits in favor of unilateral pushers and jumpers across all experiments and computational budgets. _See [Fitness Landscape Bias](#fitness-landscape-bias)_.
 
-
-> For complete per-run logbooks, statistical distributions, and individual experiment scripts, see the [Task 3 Detailed Report](./task3%20-%20Evolution%20&%20varying%20different%20mutations%20probs/README.md).
