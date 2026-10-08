@@ -3,7 +3,7 @@ This document tracks the complete physical and mathematical transition from clas
 
 ## 1. The Classical Wave Equation in Vacuum
 
-In free space (vacuum with no charges or currents), Maxwell's equations yield independent differential wave equations for the electric field $\mathbf{E}(\mathbf{r}, t)$ and the magnetic field $\mathbf{B}(\mathbf{r}, t)$:
+In free space (vacuum with no charges or currents), [Maxwell's equations](https://en.wikipedia.org/wiki/Maxwell%27s_equations) yield independent differential wave equations for the electric field $\mathbf{E}(\mathbf{r}, t)$ and the magnetic field $\mathbf{B}(\mathbf{r}, t)$:
 
 <div align="center" style="font-size: 110%;">
 
@@ -12,31 +12,41 @@ $\displaystyle\nabla^2 \mathbf{E} - \frac{1}{c^2}\frac{\partial^2 \mathbf{E}}{\p
 $\displaystyle\nabla^2 \mathbf{B} - \frac{1}{c^2}\frac{\partial^2 \mathbf{B}}{\partial t^2} = 0$
 
 
-_where $\nabla^2 = \frac{\partial^2}{\partial x^2} + \frac{\partial^2}{\partial y^2} + \frac{\partial^2}{\partial z^2}$ represents the Laplacian operator, and $c$ is the speed of light_.
+_where_ $\nabla^2 = \frac{\partial^2}{\partial x^2} + \frac{\partial^2}{\partial y^2} + \frac{\partial^2}{\partial z^2}$ _represents the Laplacian operator, and_ $c$ _is the speed of light_.
 </div>
 
 
 ## 2. The Plane Wave Solution
 
 A **plane wave** traveling along a specific direction (let's define it as the $z$-axis) means that the fields depend only on the spatial coordinate $z$ and time $t$. The spatial derivatives with respect to $x$ and $y$ vanish, reducing the Laplacian to:
+
 $$\nabla^2 = \frac{\partial^2}{\partial z^2}$$
 
 ### Mathematical Verification
 We propose a harmonic solution in complex form:
+
 $$\mathbf{E}(z, t) = \mathbf{E}_0 \exp[i(kz - \omega t)]$$
+
 where $\mathbf{E}_0$ is a constant vector representing the amplitude, $k$ is the wave number, and $\omega$ is the angular frequency. Let's find the second-order partial derivatives:
 1. **Spatial derivatives ($z$):**
-   $$\frac{\partial \mathbf{E}}{\partial z} = ik \cdot \mathbf{E}_0 e^{i(kz - \omega t)} = ik\mathbf{E} ;\ \ \ \ \ \ \ \ \frac{\partial^2 \mathbf{E}}{\partial z^2} = (ik)^2 \cdot \mathbf{E} = -k^2 \mathbf{E}$$
+
+$$\frac{\partial \mathbf{E}}{\partial z} = ik \cdot \mathbf{E}_0 e^{i(kz - \omega t)} = ik\mathbf{E} ;\ \ \ \ \ \ \ \ \frac{\partial^2 \mathbf{E}}{\partial z^2} = (ik)^2 \cdot \mathbf{E} = -k^2 \mathbf{E}$$
+   
 2. **Temporal derivatives ($t$):**
-   $$\frac{\partial \mathbf{E}}{\partial t} = (-i\omega) \cdot \mathbf{E}_0 e^{i(kz - \omega t)} = -i\omega\mathbf{E};\ \ \ \ \ \ \ \ \frac{\partial^2 \mathbf{E}}{\partial t^2} = (-i\omega)^2 \cdot \mathbf{E} = -\omega^2 \mathbf{E}$$
+   
+$$\frac{\partial \mathbf{E}}{\partial t} = (-i\omega) \cdot \mathbf{E}_0 e^{i(kz - \omega t)} = -i\omega\mathbf{E};\ \ \ \ \ \ \ \ \frac{\partial^2 \mathbf{E}}{\partial t^2} = (-i\omega)^2 \cdot \mathbf{E} = -\omega^2 \mathbf{E}$$
+   
 Substituting these results back into the wave equation gives:
+
 $$-k^2 \mathbf{E} - \frac{1}{c^2}(-\omega^2 \mathbf{E}) = 0 \implies \left(-k^2 + \frac{\omega^2}{c^2}\right) \mathbf{E} = 0$$
+
 For a non-trivial wave ($\mathbf{E} \neq 0$), this equation holds true if and only if the term inside the parenthesis equals zero. This establishes the **dispersion relation**:
 $$\omega = c k$$
 
 ### Geometric Interpretation of "Plane"
 
 The wave is called "plane" in the physical 3D space we live in. If you fix the time $t$ and look at any slice of space perpendicular to the direction of propagation (the $xy$-plane at a given $z$), the phase $\phi = kz - \omega t$ is completely identical across the entire infinite sheet. 
+
 
 
 <div style="break-after: page;"></div>
@@ -116,7 +126,9 @@ $\displaystyle |\Psi\rangle = \frac{1}{\sqrt{2}} \left( |40^\circ\rangle_1 |50^\
 2. **Instant Correlation:** The moment you measure the polarization of photon 1, the entire state collapses. If photon 1 is measured to be at exactly $40^\circ$, then photon 2 instantly collapses into a clear $50^\circ$ polarization state, regardless of the physical distance separating them.
 repared at $40^\circ$ and another at $50^\circ$—and send them through an entangling process (such as Spontaneous Parametric Down-Conversion in a non-linear crystal), their individual identities vanish. 
 Instead of having a separate wave vector for photon 1 and photon 2, they form a combined, non-separable quantum state:
+
 $$|\Psi\rangle = \frac{1}{\sqrt{2}} \left( |40^\circ\rangle_1 |50^\circ\rangle_2 + |50^\circ\rangle_1 |40^\circ\rangle_2 \right)$$
+
 ### Physical Consequences of Entanglement
 1. **Loss of Local Reality:** Neither photon possesses a definite polarization angle anymore. If you look at photon 1 by itself, its electric field orientation behaves randomly, like unpolarized light.
 2. **Instant Correlation:** The moment you measure the polarization of photon 1, the entire state collapses. If photon 1 is measured to be at exactly $40^\circ$, then photon 2 instantly collapses into a clear $50^\circ$ polarization state, regardless of the physical distance separating them.
