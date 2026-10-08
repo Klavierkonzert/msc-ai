@@ -57,7 +57,7 @@ The polarization of the wave is hidden inside the vector amplitude $\mathbf{E}_0
 
 <div align="center" style="font-size: 110%;">
 
-$\displaystyle\mathbf{E}_0 = E_{0x}\hat{\mathbf{x}} + E_{0y}\hat{\mathbf{y}}$
+$$\displaystyle\mathbf{E}_0 = E_{0x}\hat{\mathbf{x}} + E_{0y}\hat{\mathbf{y}}$$
 </div>
 
 The exact ratio between $E_{0x}$ and $E_{0y}$ governs the geometry of the oscillations:
@@ -71,7 +71,7 @@ $\displaystyle \mathbf{E}_0 = A \cos(40^\circ)\hat{\mathbf{x}} + A \sin(40^\circ
 
 
 
-<img src="3D_flat_polarized_wave.png" width="50%">
+<img src="images/3D_flat_polarized_wave.png" width="50%">
 <img>
 
 _Figure 1: Linearly polarized wave moving along the Z-axis (with black dashed line indicating direction of the wave and red dashed line indicating **polarization vector** (showing that the field oscillates both along X- and Y- axes))_
@@ -90,20 +90,21 @@ We can map our classical coordinate axes to standard orthogonal basis states:
 $$\hat{\mathbf{x}} \rightarrow \text{state}\ \ \ |H\rangle \equiv  |0\rangle$$
 
 * Vertical polarization:
+* 
 $$\hat{\mathbf{x}} \rightarrow \text{state}\ \ |V\rangle \equiv  |1\rangle$$
 
 The spatial angle of polarization ($\theta$) serves as the direct source for the probability amplitudes (coefficients) in a quantum state vector:
 
 <div align="center" style="font-size: 110%;">
 
-$\displaystyle |\psi\rangle = \begin{pmatrix} \cos\theta \\ \sin\theta \end{pmatrix} = \cos\theta |0\rangle + \sin\theta |1\rangle$
+$$\displaystyle |\psi\rangle = \begin{pmatrix} \cos\theta \\ \sin\theta \end{pmatrix} = \cos\theta |0\rangle + \sin\theta |1\rangle$$
 </div>
 
 Applying this to our $40^\circ$ photon yields the following quantum superposition state:
 
 <div align="center" style="font-size: 110%;">
 
-$\displaystyle |\psi_{40^\circ}\rangle = \cos 40^\circ|0\rangle + \sin 40^\circ |1\rangle \approx 0.766|0\rangle + 0.643|1\rangle$
+$$\displaystyle |\psi_{40^\circ}\rangle = \cos 40^\circ|0\rangle + \sin 40^\circ |1\rangle \approx 0.766|0\rangle + 0.643|1\rangle$$
 
 </div>
 
@@ -118,7 +119,7 @@ Instead of having a separate wave vector for photon 1 and photon 2, they form a 
 
 <div align="center" style="font-size: 110%;">
 
-$\displaystyle |\Psi\rangle = \frac{1}{\sqrt{2}} \left( |40^\circ\rangle_1 |50^\circ\rangle_2 + |50^\circ\rangle_1 |40^\circ\rangle_2 \right)$
+$$\displaystyle |\Psi\rangle = \frac{1}{\sqrt{2}} \left( |40^\circ\rangle_1 |50^\circ\rangle_2 + |50^\circ\rangle_1 |40^\circ\rangle_2 \right)$$
 </div>
 
 ### Physical Consequences of Entanglement
