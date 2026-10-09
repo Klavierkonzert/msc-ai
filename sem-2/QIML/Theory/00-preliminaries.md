@@ -27,7 +27,7 @@ We propose a harmonic solution in complex form:
 
 $$\mathbf{E}(z, t) = \mathbf{E}_0 \exp[i(kz - \omega t)]$$
 
-where $\mathbf{E}_0$ is a constant vector representing the amplitude, $k$ is the wave number which relates to the classical spatial period by $k = \frac{2\pi}{\lambda}$e, and $\omega$ is the angular frequency. Let's find the second-order partial derivatives:
+where $\mathbf{E}_0$ is a constant vector representing the amplitude, $k$ is the wave number which relates to the classical spatial period by $k = \frac{2\pi}{\lambda}$, and $\omega$ is the angular frequency. Let's find the second-order partial derivatives:
 1. **Spatial derivatives ($z$):**
 
 $$\frac{\partial \mathbf{E}}{\partial z} = ik \cdot \mathbf{E}_0 e^{i(kz - \omega t)} = ik\mathbf{E} ;\ \ \ \ \ \ \ \ \frac{\partial^2 \mathbf{E}}{\partial z^2} = (ik)^2 \cdot \mathbf{E} = -k^2 \mathbf{E}$$
@@ -81,7 +81,7 @@ _Figure 1: Linearly polarized wave moving along the Z-axis (with black dashed li
 
 <a id="sect-4"></a>
 ## 4. The Quantum Transition: Polarization as a Qubit
-When we transition to quantum mechanics, a single photon acts as a quantized packet (an indivisible quantum of energy $E = \hbar\omega$) of this electromagnetic field. The spatial mode (the shape of the beam) remains governed by the wave equations, but its polarization state transforms into an internal quantum property: a **qubit**.
+When we transition to quantum mechanics, a single photon acts as a quantized packet (an indivisible quantum of energy $E = \hbar\omega$) of this electromagnetic field. The spatial mode (the shape of the beam) remains governed by the [wave equations](#1-the-classical-wave-equation-in-vacuum), but its polarization state transforms into an internal quantum property: a **qubit**.
 We can map our classical coordinate axes to standard orthogonal basis states:
 
 * Horizontal polarization:
@@ -141,7 +141,7 @@ $$|\Psi\rangle = \frac{1}{\sqrt{2}} \left( |40^\circ\rangle_1 |50^\circ\rangle_2
 
 Beyond polarization, physical qubit architectures obey universal quantum constraints:
 
-* **Wave-Particle Duality:** In classical physics, electromagnetic energy varies continuously. Quantum mechanics begins with the postulate that energy exchange occurs in discrete packets—quanta ($E = \hbar\omega$). Wave-particle duality associates every physical entity possessing momentum related to its wave number $p = \hbar k = \frac{h k}{2\pi}$ with a de Broglie wavelength:
+* **Wave-Particle Duality:** In classical physics, electromagnetic energy varies continuously. Quantum mechanics begins with the postulate that energy exchange occurs in discrete packets (each having energy $E = \hbar\omega$). Wave-particle duality associates every physical entity possessing momentum related to its wave number $p = \hbar k = \frac{h k}{2\pi}$ with a de Broglie wavelength:
  
    <div align="center" style="font-size: 110%;"> $\lambda = \frac{h}{p}$ </div>
    
@@ -152,9 +152,9 @@ Beyond polarization, physical qubit architectures obey universal quantum constra
 $$\Delta x \ \Delta v \ge \frac{\hbar}{2m} = \frac{h}{4\pi m}$$
 
 * **Superposition:** As derived in [Section 4](#sect-4), a quantum system can exist in a linear combination of its basis states ($|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$), collapsing to a single eigenstate only upon projective measurement.
-* **Quantum Entanglement:** As derived in  [Section 5](#sect-5), composite multi-particle systems can form non-separable joint states where measuring one subsystem instantaneously dictates the state of the other across arbitrary spatial distances.
+* **Quantum Entanglement:** As stated in  [Section 5](#sect-5), composite multi-particle systems can form non-separable joint states where measuring one subsystem instantaneously dictates the state of the other across arbitrary spatial distances.
 
 * **Quantum Tunneling:** Wave functions decay exponentially inside finite potential energy barriers. If a barrier is sufficiently thin, the non-zero transmission amplitude allows particles to cross without having sufficient classical kinetic energy.
-* **Decoherence** - The irreversible loss of quantum coherence resulting from unwanted interactions and entanglement between a quantum system and its surrounding environment. Decoherence degrades qubit superpositions by leaking relative phase information into environmental degrees of freedom.  
-* **No-Cloning Theorem:** An arbitrary, unknown quantum state cannot be duplicated by any unitary transformation.
+* **Decoherence** - is the irreversible loss of quantum coherence resulting from unwanted interactions and entanglement between a quantum system and its surrounding environment. Decoherence degrades qubit superpositions by leaking relative phase information into environmental degrees of freedom.  
+* **No-Cloning Theorem** states that an arbitrary, unknown quantum state cannot be duplicated by any unitary transformation.
 
