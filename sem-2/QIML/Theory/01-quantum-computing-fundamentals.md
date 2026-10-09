@@ -4,8 +4,8 @@
 
 ## Scope
 0. [Physical Foundations](./00-preliminaries.md)
-1. [Principle of Computation](#principle-of-computation)
-2. [Notes on Quantum Logic](#notes-on-quantum-logic)
+1. [Principle of Computation](#1-principle-of-computation)
+2. [Notes on Quantum Logic](#2-notes-on-quantum-logic)
 3. Qubit Operations & Gates
     1. Single-Qubit Gates
     2. Two-Qubit Gates
@@ -40,13 +40,13 @@ A single projective measurement yields an eigenvalue corresponding to either $|0
 A quantum computer consists of multiple (_n_) coupled qubits initialized to an initial state in a specific way corresponding to a problem considered. 
 ​Under the Everett many-worlds interpretation, it can be conceptually visualized as an ensemble of 2<sup>n</sup> classical computers executing the same algorithm across parallel branches of reality.
 Algorithms manipulate the probability amplitudes via unitary quantum gates replacing Boolean logic gates, so that the resulting probability distribution corresponds to the process modeled. Moreover qubits can interfere with each other, which provides the foundation of the computations. Coherent interference across registers is orchestrated in such a way that amplitudes corresponding to correct solutions constructively interfere, while incorrect branches cancel destructively. 
-State evolution is continuous and unitary, while final readout is probabilistic. Hence the whole quantum computation should be repeated multiple times to obtain the final distribution of solutions, which allows to obtain not only the best answer but also several good ones.
+State evolution is continuous and unitary, while final readout is probabilistic. Hence the whole quantum computation should be repeated multiple times to obtain the final distribution of solutions, which allows one to obtain not only the best answer but also several good ones.
 
 
 ## 2. Notes on Quantum Logic
 
 Standard computation relies on Boolean propositional calculus $(0, 1, \wedge, \vee, \neg)$.
-In standard quantum logic (originating with Birkhoff and von Neumann), propositions correspond to closed linear subspaces (projection operators) of a complex Hilbert space $\mathcal{H}$, breaking several properties of classical propositional logic (such as the law of the excluded middle):
+In standard quantum logic (originating with Birkhoff and von Neumann), propositions correspond to closed linear subspaces (projection operators) of a complex Hilbert space $\mathcal{H}$, breaking several properties of classical propositional logic:
 
 * **Failure of Distributivity:** Because non-commuting observables cannot be resolved simultaneously, quantum propositions do not satisfy classical distributivity:
 
@@ -63,7 +63,9 @@ Cattaneo, Dalla Chiara, and Giuntini (2003) formulated *fuzzy quantum logic base
 * Atomic propositions are mapped to state vectors $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ in $\mathcal{H}_2 \cong \mathbb{C}^2$.
 * Composite formulas correspond to unit vectors in tensor product spaces
 
-$$\displaystyle\mathcal{H_{2^n}}=\bigotimes_{i=1}^n \mathcal{H}_2$$
+$$\displaystyle\mathcal{H}_{2^n}=\bigotimes_{i=1}^n \mathcal{H}_2$$
 
-  * Logical connectives are realized as **unitary operators** of dimension $2^n$ rather than static truth tables, directly recovering the standard circuit model of quantum computing.
+* Logical connectives are realized as **unitary operators** of dimension $2^n$ rather than static truth tables, directly recovering the standard circuit model of quantum computing.
+
+However, in contradistinction to Birkhoff-von Neumann logic, **the law of the excluded middle** is broken in this formulation (e.g. for a superposition state like $\frac{\vert{}0\rangle + \vert{}1\rangle}{\sqrt{2}}$).
 
