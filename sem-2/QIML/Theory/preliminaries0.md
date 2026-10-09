@@ -81,8 +81,9 @@ _Figure 1: Linearly polarized wave moving along the Z-axis (with black dashed li
 
 <div style="break-after: page;"></div>
 
+<a ref="sect-4"></a>
 ## 4. The Quantum Transition: Polarization as a Qubit
-When we transition to quantum mechanics, a single photon acts as a quantized packet of this electromagnetic field. The spatial mode (the shape of the beam) remains governed by the wave equations, but its polarization state transforms into an internal quantum property: a **qubit**.
+When we transition to quantum mechanics, a single photon acts as a quantized packet (an indivisible quantum of energy $E = \hbar\omega$) of this electromagnetic field. The spatial mode (the shape of the beam) remains governed by the wave equations, but its polarization state transforms into an internal quantum property: a **qubit**.
 We can map our classical coordinate axes to standard orthogonal basis states:
 
 * Horizontal polarization:
@@ -90,14 +91,16 @@ We can map our classical coordinate axes to standard orthogonal basis states:
 $$\hat{\mathbf{x}} \rightarrow \text{state}\ \ \ |H\rangle \equiv  |0\rangle$$
 
 * Vertical polarization:
-* 
+
 $$\hat{\mathbf{x}} \rightarrow \text{state}\ \ |V\rangle \equiv  |1\rangle$$
 
 The spatial angle of polarization ($\theta$) serves as the direct source for the probability amplitudes (coefficients) in a quantum state vector:
 
 <div align="center" style="font-size: 110%;">
 
-$$\displaystyle |\psi\rangle = \begin{pmatrix} \cos\theta \\ \sin\theta \end{pmatrix} = \cos\theta |0\rangle + \sin\theta |1\rangle$$
+$$\displaystyle |\psi\rangle = \begin{pmatrix} \cos\theta \\ 
+\sin\theta \end{pmatrix} = \cos\theta |0\rangle + \sin\theta |1\rangle$$
+
 </div>
 
 Applying this to our $40^\circ$ photon yields the following quantum superposition state:
@@ -108,13 +111,18 @@ $$\displaystyle |\psi_{40^\circ}\rangle = \cos 40^\circ|0\rangle + \sin 40^\circ
 
 </div>
 
-This means the physical angle of oscillation in our 3D space dictates the quantum probability amplitudes. Squaring these coefficients tells us the likelihood of a photon passing through a horizontal or vertical polarization filter ($58.7\%$ for H and $41.3\%$ for V).
+### Physical Origin of the Superposition State
+
+​In classical optics, field intensity divides continuously across orthogonal axes ($I_x = I_0\cos^2\theta,\ I_y = I_0\sin^2\theta$). In the quantum regime, a single photon is indivisible and cannot split its energy between detector channels - it must trigger either the horizontal ($\vert{}H\rangle$) or vertical ($\vert{}V\rangle$) detector as an all-or-nothing event.  
+​Because an identically prepared photon yields detection outcomes probabilistically rather than deterministically, its pre-measurement state cannot be assigned purely to $\vert{}H\rangle \ \text{or} \vert{}V\rangle$. It exists as a coherent linear combination $\vert{}\psi\rangle = \cos\theta|0\rangle + \sin\theta|1\rangle$, where geometric coefficients are determined by a physical angle of oscillation in 3D space dictating quantum probability amplitudes. Squaring these coefficients tells the likelihood of a photon passing through a horizontal or vertical polarization filter (according to Borne's rule: $58.7$% for **H** and $41.3$% for **V**).
+
 
 
 <div style="break-after: page;"></div>
 
+<a ref="sect-5"></a>
 ## 5. Quantum Entanglement of Polarized Photons
-If we take two individual photons—one prepared at $40^\circ$ and another at $50^\circ$—and send them through an entangling process (such as Spontaneous Parametric Down-Conversion in a non-linear crystal), their individual identities vanish. 
+If we take two individual photons - one prepared at $40^\circ$ and another at $50^\circ$ - and send them through an entangling process (such as Spontaneous Parametric Down-Conversion in a non-linear crystal), their individual identities vanish. 
 Instead of having a separate wave vector for photon 1 and photon 2, they form a combined, non-separable quantum state:
 
 <div align="center" style="font-size: 110%;">
@@ -123,13 +131,33 @@ $$\displaystyle |\Psi\rangle = \frac{1}{\sqrt{2}} \left( |40^\circ\rangle_1 |50^
 </div>
 
 ### Physical Consequences of Entanglement
-1. **Loss of Local Reality:** Neither photon possesses a definite polarization angle anymore. If you look at photon 1 by itself, its electric field orientation behaves randomly, like unpolarized light.
-2. **Instant Correlation:** The moment you measure the polarization of photon 1, the entire state collapses. If photon 1 is measured to be at exactly $40^\circ$, then photon 2 instantly collapses into a clear $50^\circ$ polarization state, regardless of the physical distance separating them.
+1. **Loss of Local Reality:** Neither photon possesses a definite polarization angle anymore. If one looks at photon 1 by itself, its electric field orientation behaves randomly, like unpolarized light.
+2. **Instant Correlation:** Projective measurement on photon 1 collapses the joint state. If photon 1 is measured to be at exactly $40^\circ$, then photon 2 instantly collapses into a clear $50^\circ$ polarization state, regardless of the physical distance separating them.
 repared at $40^\circ$ and another at $50^\circ$—and send them through an entangling process (such as Spontaneous Parametric Down-Conversion in a non-linear crystal), their individual identities vanish. 
 Instead of having a separate wave vector for photon 1 and photon 2, they form a combined, non-separable quantum state:
 
 $$|\Psi\rangle = \frac{1}{\sqrt{2}} \left( |40^\circ\rangle_1 |50^\circ\rangle_2 + |50^\circ\rangle_1 |40^\circ\rangle_2 \right)$$
 
-### Physical Consequences of Entanglement
-1. **Loss of Local Reality:** Neither photon possesses a definite polarization angle anymore. If you look at photon 1 by itself, its electric field orientation behaves randomly, like unpolarized light.
-2. **Instant Correlation:** The moment you measure the polarization of photon 1, the entire state collapses. If photon 1 is measured to be at exactly $40^\circ$, then photon 2 instantly collapses into a clear $50^\circ$ polarization state, regardless of the physical distance separating them.
+
+## 6. Fundamental Quantum Phenomena & Constraints
+
+Beyond polarization, physical qubit architectures obey universal quantum constraints:
+
+* **Wave-Particle Duality:** In classical physics, electromagnetic energy varies continuously. Quantum mechanics begins with the postulate that energy exchange occurs in discrete packets—quanta ($E = \hbar\omega$). Wave-particle duality associates every physical entity possessing momentum p with a de Broglie wavelength:
+Every physical entity with momentum $p$ has an associated de Broglie wavelength:
+ 
+   <div align="center" style="font-size: 110%;"> $\lambda = \frac{h}{p}$ </div>
+   
+   At spatial dimensions on the order of $\lambda$, particles exhibit wave-like behavior described by state vectors evolving under the Schrödinger equation.
+
+* **Heisenberg Uncertainty Principle:** Conjugate observables cannot be determined simultaneously to arbitrary precision. For position $x$ and velocity $v$:
+
+$$\Delta x \ \Delta v \ge \frac{\hbar}{2m} = \frac{h}{4\pi m}$$
+
+* **Superposition:** As derived in [Section 4](#sect-4), a quantum system can exist in a linear combination of its basis states ($|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$), collapsing to a single eigenstate only upon projective measurement.
+* **Quantum Entanglement:** As derived in  [Section 5](#sect-5), composite multi-particle systems can form non-separable joint states where measuring one subsystem instantaneously dictates the state of the other across arbitrary spatial distances.
+
+* **Quantum Tunneling:** Wave functions decay exponentially inside finite potential energy barriers. If a barrier is sufficiently thin, the non-zero transmission amplitude allows particles to cross without having sufficient classical kinetic energy.
+* **Decoherence** - The irreversible loss of quantum coherence resulting from unwanted interactions and entanglement between a quantum system and its surrounding environment. Decoherence degrades qubit superpositions by leaking relative phase information into environmental degrees of freedom.  
+* **No-Cloning Theorem:** An arbitrary, unknown quantum state cannot be duplicated by any unitary transformation.
+
