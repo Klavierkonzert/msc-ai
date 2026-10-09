@@ -27,7 +27,7 @@ We propose a harmonic solution in complex form:
 
 $$\mathbf{E}(z, t) = \mathbf{E}_0 \exp[i(kz - \omega t)]$$
 
-where $\mathbf{E}_0$ is a constant vector representing the amplitude, $k$ is the wave number, and $\omega$ is the angular frequency. Let's find the second-order partial derivatives:
+where $\mathbf{E}_0$ is a constant vector representing the amplitude, $k$ is the wave number which relates to the classical spatial period by $k = \frac{2\pi}{\lambda}$e, and $\omega$ is the angular frequency. Let's find the second-order partial derivatives:
 1. **Spatial derivatives ($z$):**
 
 $$\frac{\partial \mathbf{E}}{\partial z} = ik \cdot \mathbf{E}_0 e^{i(kz - \omega t)} = ik\mathbf{E} ;\ \ \ \ \ \ \ \ \frac{\partial^2 \mathbf{E}}{\partial z^2} = (ik)^2 \cdot \mathbf{E} = -k^2 \mathbf{E}$$
@@ -40,9 +40,7 @@ Substituting these results back into the wave equation gives:
 
 $$-k^2 \mathbf{E} - \frac{1}{c^2}(-\omega^2 \mathbf{E}) = 0 \implies \left(-k^2 + \frac{\omega^2}{c^2}\right) \mathbf{E} = 0$$
 
-For a non-trivial wave ($\mathbf{E} \neq 0$), this equation holds true if and only if the term inside the parenthesis equals zero. This establishes the **dispersion relation**:
-$$\omega = c k$$
-
+For a non-trivial wave ($\mathbf{E} \neq 0$), this equation holds true if and only if the term inside the parenthesis equals zero. This establishes the **dispersion relation** $\omega = c k$. 
 ### Geometric Interpretation of "Plane"
 
 The wave is called "plane" in the physical 3D space we live in. If you fix the time $t$ and look at any slice of space perpendicular to the direction of propagation (the $xy$-plane at a given $z$), the phase $\phi = kz - \omega t$ is completely identical across the entire infinite sheet. 
@@ -81,7 +79,7 @@ _Figure 1: Linearly polarized wave moving along the Z-axis (with black dashed li
 
 <div style="break-after: page;"></div>
 
-<a ref="sect-4"></a>
+<a id="sect-4"></a>
 ## 4. The Quantum Transition: Polarization as a Qubit
 When we transition to quantum mechanics, a single photon acts as a quantized packet (an indivisible quantum of energy $E = \hbar\omega$) of this electromagnetic field. The spatial mode (the shape of the beam) remains governed by the wave equations, but its polarization state transforms into an internal quantum property: a **qubit**.
 We can map our classical coordinate axes to standard orthogonal basis states:
@@ -120,7 +118,7 @@ $$\displaystyle |\psi_{40^\circ}\rangle = \cos 40^\circ|0\rangle + \sin 40^\circ
 
 <div style="break-after: page;"></div>
 
-<a ref="sect-5"></a>
+<a id="sect-5"></a>
 ## 5. Quantum Entanglement of Polarized Photons
 If we take two individual photons - one prepared at $40^\circ$ and another at $50^\circ$ - and send them through an entangling process (such as Spontaneous Parametric Down-Conversion in a non-linear crystal), their individual identities vanish. 
 Instead of having a separate wave vector for photon 1 and photon 2, they form a combined, non-separable quantum state:
@@ -143,8 +141,7 @@ $$|\Psi\rangle = \frac{1}{\sqrt{2}} \left( |40^\circ\rangle_1 |50^\circ\rangle_2
 
 Beyond polarization, physical qubit architectures obey universal quantum constraints:
 
-* **Wave-Particle Duality:** In classical physics, electromagnetic energy varies continuously. Quantum mechanics begins with the postulate that energy exchange occurs in discrete packets—quanta ($E = \hbar\omega$). Wave-particle duality associates every physical entity possessing momentum p with a de Broglie wavelength:
-Every physical entity with momentum $p$ has an associated de Broglie wavelength:
+* **Wave-Particle Duality:** In classical physics, electromagnetic energy varies continuously. Quantum mechanics begins with the postulate that energy exchange occurs in discrete packets—quanta ($E = \hbar\omega$). Wave-particle duality associates every physical entity possessing momentum related to its wave number $p = \hbar k = \frac{h k}{2\pi}$ with a de Broglie wavelength:
  
    <div align="center" style="font-size: 110%;"> $\lambda = \frac{h}{p}$ </div>
    
