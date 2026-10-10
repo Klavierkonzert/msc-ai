@@ -2,29 +2,30 @@
 
 > *Notes translated from my 2020 bachelor term paper, cleaned up and corrected.*
 
-## Scope
+## Scope (1-3)
 0. [Physical Foundations](./00-preliminaries.md)
-1. [Principle of Computation](#1-principle-of-computation)
-2. [Notes on Quantum Logic](#2-notes-on-quantum-logic)
-3. [Qubit Operations & Gates](#3-operations-on-qubits)
+1. **[Principle of Computation](#1-principle-of-computation)**
+2. **[Notes on Quantum Logic](#2-notes-on-quantum-logic)**
+3. **[Qubit Operations & Gates](#3-operations-on-qubits)**
     1. Single-Qubit Gates
     2. Two-Qubit Gates
     3. Three-Qubit Gates
-    4. Universal Gate Sets
-4. Circuits & Measurement
-    1. Circuit Composition
-    2. Ancillas & Reversibility
-    3. Measurement
+4. [Universal Gate Synthesis](./04-universal-gates.md) (mathematically heavy and can be skipped)
+5. [Circuits & Measurement](./05-quantum-circuits.md)
+6. ...
 
 ## 1. Principle of Computation
 
-Classical computers operate on discrete bits taking values in _{0, 1}_. The quantum analog is the **qubit** (quantum bit), which can exist in an arbitrary linear superposition of computational basis states:
+Classical computers operate on discrete bits taking values in _{0, 1}_. The quantum analog is the **qubit** (quantum bit), which can exist in an arbitrary linear superposition of _computational basis states_. In standard Dirac notation, state vectors are called _kets_ and represented as column vectors:
 
-$$|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$$
+$$\displaystyle|\psi\rangle = \alpha|0\rangle + \beta|1\rangle \equiv \begin{bmatrix} \alpha \\ 
+                                                                          \beta \end{bmatrix}\in \mathbb{C}^2$$
 
 where $\alpha, \beta \in \mathbb{C}$ are probability amplitudes constrained by the normalization condition:
 
 $$|\alpha|^2 + |\beta|^2 = 1$$
+
+Corresponding conjugate linear operators are denoted as _bra_ vectors $\langle\psi| \equiv |\psi\rangle^\dagger$ (Hermitian conjugate), represented by row vectors.
 
 Geometrically, a single-qubit pure state corresponds to a point on the unit **Bloch sphere**:
 
@@ -77,7 +78,7 @@ However, in contradistinction to Birkhoff-von Neumann logic, **the law of the ex
 
 ## 3. Operations on Qubits
 
-A quantum gate is a unitary transformation acting on a qubit register. Unlike classical irreversible logic, all quantum operations on closed systems are strictly reversible and trace-preserving.
+A quantum gate is a unitary transformation acting on a qubit register. Unlike classical irreversible logic, all quantum operations on closed systems are strictly reversible and trace-preserving. The result of the applying a gate operator $U$ on a qubit register is denoted as $U\vert{}\psi\rangle$.
 
 A single-qubit gate is represented by a $2 \times 2$ unitary matrix satisfying:
 
@@ -85,22 +86,21 @@ $$U U^\dagger = U^\dagger U = I$$
 
 where $U^\dagger = (U^*)^T$ is the Hermitian conjugate. An $n$-qubit gate corresponds to a $2^n \times 2^n$ unitary matrix.
 
-Computational basis states in standard column vector form:
+_Computational basis states_ in standard column vector form:
 
 $$|0\rangle = \begin{bmatrix} 1 \\ 
                               0 \end{bmatrix}, 
     |1\rangle = \begin{bmatrix} 0 \\ 
                                       1 \end{bmatrix}$$
 
-Composite registers are constructed via the _tensor product_:
 
+Composite registers are constructed via the _tensor product_:
 
 $$|ab\rangle = |a\rangle \otimes |b\rangle \equiv \begin{bmatrix} a_0 b_0 \\ 
                                                                   a_0 b_1 \\ 
                                                                   a_1 b_0 \\ 
                                                                   a_1 b_1 \end{bmatrix}   \equiv   v_{00}|00\rangle + v_{01}|01\rangle + v_{10}|10\rangle + v_{11}|11\rangle
                                                              \text{, \ \ where}\sum_{i,j} |v_{ij}|^2 = 1$$
-
 
 ### Elementary Single-Qubit Gates
 Given a single qubit $|\psi\rangle=\alpha|0\rangle + \beta|1\rangle$, the following ounitary operations can be performed:
@@ -225,40 +225,4 @@ $$D_\theta|a, b, c\rangle = \begin{cases}
   i\cos\theta|a, b, c\rangle + \sin\theta|a, b, 1-c\rangle & \text{if } a = b = 1 \\
   |a, b, c\rangle & \text{otherwise}
   \end{cases}$$
-
-
-### Universal Gate Sets
-
-A set of gates is **universal** if any unitary transformation $U \in U(2^n)$ can be approximated to arbitrary accuracy $\epsilon > 0$ by a finite sequence of gates selected from that set.
-
-Standard universal sets include:
-* $\{H, T, \text{CNOT}\}$
-* $\{\text{CNOT}\} \cup U(2)$
-* $\{H, Z, CZ, CCZ\}$
-* $\{D_\theta\}$ for irrational $\theta/\pi$
-
-#### Decomposition into Two-Level Unitary Operators
-
-Any unitary matrix $U$ on a $d$-dimensional space ($d = 2^n$) can be factored into a product of at most $d(d-1)/2$ two-level unitary matrices:
-
-$$\displaystyle U = U_1^\dagger U_2^\dagger \cdots U_k^\dagger, \quad k \le 2^{n-1}(2^n - 1) = O(4^n)$$
-
-Using Gray code state transitions, each $n$-qubit two-level unitary decomposes into $O(n^2)$ single-qubit and CNOT operations. Thus, an arbitrary $n$-qubit unitary transformation can be synthesized using 
-$$O(n^2 4^n)$$
-elementary single-qubit and CNOT gates.
-
-#### Solovay–Kitaev Theorem
-
-Because the space of unitaries forms a continuum, a finite gate set can only approximate arbitrary unitaries. The approximation error between unitaries $U$ and $V$ is defined as:
-
-$$\displaystyle E(U, V) = \sup_{|\psi\rangle} \|(U - V)|\psi\rangle\|$$
-
-This metric bounds variation in measurement probabilities:
-$$|P_U - P_V| \le 2E(U, V)$$
-
-**Theorem:** Let $G$ generate a dense subgroup in $\text{SU}(2)$. Any target gate $U \in \text{SU}(2)$ can be approximated to precision $\epsilon$ using a sequence of gates from $G$ of length:
-
-$$O\left(\log^c\left(\frac{1}{\epsilon}\right)\right), \text{where } c \approx 3.97$$
-
-For an $m$-gate circuit, synthesizing an $\epsilon$-approximation requires $O(m \log^c(m/\epsilon))$ gates.
 
