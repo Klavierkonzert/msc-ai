@@ -212,7 +212,7 @@ $$C(U) = \begin{bmatrix} 1 & 0 & 0 & 0 \\
 
 ### Three-Qubit Gates
 
-* **Toffoli Gate (CCNOT)** is a _involutory_ and _universal_ gate which returns $NOT|c\rangle$ iff $a=b$: 
+* **Toffoli Gate (CCNOT, $D_{\pi/2}$)** is an _involutory_ and _classically universal_ gate which returns $NOT|c\rangle$ iff $a=b=1$: 
 
 $$\text{CCNOT}|a, b, c\rangle = |a, b, c \oplus (a \wedge b)\rangle$$
 
@@ -224,7 +224,7 @@ $$\text{CSWAP}:=\begin{bmatrix} I_{4\times 4} & 0_{4 \times 4} \\
 $$\implies \text{CSWAP}|1, b, c\rangle = |1, c, b\rangle, \quad \text{CSWAP}|0, b, c\rangle = |0, b, c\rangle$$
 
 
-* **Deutsch Gate ($D_\theta$)** is a _universal_ gate which performs a controlled transformation $U_{\theta}$ iff the first two qubits are in state $|1\rangle$:
+* **Deutsch Gate ($D_\theta$)** is a _quantum-universal_ (if $\frac{\theta}{\pi} \notin\mathbb{Q}$) gate which performs a controlled single-qubit unitary rotation $U_{\theta}$ iff the first two qubits are in state $|1\rangle$:
 
 $$U_\theta:=\begin{bmatrix} i\cos\theta & \sin\theta \\
                             \sin \theta & i\cos\theta \end{bmatrix}$$
