@@ -6,10 +6,11 @@
 0. [Physical Foundations](./00-preliminaries.md)
 1. [Principle of Computation](#1-principle-of-computation)
 2. [Notes on Quantum Logic](#2-notes-on-quantum-logic)
-3. Qubit Operations & Gates
+3. [Qubit Operations & Gates](#3-operations-on-qubits)
     1. Single-Qubit Gates
     2. Two-Qubit Gates
-    3. Universal Gate Sets
+    3. Three-Qubit Gates
+    4. Universal Gate Sets
 4. Circuits & Measurement
     1. Circuit Composition
     2. Ancillas & Reversibility
@@ -68,4 +69,196 @@ $$\displaystyle\mathcal{H}_{2^n}=\bigotimes_{i=1}^n \mathcal{H}_2$$
 * Logical connectives are realized as **unitary operators** of dimension $2^n$ rather than static truth tables, directly recovering the standard circuit model of quantum computing.
 
 However, in contradistinction to Birkhoff-von Neumann logic, **the law of the excluded middle** is broken in this formulation (e.g. for a superposition state like $\frac{\vert{}0\rangle + \vert{}1\rangle}{\sqrt{2}}$).
+
+
+
+
+
+
+## 3. Operations on Qubits
+
+A quantum gate is a unitary transformation acting on a qubit register. Unlike classical irreversible logic, all quantum operations on closed systems are strictly reversible and trace-preserving.
+
+A single-qubit gate is represented by a $2 \times 2$ unitary matrix satisfying:
+
+$$U U^\dagger = U^\dagger U = I$$
+
+where $U^\dagger = (U^*)^T$ is the Hermitian conjugate. An $n$-qubit gate corresponds to a $2^n \times 2^n$ unitary matrix.
+
+Computational basis states in standard column vector form:
+
+$$|0\rangle = \begin{bmatrix} 1 \\ 
+                              0 \end{bmatrix}, 
+    |1\rangle = \begin{bmatrix} 0 \\ 
+                                      1 \end{bmatrix}$$
+
+Composite registers are constructed via the _tensor product_:
+
+
+$$|ab\rangle = |a\rangle \otimes |b\rangle \equiv \begin{bmatrix} a_0 b_0 \\ 
+                                                                  a_0 b_1 \\ 
+                                                                  a_1 b_0 \\ 
+                                                                  a_1 b_1 \end{bmatrix}   \equiv   v_{00}|00\rangle + v_{01}|01\rangle + v_{10}|10\rangle + v_{11}|11\rangle
+                                                             \text{, \ \ where}\sum_{i,j} |v_{ij}|^2 = 1$$
+
+
+### Elementary Single-Qubit Gates
+Given a single qubit $|\psi\rangle=\alpha|0\rangle + \beta|1\rangle$, the following ounitary operations can be performed:
+* **Identity Gate ($I$ or $\sigma_0$):**
+
+$$I = \begin{bmatrix} 1 & 0 \\ 
+                      0 & 1 \end{bmatrix}, 
+        \quad I|\psi\rangle = |\psi\rangle $$
+
+* **Pauli-X Gate ($X$ or $\sigma_x$)** is the quantum NOT gate; corresponds to a $\pi$ rotation about the X-axis of the Bloch sphere:
+
+$$X = \begin{bmatrix} 0 & 1 \\ 
+                      1 & 0 \end{bmatrix}, 
+       \quad X|\psi\rangle = \beta|0\rangle + \alpha|1\rangle$$
+
+* **Pauli-Z Gate ($Z$ or $\sigma_z$)** flips the relative phase; corresponds to a $\pi$ rotation about the Z-axis of the Bloch sphere:
+
+$$Z = \begin{bmatrix} 1 & 0 \\ 
+                      0 & -1 \end{bmatrix},
+    \quad Z|\psi\rangle = \alpha|0\rangle - \beta|1\rangle$$
+
+
+* **Pauli-Y Gate ($Y$ or $\sigma_y$)** corresponds to a $\pi$ rotation about the Y-axis of the Bloch sphere:
+
+$$Y = \begin{bmatrix} 0 & -i \\
+                      i & 0 \end{bmatrix},
+   \quad Y|\psi\rangle = -i\beta|0\rangle + i\alpha|1\rangle$$
+  
+
+The Pauli matrices are Hermitian and involutory:
+
+$$I^2 = X^2 = Y^2 = Z^2 = -iXYZ = I$$
+
+
+
+* **Hadamard Gate ($H$)** generates equal superpositions; corresponds to a rotation of $\pi$ radians about the diagonal axis $(\hat{x} + \hat{z})/\sqrt{2}$ on the Bloch sphere. Satisfies $H = H^\dagger$ and $H^2 = I$:
+
+$$H = \frac{1}{\sqrt{2}}\begin{bmatrix} 1 & 1 \\
+                                          1 & -1 \end{bmatrix}$$
+                                          
+$$H|0\rangle = \frac{|0\rangle + |1\rangle}{\sqrt{2}} = |+\rangle, \quad H|1\rangle = \frac{|0\rangle - |1\rangle}{\sqrt{2}} = |-\rangle$$
+  
+
+* **Square Root of NOT ($\sqrt{X}$ or $\sqrt{\text{NOT}}$):**
+
+$$\sqrt{X} = \frac{1}{2}\begin{bmatrix} 1+i & 1-i \\
+                                          1-i & 1+i \end{bmatrix}, \quad \sqrt{X}^2 = X$$
+
+
+
+* **Phase Shift Gate ($R_\phi$)** rotates a vector within $xy$ plane on a given angle $\phi$; leaves computational basis measurement probabilities unchanged while shifting relative phase. 
+
+$$R_\phi = \begin{bmatrix} 1 & 0 \\ 
+                           0 & e^{i\phi} \end{bmatrix}$$
+
+Two particular cases of the Shift Gate are of interest:
+- **S gate** ($R_{\pi/2}$):
+
+$$S = \begin{bmatrix} 1 & 0 \\
+                      0 & i \end{bmatrix}$$
+    
+- **T gate** ($R_{\pi/4}$):
+
+$$T = \begin{bmatrix} 1 & 0 \\
+                      0 & e^{i\pi/4} \end{bmatrix} \implies T^2 = S$$
+
+
+### Two-Qubit Gates
+
+* **SWAP Gate** exchanges two states:
+ 
+$$\text{SWAP} = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 
+                                0 & 0 & 1 & 0 \\ 
+                                0 & 1 & 0 & 0 \\ 
+                                0 & 0 & 0 & 1 \end{bmatrix}$$
+
+$$\text{SWAP} \begin{bmatrix} v_{00} & v_{01} & v_{10} & v_{11} \end{bmatrix}^T \equiv v_{00} |00\rangle + v_{10}|01\rangle + v_{01}|10\rangle + v_{11} |11\rangle $$
+
+* **$\sqrt{\text{SWAP}}$ Gate** is a universal in combination with single-qubit rotations gate, which performs an entangling half-swap:
+
+$$\sqrt{\text{SWAP}} = \begin{bmatrix} 1 & 0 & 0 & 0 \\
+                                       0 & \frac{1+i}{2} & \frac{1-i}{2} & 0 \\ 
+                                       0 & \frac{1-i}{2} & \frac{1+i}{2} & 0 \\ 
+                                       0 & 0 & 0 & 1 \end{bmatrix}$$
+
+
+#### Controlled Gates
+
+Controlled gates  ($C(U)$ ) apply operation $U$ to the target qubit if the control qubit is $|1\rangle$, leaving it unchanged otherwise:
+
+* **Controlled-NOT (CNOT / $cX$):**
+
+$$\text{CNOT}|a, b\rangle = |a, a \oplus b\rangle$$
+
+$$\text{CNOT} = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 
+                                0 & 1 & 0 & 0 \\ 
+                                0 & 0 & 0 & 1 \\ 
+                                0 & 0 & 1 & 0 \end{bmatrix}$$
+  
+* **General Controlled-U:**
+
+$$C(U) = \begin{bmatrix} 1 & 0 & 0 & 0 \\
+                        0 & 1 & 0 & 0 \\
+                        0 & 0 & u_{00} & u_{01} \\
+                        0 & 0 & u_{10} & u_{11} \end{bmatrix}$$
+
+
+### Three-Qubit Gates
+
+* **Toffoli Gate (CCNOT)** is a _reversible_ and _universal_ gate which returns $NOT|c\rangle$ iff $a=b=c$: 
+
+$$\text{CCNOT}|a, b, c\rangle = |a, b, c \oplus (a \wedge b)\rangle$$
+
+* **Fredkin Gate (CSWAP)** is a controlled swap gate preserving total Hamming weight:
+  
+$$\text{CSWAP}|1, b, c\rangle = |1, c, b\rangle, \quad \text{CSWAP}|0, b, c\rangle = |0, b, c\rangle$$
+
+
+* **Deutsch Gate ($D_\theta$):**
+
+$$D_\theta|a, b, c\rangle = \begin{cases}
+  i\cos\theta|a, b, c\rangle + \sin\theta|a, b, 1-c\rangle & \text{if } a = b = 1 \\
+  |a, b, c\rangle & \text{otherwise}
+  \end{cases}$$
+
+
+### Universal Gate Sets
+
+A set of gates is **universal** if any unitary transformation $U \in U(2^n)$ can be approximated to arbitrary accuracy $\epsilon > 0$ by a finite sequence of gates selected from that set.
+
+Standard universal sets include:
+* $\{H, T, \text{CNOT}\}$
+* $\{\text{CNOT}\} \cup U(2)$
+* $\{H, Z, CZ, CCZ\}$
+* $\{D_\theta\}$ for irrational $\theta/\pi$
+
+#### Decomposition into Two-Level Unitary Operators
+
+Any unitary matrix $U$ on a $d$-dimensional space ($d = 2^n$) can be factored into a product of at most $d(d-1)/2$ two-level unitary matrices:
+
+$$\displaystyle U = U_1^\dagger U_2^\dagger \cdots U_k^\dagger, \quad k \le 2^{n-1}(2^n - 1) = O(4^n)$$
+
+Using Gray code state transitions, each $n$-qubit two-level unitary decomposes into $O(n^2)$ single-qubit and CNOT operations. Thus, an arbitrary $n$-qubit unitary transformation can be synthesized using 
+$$O(n^2 4^n)$$
+elementary single-qubit and CNOT gates.
+
+#### Solovay–Kitaev Theorem
+
+Because the space of unitaries forms a continuum, a finite gate set can only approximate arbitrary unitaries. The approximation error between unitaries $U$ and $V$ is defined as:
+
+$$\displaystyle E(U, V) = \sup_{|\psi\rangle} \|(U - V)|\psi\rangle\|$$
+
+This metric bounds variation in measurement probabilities:
+$$|P_U - P_V| \le 2E(U, V)$$
+
+**Theorem:** Let $G$ generate a dense subgroup in $\text{SU}(2)$. Any target gate $U \in \text{SU}(2)$ can be approximated to precision $\epsilon$ using a sequence of gates from $G$ of length:
+
+$$O\left(\log^c\left(\frac{1}{\epsilon}\right)\right), \text{where } c \approx 3.97$$
+
+For an $m$-gate circuit, synthesizing an $\epsilon$-approximation requires $O(m \log^c(m/\epsilon))$ gates.
 
