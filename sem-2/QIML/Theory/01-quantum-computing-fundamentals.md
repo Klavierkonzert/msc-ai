@@ -78,6 +78,8 @@ However, in contradistinction to Birkhoff-von Neumann logic, **the law of the ex
 
 ## 3. Operations on Qubits
 
+> see https://en.wikipedia.org/wiki/Quantum_logic_gate for more details
+
 A quantum gate is a unitary transformation acting on a qubit register. Unlike classical irreversible logic, all quantum operations on closed systems are strictly reversible and trace-preserving. The result of the applying a gate operator $U$ on a qubit register is denoted as $U\vert{}\psi\rangle$.
 
 A single-qubit gate is represented by a $2 \times 2$ unitary matrix satisfying:
@@ -200,7 +202,7 @@ $$\text{CNOT} = \begin{bmatrix} 1 & 0 & 0 & 0 \\
                                 0 & 0 & 0 & 1 \\ 
                                 0 & 0 & 1 & 0 \end{bmatrix}$$
   
-* **General Controlled-U:**
+* **General Controlled-U**:
 
 $$C(U) = \begin{bmatrix} 1 & 0 & 0 & 0 \\
                         0 & 1 & 0 & 0 \\
@@ -210,18 +212,24 @@ $$C(U) = \begin{bmatrix} 1 & 0 & 0 & 0 \\
 
 ### Three-Qubit Gates
 
-* **Toffoli Gate (CCNOT)** is a _reversible_ and _universal_ gate which returns $NOT|c\rangle$ iff $a=b=c$: 
+* **Toffoli Gate (CCNOT)** is a _involutory_ and _universal_ gate which returns $NOT|c\rangle$ iff $a=b$: 
 
 $$\text{CCNOT}|a, b, c\rangle = |a, b, c \oplus (a \wedge b)\rangle$$
 
-* **Fredkin Gate (CSWAP)** is a controlled swap gate preserving total Hamming weight:
-  
-$$\text{CSWAP}|1, b, c\rangle = |1, c, b\rangle, \quad \text{CSWAP}|0, b, c\rangle = |0, b, c\rangle$$
+* **Fredkin Gate (CSWAP)** is a _involutory_ controlled swap gate preserving total Hamming weight:
+
+$$\text{CSWAP}:=\begin{bmatrix} I_{4\times 4} & 0_{4 \times 4} \\
+                        0_{4\times 4} & \text{SWAP} \end{bmatrix}$$
+                        
+$$\implies \text{CSWAP}|1, b, c\rangle = |1, c, b\rangle, \quad \text{CSWAP}|0, b, c\rangle = |0, b, c\rangle$$
 
 
-* **Deutsch Gate ($D_\theta$):**
+* **Deutsch Gate ($D_\theta$)** is a _universal_ gate which performs a controlled transformation $U_{\theta}$ iff the first two qubits are in state $|1\rangle$:
 
-$$D_\theta|a, b, c\rangle = \begin{cases}
+$$U_\theta:=\begin{bmatrix} i\cos\theta & \sin\theta \\
+                            \sin \theta & i\cos\theta \end{bmatrix}$$
+                        
+$$\implies D_\theta|a, b, c\rangle := \begin{cases}
   i\cos\theta|a, b, c\rangle + \sin\theta|a, b, 1-c\rangle & \text{if } a = b = 1 \\
   |a, b, c\rangle & \text{otherwise}
   \end{cases}$$
