@@ -10,8 +10,8 @@
     1. Single-Qubit Gates
     2. Two-Qubit Gates
     3. Three-Qubit Gates
-4. [Universal Gate Synthesis](./04-universal-gates.md) (mathematically heavy and can be skipped)
-5. [Circuits & Measurement](./05-quantum-circuits.md)
+4. [Universal Gate Synthesis](./02-universal-gates.md) (mathematically heavy and can be skipped)
+5. [Circuits & Measurement](./03-quantum-circuits.md)
 6. ...
 
 ## 1. Principle of Computation
