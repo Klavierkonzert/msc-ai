@@ -23,7 +23,7 @@ $$\displaystyle|\psi\rangle = \alpha|0\rangle + \beta|1\rangle \equiv \begin{bma
 
 where $\alpha, \beta \in \mathbb{C}$ are probability amplitudes constrained by the normalization condition:
 
-$$|\alpha|^2 + |\beta|^2 = 1$$
+$$\lVert \psi \rVert^2_2 \equiv |\alpha|^2 + |\beta|^2 = 1$$
 
 Corresponding conjugate linear operators are denoted as _bra_ vectors $\langle\psi| \equiv |\psi\rangle^\dagger$ (Hermitian conjugate), represented by row vectors.
 
@@ -84,7 +84,9 @@ A quantum gate is a unitary transformation acting on a qubit register. Unlike cl
 
 A single-qubit gate is represented by a $2 \times 2$ unitary matrix satisfying:
 
-$$U U^\dagger = U^\dagger U = I$$
+$$\displaystyle U U^\dagger = U^\dagger U = I$$
+
+$$\Leftrightarrow \displaystyle \lVert U\psi \rVert_2 = \lVert\psi \rVert_2 \equiv 1$$
 
 where $U^\dagger = (U^*)^T$ is the Hermitian conjugate. An $n$-qubit gate corresponds to a $2^n \times 2^n$ unitary matrix.
 
@@ -98,10 +100,10 @@ $$|0\rangle = \begin{bmatrix} 1 \\
 
 Composite registers are constructed via the _tensor product_:
 
-$$|ab\rangle = |a\rangle \otimes |b\rangle \equiv \begin{bmatrix} a_0 b_0 \\ 
-                                                                  a_0 b_1 \\ 
-                                                                  a_1 b_0 \\ 
-                                                                  a_1 b_1 \end{bmatrix}   \equiv   v_{00}|00\rangle + v_{01}|01\rangle + v_{10}|10\rangle + v_{11}|11\rangle
+$$\displaystyle|ab\rangle = |a\rangle \otimes |b\rangle \equiv \begin{bmatrix} a_0 b_0 \\ 
+                                                                              a_0 b_1 \\ 
+                                                                              a_1 b_0 \\ 
+                                                                              a_1 b_1 \end{bmatrix}   \equiv   v_{00}|00\rangle + v_{01}|01\rangle + v_{10}|10\rangle + v_{11}|11\rangle
                                                              \text{, \ \ where}\sum_{i,j} |v_{ij}|^2 = 1$$
 
 ### Elementary Single-Qubit Gates
@@ -144,9 +146,11 @@ $$I^2 = X^2 = Y^2 = Z^2 = -iXYZ = I$$
 
 $$H = \frac{1}{\sqrt{2}}\begin{bmatrix} 1 & 1 \\
                                           1 & -1 \end{bmatrix}$$
-                                          
-$$H|0\rangle = \frac{|0\rangle + |1\rangle}{\sqrt{2}} = |+\rangle, \quad H|1\rangle = \frac{|0\rangle - |1\rangle}{\sqrt{2}} = |-\rangle$$
-  
+
+Hadamard Gate maps $|0\rangle$ and $|1\rangle$ into states commonly denoted as $+$ and $-$ respectively, where probabilities of obtaining **0** or **1** are equal after measurement:
+
+$$H|0\rangle = \frac{|0\rangle + |1\rangle}{\sqrt{2}} \eqqcolon |\text{+}\rangle, \quad H|1\rangle = \frac{|0\rangle - |1\rangle}{\sqrt{2}} \eqqcolon |-\rangle$$
+
 
 * **Square Root of NOT ($\sqrt{X}$ or $\sqrt{\text{NOT}}$):**
 
