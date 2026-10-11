@@ -112,6 +112,7 @@ $$I = \begin{bmatrix} 1 & 0 \\
                       0 & 1 \end{bmatrix}, 
         \quad I|\psi\rangle = |\psi\rangle $$
 
+#### Pauli Gates
 * **Pauli-X Gate ($X$ or $\sigma_x$)** is the quantum NOT gate; corresponds to a $\pi$ rotation about the X-axis of the Bloch sphere:
 
 $$X = \begin{bmatrix} 0 & 1 \\ 
@@ -136,6 +137,7 @@ The Pauli matrices are Hermitian and involutory:
 
 $$I^2 = X^2 = Y^2 = Z^2 = -iXYZ = I$$
 
+#### Other Gates
 
 
 * **Hadamard Gate ($H$)** generates equal superpositions; corresponds to a rotation of $\pi$ radians about the diagonal axis $(\hat{x} + \hat{z})/\sqrt{2}$ on the Bloch sphere. Satisfies $H = H^\dagger$ and $H^2 = I$:
@@ -152,8 +154,7 @@ $$\sqrt{X} = \frac{1}{2}\begin{bmatrix} 1+i & 1-i \\
                                           1-i & 1+i \end{bmatrix}, \quad \sqrt{X}^2 = X$$
 
 
-
-* **Phase Shift Gate ($R_\phi$)** rotates a vector within $xy$ plane on a given angle $\phi$; leaves computational basis measurement probabilities unchanged while shifting relative phase. 
+* **Phase Shift Gate ($R_\phi$, also $P_\phi$)** rotates a vector within $xy$ plane on a given angle $\phi$; leaves computational basis measurement probabilities unchanged while shifting $|1\rangle$ to a given relative phase. 
 
 $$R_\phi = \begin{bmatrix} 1 & 0 \\ 
                            0 & e^{i\phi} \end{bmatrix}$$
@@ -168,6 +169,24 @@ $$S = \begin{bmatrix} 1 & 0 \\
 
 $$T = \begin{bmatrix} 1 & 0 \\
                       0 & e^{i\pi/4} \end{bmatrix} \implies T^2 = S$$
+
+#### Rotation Operator Gates
+Can be expressed as exponentials of corresponding Pauli gates. Any $2\times 2$ unitary matrix in $SU(2)$ can be represented as a product of $\le$ 3 rotation operators.
+
+- **Rotation around $x$ axis**:
+
+$$ R_X(\theta) = \exp\big(-i\ X\frac{\theta}{2}\big) \equiv \begin{bmatrix} \cos\frac{\theta}{2} & -i\ \sin\frac{\theta}{2} \\
+                                                                              -i\ \sin\frac{\theta}{2} & \cos\frac{\theta}{2} \end{bmatrix}$$
+
+- **Rotation around $y$ axis**:
+
+$$ R_Y(\theta) = \exp\big(-i\ Y\frac{\theta}{2}\big) \equiv \begin{bmatrix} \cos\frac{\theta}{2} & -\sin\frac{\theta}{2} \\
+                                                                             \sin\frac{\theta}{2} & \cos\frac{\theta}{2} \end{bmatrix}$$
+
+- **Rotation around $z$ axis**:
+
+$$ R_Z(\theta) = \exp\big(-i\ Z\ frac{\theta}{2}\big) \equiv \begin{bmatrix} \exp\big(-\frac{\theta}{2}\big)& 0 \\
+                                                                             0 & \exp \big(\frac{\theta}{2}\big) \end{bmatrix}$$
 
 
 ### Two-Qubit Gates
