@@ -80,15 +80,15 @@ However, in contradistinction to Birkhoff-von Neumann logic, **the law of the ex
 
 > see https://en.wikipedia.org/wiki/Quantum_logic_gate for more details
 
-A quantum gate is a unitary transformation acting on a qubit register. Unlike classical irreversible logic, all quantum operations on closed systems are strictly reversible and trace-preserving. The result of the applying a gate operator $U$ on a qubit register is denoted as $U\vert{}\psi\rangle$.
+A quantum gate is a unitary transformation acting on a qubit register. Unlike classical irreversible logic, all quantum operations on closed systems are strictly reversible and trace-preserving. The result of applying a gate operator $U$ to a qubit register in state $|\psi\rangle$ is given by $U|\psi\rangle$.
 
-A single-qubit gate is represented by a $2 \times 2$ unitary matrix satisfying:
+A single-qubit gate is represented by a $2 \times 2$ unitary matrix, and $n$-qubit gate corresponds to a $2^n \times 2^n$ unitary matrix, which satisfy:
 
 $$\displaystyle U U^\dagger = U^\dagger U = I$$
 
 $$\Leftrightarrow \displaystyle \lVert U\psi \rVert_2 = \lVert\psi \rVert_2 \equiv 1$$
 
-where $U^\dagger = (U^*)^T$ is the Hermitian conjugate. An $n$-qubit gate corresponds to a $2^n \times 2^n$ unitary matrix.
+where $U^\dagger = (U^*)^T$ is the Hermitian conjugate. 
 
 _Computational basis states_ in standard column vector form:
 
@@ -98,13 +98,29 @@ $$|0\rangle = \begin{bmatrix} 1 \\
                                       1 \end{bmatrix}$$
 
 
-Composite registers are constructed via the _tensor product_:
+Composite registers are constructed _recursively_ via the _tensor product_ according to the following rule:
 
 $$\displaystyle|ab\rangle = |a\rangle \otimes |b\rangle \equiv \begin{bmatrix} a_0 b_0 \\ 
                                                                               a_0 b_1 \\ 
                                                                               a_1 b_0 \\ 
                                                                               a_1 b_1 \end{bmatrix}   \equiv   v_{00}|00\rangle + v_{01}|01\rangle + v_{10}|10\rangle + v_{11}|11\rangle
                                                              \text{, \ \ where}\sum_{i,j} |v_{ij}|^2 = 1$$
+
+Tensor product of matrices can be obtained in a similar way. Tensor product is _not commutative_ and _bilinear_.
+
+
+Since $U$ defines a transition from the computational basis $\mathcal{B} = \{|v\rangle : v \in \{0, 1\}^n\}$ to another orthonormal basis $\{|u_v\rangle\}$, where each transformed state:
+
+$$|u_v\rangle \equiv U|v\rangle = \sum_{w \in \{0, 1\}^n} U_{wv}|w\rangle$$
+
+corresponds to the $v$-th column vector of $U$, the operator expands via the completeness relation ($I = \sum_{v} |v\rangle\langle v|$) as a sum of outer products:
+
+$$U = UI = \sum_{v \in \{0, 1\}^n} (U|v\rangle)\langle v| = \sum_{v \in \{0, 1\}^n} |u_v\rangle \langle v|$$
+
+Applying $U$ to an arbitrary superposition state $|\psi\rangle = \sum_{v} c_v |v\rangle$ transforms each basis vector into its corresponding column state while preserving the probability amplitudes $c_v = \langle v|\psi\rangle$:
+
+$$U|\psi\rangle = \left(\sum_{v \in \{0, 1\}^n} |u_v\rangle\langle v|\right)|\psi\rangle = \sum_{v \in \{0, 1\}^n} |u_v\rangle \langle v|\psi\rangle = \sum_{v \in \{0, 1\}^n} c_v |u_v\rangle$$
+
 
 ### Elementary Single-Qubit Gates
 Given a single qubit $|\psi\rangle=\alpha|0\rangle + \beta|1\rangle$, the following ounitary operations can be performed:
