@@ -1,0 +1,5 @@
+# Raw landscape probing data (individual parent-mutant genotype dumps)
+results/landscape/landscape_data_*.csv
+
+# Raw generational run stats dump
+stats/last_stats.csv

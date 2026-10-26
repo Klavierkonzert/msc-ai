@@ -10,6 +10,8 @@ This module focuses on the evolution of 3D artificial creatures using the [Frams
 
 * **[Assignment 3: Mutation Intensity in Evolutionary Algorithms](./assignments/Assignment%203%20-%20Mutation%20Intensity%20in%20Evolutionary%20Algorithms/README.md)**: Investigating the influence of mutation intensity on search performance, premature convergence, local optima, and the critical role of crossover.
 * **[Assignment 4: EA with Different Genome Encodings](./assignments/Assignment%204%20-%20EA%20with%20different%20genome%20encodings/README.md)**: Comparing structural representations ($f_0, f_1, f_4, f_9$), analyzing neutral plateaus on uneven terrain, and formulating justified fitness modifications to guide evolution out of plateaus.
+* **[Assignment 5: Modifying Topology Exploration Path](./assignments/Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/README.md)**: Manipulating mutation types, operator probabilities (morphological vs. neural net balance), and active sensor/effector co-evolution for locomotion velocity.
+* **[Assignment 6: Fitness Landscape Exploration](./assignments/Assignment%206%20-%20Fitness%20Landscape%20Exploration/README.md)**: Probing topological ruggedness, neutrality, mutational locality, and evolvability across direct, tree-developmental, grammar, and handle-based genetic representations ($f_0, f_1, f_4, f_H$).
 
 ---
 
@@ -143,7 +145,9 @@ python scripts/analyze_hof.py \
 Evolutionary Design/
 ├── assignments/
 │   ├── Assignment 3 - Mutation Intensity in Evolutionary Algorithms/
-│   └── Assignment 4 - EA with different genome encodings/
+│   ├── Assignment 4 - EA with different genome encodings/
+│   ├── Assignment 5 - Modifying topology exploration path. Evolution of Designs/
+│   └── Assignment 6 - Fitness Landscape Exploration/
 ├── Framsticks55/               # Framsticks engine and binaries
 │   ├── data/                   # Simulation files (*.sim) and scripts
 │   └── frams-objects.dll       # Native simulation library
