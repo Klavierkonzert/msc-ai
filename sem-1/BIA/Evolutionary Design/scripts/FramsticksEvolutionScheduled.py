@@ -71,7 +71,8 @@ def apply_sim_strategy(sim_path: str):
 
 def scheduled_eaSimple(pop, toolbox, cxpb, mutpb, ngen, stats=None, halloffame=None, verbose=True):
     """
-    Replaces DEAP algorithms.eaSimple to apply mutation strategy switches mid-evolution.
+    Replaces DEAP algorithms.eaSimple to apply mutation strategy switches mid-evolution + to track 
+    hall of fame history (best genotypes and their fitness values for each generation).
     """
     schedule = parse_schedule(getattr(fe.parsed_args, 'schedule', None))
     logbook = tools.Logbook()
@@ -91,8 +92,20 @@ def scheduled_eaSimple(pop, toolbox, cxpb, mutpb, ngen, stats=None, halloffame=N
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
+    # individual HoF, updated if needed
     if halloffame is not None:
         halloffame.update(pop)
+
+    # HoF history tracking
+    hof_history = []
+    last_best_fit = -float('inf')
+    if halloffame is not None and len(halloffame) > 0 and fe.is_feasible_fitness_criteria(halloffame[0].fitness.values):
+        last_best_fit = halloffame[0].fitness.values[0]
+        hof_history.append({
+            "gen": 0,
+            "fitness": float(last_best_fit),
+            "genotype": halloffame[0][0]
+        })
 
     record = stats.compile(pop) if stats else {}
     logbook.record(gen=0, nevals=len(invalid_ind), strategy=current_strategy, **record)
@@ -127,6 +140,15 @@ def scheduled_eaSimple(pop, toolbox, cxpb, mutpb, ngen, stats=None, halloffame=N
 
         if halloffame is not None:
             halloffame.update(offspring)
+            if len(halloffame) > 0 and fe.is_feasible_fitness_criteria(halloffame[0].fitness.values):
+                cur_fit = halloffame[0].fitness.values[0]
+                if cur_fit > last_best_fit:
+                    last_best_fit = cur_fit
+                    hof_history.append({
+                        "gen": gen,
+                        "fitness": float(cur_fit),
+                        "genotype": halloffame[0][0]
+                    })
 
         pop[:] = offspring
 
@@ -134,6 +156,9 @@ def scheduled_eaSimple(pop, toolbox, cxpb, mutpb, ngen, stats=None, halloffame=N
         logbook.record(gen=gen, nevals=len(invalid_ind), strategy=current_strategy, **record)
         if verbose:
             print(logbook.stream)
+
+    # Attach HoF climbing history directly to the logbook (persisted in *.logbook.pkl)
+    setattr(logbook, 'hof_history', hof_history)
 
     return pop, logbook
 
@@ -160,3 +185,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
