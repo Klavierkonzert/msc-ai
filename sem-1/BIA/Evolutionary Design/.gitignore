@@ -30,6 +30,7 @@ framspy-download/
 !assignments/**/*.txt
 !assignments/**/*.py
 !assignments/**/*.csv
+!assignments/**/*.html
 ## Specific Framsticks file extensions:
 !assignments/**/*.sim
 !assignments/**/*.gen

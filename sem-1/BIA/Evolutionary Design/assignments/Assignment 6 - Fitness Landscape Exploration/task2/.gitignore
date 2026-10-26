@@ -1,0 +1,3 @@
+# Raw crossover evaluation data (individual parent-pair mutant genotype dumps)
+results/crossover/crossover_data_*.csv
+results/crossover/crossover_cache.pkl
