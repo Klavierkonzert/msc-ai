@@ -43,13 +43,13 @@ Because combinatorial solution spaces cannot be plotted directly against argumen
 
 ```mermaid
 flowchart LR
-    A["Relatively Greedy & Fast Evolutionary Climb<br>(48 runs x 300 gens per encoding)"] --> B["Climbing Solutions Pool<br>(Extracted from logbook.hof_history, serialized inside `stats/<timestamp>/<hof_base>.logbook.pkl`)"]
-    A --> CurvesBoxplots["Figures 1, 2: Confidence and mean curves and boxplots of HoF"]
+    A["<b>Relatively Greedy & Fast Evolutionary Climb</b><br>(48 runs x 300 gens per encoding)"] --> B["Climbing Solutions Pool<br>(Extracted from logbook.hof_history, serialized inside `stats/<timestamp>/<hof_base>.logbook.pkl`)"]
+    A --> CurvesBoxplots["<a href=#fig-evolution-mean-curves><b>Figures 1, 2:</b></a> Confidence and mean curves and boxplots of HoF"]
     B --> C["Uniform Fitness Sampling<br>(200+ parents spanning [0, F_max])"]
     C --> D["Neighborhood <br>(20 valid 1-step mutants per parent, invalid or broken genotypes rejected and retried up to 20 times)"]
-    C --> ClimbersFitnessDistr["Figure 0: Distribution of Fitness values across unique fitness climbers"]
-    D --> E["Figure 4: Landscape Visualizations<br>(Scatter plots with y=x, fixed scale)"]
-    D --> N["Table: Neighbourhood characteristics: improvement rates, lethality / fragility rate"]
+    C --> ClimbersFitnessDistr["<a href=#fig-distribution-parents-climbers><b>Figure 0:</b></a> Distribution of Fitness values across unique fitness climbers"]
+    D --> E["<a href=#eoeu><b>Figure 4:</b></a> Landscape Visualizations<br>(Scatter plots with y=x, fixed scale)"]
+    D --> N["<a href=#table-neighborhood-characteristics><b>Table:</b></a><br>Neighbourhood characteristics: improvement rates, lethality / fragility rate"]
 ```
 
 <a id="fig-distribution-parents-climbers"></a>
