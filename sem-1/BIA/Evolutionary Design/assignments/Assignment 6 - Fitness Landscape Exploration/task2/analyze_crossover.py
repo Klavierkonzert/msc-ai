@@ -57,19 +57,85 @@ def generate_shuffled_pairs(parents: List[Dict[str, Any]], rounds: int = 5, seed
             pairs.append((p_low, p_high, r + 1, len(pairs)))
     return pairs
 
+import numpy as np
+from scipy import stats
 
-def _worker_crossover(batch, frams_path, sim_settings, reps, max_retries):
+def test_triangle_uniformity(points, L: float|None=None, case='upper', grid_size=4, eps = 1e-6):
+    """
+    Tests uniformity of points inside a diagonal half of a square (O, (0, L), (L, L), (L, 0)) of side L (if set up, otherwise max value used L:=max(max(x), max(y))).
+    
+    Parameters:
+    - points: array-like of shape (N, 2)
+    - L: the maximum coordinate value (X_max or Y_max)
+    - case: 'lower' for lower triangle (y <= x), 'upper' for upper triangle (y >= x)
+    - grid_size: matrix size for the Chi-Square binning (e.g., 4x4 = 16 bins)
+    """
+    points = np.asarray(points)
+    x = points[:, 0]
+    y = points[:, 1]
+    if L is None:
+        L = max(x.max(), y.max()) + eps
+    
+    # Avoid division by exact zeros at the origin/boundaries
+    x = np.where(x == 0, eps, x)
+    
+    # 1. Apply Direct Probability Integral Transform
+    if case.upper() == 'LOWER':
+        # Bounded by y <= x
+        u1 = (x / L) ** 2
+        u2 = y / x
+    elif case.upper() == 'UPPER':
+        u1 = 1.0 - (1.0 - x / L) ** 2
+        denom = L - x
+        denom = np.where(denom == 0, eps, denom)
+        u2 = (y - x) / denom
+    else:
+        raise ValueError("Case must be 'lower' or 'upper'")
+        
+    # Clip to ensure minor float noise doesn't escape [0, 1]
+    u1, u2 = np.clip(u1, 0, 1), np.clip(u2, 0, 1)
+    
+    # 2. Map to 2D Histogram bins
+    edges = np.linspace(0, 1, grid_size + 1)
+    observed, _, _ = np.histogram2d(u1, u2, bins=[edges, edges])
+    observed_flat = observed.flatten()
+    
+    # 3. Calculate Chi-Square Expected Frequencies
+    total_dots = len(points)
+    total_bins = grid_size * grid_size
+    expected_flat = np.full(total_bins, total_dots / total_bins)
+    
+    # 4. Compute Statistical Metrics
+    chi2_stat, p_val = stats.chisquare(f_obs=observed_flat, f_exp=expected_flat)
+    
+    # Compute KL Divergence (P || Q)
+    p_empirical = observed_flat / total_dots
+    q_uniform = np.ones(total_bins) / total_bins
+    p_empirical = np.where(p_empirical == 0, eps, p_empirical) # Smooth zeros
+    kl_div = stats.entropy(p_empirical, q_uniform)
+    
+    return {
+        "chi2_stat": chi2_stat,
+        "p_value": p_val,
+        "kl_divergence_nats": kl_div,
+        "is_uniform": p_val > 0.05
+    }
+
+def _worker_crossover(batch, frams_path, sim_settings, reps: int, max_retries: int, eps: float =1e-6):
     """Worker process evaluating crossover offspring for a chunk of parent pairs."""
     from FramsticksLib import FramsticksLib
     flib = FramsticksLib(frams_path, None, sim_settings)
     flib.PRINT_FRAMSTICKS_OUTPUT = False
     flib.GENOTYPE_INVALID_OFFSPRING_SUBSTITUTE_ORIGINAL = False
 
-    records, eps = [], 1e-6
+    records = []
     for p_low, p_high, s_round, pair_id in batch:
         p_low_f, p_high_f = float(p_low['parent_fitness']), float(p_high['parent_fitness'])
         p_mid_f = 0.5 * (p_low_f + p_high_f)
 
+        # crossover will be performed for two pairs of parents (p_low, p_high) and (p_high, p_low)
+        # the offspring O(p_low, p_high) -> 'low_x_high'
+        #               O(p_high, p_low) -> 'high_x_low'
         for dir_name, g_base, g_donor in [("low_x_high", p_low['parent_genotype'], p_high['parent_genotype']),
                                           ("high_x_low", p_high['parent_genotype'], p_low['parent_genotype'])]:
             for _ in range(reps):
@@ -90,6 +156,8 @@ def _worker_crossover(batch, frams_path, sim_settings, reps, max_retries):
                         records.append({
                             "pair_id": pair_id, "shuffle_round": s_round, "direction": dir_name,
                             "p_low_fitness": p_low_f, "p_high_fitness": p_high_f, "p_mid_fitness": p_mid_f,
+                            "p_base_fitness": p_high_f if dir_name == 'high_x_low' else p_low_f,
+                            "p_donor_fitness": p_low_f if dir_name == 'high_x_low' else p_high_f,
                             "offspring_fitness": off_fit, "delta_high": off_fit - p_high_f,
                             "is_better_high": bool(off_fit > p_high_f + eps),
                             "is_worse_low": bool(off_fit < p_low_f - eps),
@@ -106,8 +174,18 @@ def _worker_crossover(batch, frams_path, sim_settings, reps, max_retries):
 # 2. Vectorized Metrics & Table
 # ==============================================================================
 
-def compute_metrics(df: pd.DataFrame, label: str) -> Dict[str, Any]:
-    """Calculates summary crossover statistics including Heritability and Multiple Correlation."""
+def compute_metrics(df: pd.DataFrame, label: str, exclude_metrics: List[str] = None) -> Dict[str, Any]:
+    """Calculates summary crossover statistics including Heritability and Multiple Correlation on Base and Donor.
+    
+    Args:
+        df: DataFrame containing crossover results.
+        label: Label for the metric set.
+        exclude_metrics: List of metrics to exclude from the results. Valid values are (not case sensitive):
+            'Heterosis', 'Intermediate', 'Destructive', 'Heritability', 'Multiple R', 
+            'Weights', 'Lethality Rate', 'Max Parent', 'Max Offspring'
+    Returns:
+        Dictionary containing computed metrics.
+    """
     if df.empty:
         return {}
     n = len(df)
@@ -115,36 +193,48 @@ def compute_metrics(df: pd.DataFrame, label: str) -> Dict[str, Any]:
     var_mid = float(np.var(df['p_mid_fitness']))
     h2 = float(np.cov(y, df['p_mid_fitness'])[0, 1] / var_mid) if var_mid > 1e-12 else 0.0
 
-    # Multiple linear regression via statsmodels OLS: F(O) ~ beta_0 + beta_low * P_low + beta_high * P_high
-    X = sm.add_constant(df[['p_low_fitness', 'p_high_fitness']])
+    # Ensure p_base_fitness and p_donor_fitness exist
+    if 'p_base_fitness' not in df.columns:
+        is_hl = df['direction'] == 'high_x_low'
+        df['p_base_fitness'] = np.where(is_hl, df['p_high_fitness'], df['p_low_fitness'])
+        df['p_donor_fitness'] = np.where(is_hl, df['p_low_fitness'], df['p_high_fitness'])
+
+    # Multiple linear regression via statsmodels OLS: F(O) ~ beta_0 + beta_base * P_base + beta_donor * P_donor
+    X = sm.add_constant(df[['p_base_fitness', 'p_donor_fitness']])
     ols_res = sm.OLS(y, X).fit()
-    beta_low, beta_high = ols_res.params['p_low_fitness'], ols_res.params['p_high_fitness']
+    beta_base, beta_donor = ols_res.params['p_base_fitness'], ols_res.params['p_donor_fitness']
     R_mult = float(np.sqrt(max(0.0, ols_res.rsquared)))
 
     tot_att = df['attempts'].sum()
     lethality = float((tot_att - n) / tot_att * 100.0) if tot_att > 0 else 0.0
 
-    return {
+    res = {
         "Representation": label,
         "Heterosis $H^+$ ($O > P_{high}$)": f"{df['is_better_high'].sum()} ({df['is_better_high'].mean()*100:.2f}%)",
         "Intermediate ($P_{low} \\le O \\le P_{high}$)": f"{df['is_intermediate'].sum()} ({df['is_intermediate'].mean()*100:.2f}%)",
         "Destructive ($O < P_{low}$)": f"{df['is_worse_low'].sum()} ({df['is_worse_low'].mean()*100:.2f}%)",
-        "Heritability $h^2_{cross}$": f"{h2:.4f}",
+        "Heritability $h^2_{cross}$": f"{h2:.4f}" ,
         "Multiple $R$": f"{R_mult:.4f}",
-        "Weights $(\\beta_{low}, \\beta_{high})$": f"({beta_low:.3f}, {beta_high:.3f})",
+        "Weights $(\\beta_{base}, \\beta_{donor})$": f"({beta_base:.3f}, {beta_donor:.3f})",
         "Lethality Rate": f"{lethality:.2f}%",
         "Max Parent": f"{df['p_high_fitness'].max():.6f}",
         "Max Offspring": f"{df['offspring_fitness'].max():.6f}"
     }
+    if exclude_metrics:
+        exclude_set = {m.lower().strip() for m in exclude_metrics}
+        keys_to_del = [k for k in list(res.keys()) if any(m in k.lower() for m in exclude_set)]
+        for k in keys_to_del:
+            del res[k]
+    return res
 
 
-def export_tables(dfs: Dict[str, pd.DataFrame], out_dir: str):
+def export_tables(dfs: Dict[str, pd.DataFrame], out_dir: str, exclude_metrics: List[str] = None):
     """Builds and saves the metrics summary table in Markdown and CSV without outlier splitting."""
     rows = []
-    for fmt in ['0', '1', '4', 'H']:
+    for fmt in FORMAT_NAMES:
         df = dfs.get(fmt, pd.DataFrame())
         if not df.empty:
-            rows.append(compute_metrics(df, f"**f{fmt}**"))
+            rows.append(compute_metrics(df, f"**f{fmt}**", exclude_metrics=exclude_metrics))
 
     summary_df = pd.DataFrame(rows)
     summary_df.to_csv(os.path.join(out_dir, "crossover_metrics_summary.csv"), index=False)
@@ -160,10 +250,10 @@ def export_tables(dfs: Dict[str, pd.DataFrame], out_dir: str):
 def plot_2d_scatter(dfs: Dict[str, pd.DataFrame], out_dir: str, global_max: float):
     """Figure 1: 2x2 grid of Offspring Fitness vs. Mid-Parent Fitness on fixed shared axes."""
     fig, axes = plt.subplots(2, 2, figsize=(14, 12), sharex=True, sharey=True)
-    margin = global_max * 0.05
-    axis_lim = [0.0 - margin * 0.2, global_max + margin]
+    pad = global_max * 0.03
+    axis_lim = [-pad * 0.5, global_max + pad]
 
-    for idx, fmt in enumerate(['0', '1', '4', 'H']):
+    for idx, fmt in enumerate(FORMAT_NAMES):
         ax = axes.flatten()[idx]
         df = dfs.get(fmt, pd.DataFrame())
         if df.empty:
@@ -182,7 +272,7 @@ def plot_2d_scatter(dfs: Dict[str, pd.DataFrame], out_dir: str, global_max: floa
         # Metrics for annotation box via statsmodels
         var_mid = float(np.var(x))
         h2 = float(np.cov(y, x)[0, 1] / var_mid) if var_mid > 1e-12 else 0.0
-        X_mat = sm.add_constant(df[['p_low_fitness', 'p_high_fitness']])
+        X_mat = sm.add_constant(df[['p_base_fitness', 'p_donor_fitness']])
         ols_res = sm.OLS(y, X_mat).fit()
         R_mult = float(np.sqrt(max(0.0, ols_res.rsquared)))
 
@@ -207,124 +297,235 @@ def plot_2d_scatter(dfs: Dict[str, pd.DataFrame], out_dir: str, global_max: floa
     plt.close()
 
 
-def plot_3d_interactive(dfs: Dict[str, pd.DataFrame], out_dir: str, global_max: float):
-    """Generates interactive 3D HTML scatter plots with reference surfaces."""
-    grid_vals = np.linspace(0, global_max, 25)
+def plot_3d_interactive(dfs: Dict[str, pd.DataFrame], out_dir: str, global_max: float, vrange: tuple[float, float]):
+    """Generates interactive 3D HTML scatter plots with reference surfaces on shared (P_base, P_donor) square axes."""
+    grid_vals = np.linspace(0, global_max, 30)
     X_grid, Y_grid = np.meshgrid(grid_vals, grid_vals)
 
-    for fmt in ['0', '1', '4', 'H']:
+    # Reference surfaces across the full square [0, global_max]^2:
+    # 1. Best-Parent Ceiling: Upper triangle (Y >= X, Z = Y = P_donor)
+    Z_semi1 = np.where(Y_grid >= X_grid, Y_grid, np.nan)
+    # 2. Best-Parent Ceiling: Lower triangle (X >= Y, Z = X = P_base)
+    Z_semi2 = np.where(X_grid >= Y_grid, X_grid, np.nan)
+    # 3. Blue Mid-Parent Plane: Z = 0.5 * (X + Y)
+    Z_mid = 0.5 * (X_grid + Y_grid)
+    for fmt in FORMAT_NAMES:
         df = dfs.get(fmt, pd.DataFrame())
         if df.empty:
             continue
+        if 'p_base_fitness' not in df.columns:
+            is_hl = df['direction'] == 'high_x_low'
+            df['p_base_fitness'] = np.where(is_hl, df['p_high_fitness'], df['p_low_fitness'])
+            df['p_donor_fitness'] = np.where(is_hl, df['p_low_fitness'], df['p_high_fitness'])
+
         sample_df = df.sample(min(len(df), 2000), random_state=42) if len(df) > 2000 else df
         fig = go.Figure()
+
+        # 1. Main sampled offspring scatter
         fig.add_trace(go.Scatter3d(
-            x=sample_df['p_low_fitness'], y=sample_df['p_high_fitness'], z=sample_df['offspring_fitness'],
-            mode='markers', marker=dict(size=3.5, color=sample_df['delta_high'], colorscale='Viridis', colorbar=dict(title=r'$\Delta F_{high}$'), opacity=0.75),
-            text=[f"P_low: {r['p_low_fitness']:.5f}<br>P_high: {r['p_high_fitness']:.5f}<br>Offspring: {r['offspring_fitness']:.5f}" for _, r in sample_df.iterrows()],
-            hoverinfo='text', name='Offspring'
+            x=sample_df['p_base_fitness'], y=sample_df['p_donor_fitness'], z=sample_df['offspring_fitness'],
+            mode='markers', marker=dict(
+                size=3.5,
+                color=sample_df['delta_high'],
+                colorscale='RdBu',
+                cmin=vrange[0], cmid=(vrange[0]+vrange[1])/2, cmax=vrange[1],
+                colorbar=dict(title=dict(text='ΔF<sub>high</sub>', font=dict(size=13)), ticks='outside'),
+                opacity=0.75
+            ),
+            text=[f"P_base: {r['p_base_fitness']:.5f}<br>P_donor: {r['p_donor_fitness']:.5f}<br>Offspring: {r['offspring_fitness']:.5f}<br>Delta_F: {r['delta_high']:+.5f}" for _, r in sample_df.iterrows()],
+            hoverinfo='text', name=f'Offspring Sample (n={len(sample_df)})'
         ))
-        fig.add_trace(go.Surface(x=X_grid, y=Y_grid, z=np.maximum(X_grid, Y_grid), colorscale=[[0, 'rgba(255,0,0,0.15)'], [1, 'rgba(255,0,0,0.15)']], showscale=False, name='Best-Parent Ceiling'))
-        fig.add_trace(go.Surface(x=X_grid, y=Y_grid, z=0.5*(X_grid+Y_grid), colorscale=[[0, 'rgba(0,0,255,0.1)'], [1, 'rgba(0,0,255,0.1)']], showscale=False, name='Mid-Parent Plane'))
+
+        # 2. Highlight trace: Successful offspring (O > max(P_base, P_donor))
+        pos_df = df[df['is_better_high']]
+        if not pos_df.empty:
+            fig.add_trace(go.Scatter3d(
+                x=pos_df['p_base_fitness'], y=pos_df['p_donor_fitness'], z=pos_df['offspring_fitness'],
+                mode='markers',
+                marker=dict(size=8, symbol='circle', color='green', line=dict(color='black', width=1.2)),
+                text=[f"Successful Offspring: {r['p_base_fitness']:.5f}<br>P_donor: {r['p_donor_fitness']:.5f}<br>Offspring: {r['offspring_fitness']:.5f}<br>Delta_F: +{r['delta_high']:.5f}" for _, r in pos_df.iterrows()],
+                hoverinfo='text', name=f'Successful Offspring: O > P_high (n={len(pos_df)})'
+            ))
+        else:
+            fig.add_trace(go.Scatter3d(
+                x=[None], y=[None], z=[None],
+                mode='markers',
+                marker=dict(size=8, symbol='circle', color='green', line=dict(color='black', width=1.2)),
+                name='Successful Offspring: O > P_high (n=0)',
+                showlegend=True
+            ))
+
+        # 3. Two Red Semiplanes forming the Best-Parent Ceiling Z = max(P_base, P_donor)
+        fig.add_trace(go.Surface(
+            x=X_grid, y=Y_grid, z=Z_semi1,
+            colorscale=[[0, 'rgba(230, 40, 40, 0.22)'], [1, 'rgba(230, 40, 40, 0.22)']],
+            showscale=False, showlegend=True,
+            name='Best-Parent Ceiling (Z = P_donor, Y >= X)'
+        ))
+        fig.add_trace(go.Surface(
+            x=X_grid, y=Y_grid, z=Z_semi2,
+            colorscale=[[0, 'rgba(190, 20, 20, 0.16)'], [1, 'rgba(190, 20, 20, 0.16)']],
+            showscale=False, showlegend=True,
+            name='Best-Parent Ceiling (Z = P_base, X >= Y)'
+        ))
+
+        # 4. Blue Mid-Parent Neutrality Plane Z = (P_base + P_donor) / 2
+        fig.add_trace(go.Surface(
+            x=X_grid, y=Y_grid, z=Z_mid,
+            colorscale=[[0, 'rgba(30, 100, 240, 0.20)'], [1, 'rgba(30, 100, 240, 0.20)']],
+            showscale=False, showlegend=True,
+            name='Mid-Parent Plane (Z = (X+Y)/2)'
+        ))
+
         fig.update_layout(
-            title=f"3D Crossover Fitness Landscape - {FORMAT_NAMES[fmt]}",
-            scene=dict(xaxis=dict(title='F(P_low)', range=[0, global_max]), yaxis=dict(title='F(P_high)', range=[0, global_max]), zaxis=dict(title='F(Offspring)', range=[0, global_max]), aspectmode='cube'),
-            width=900, height=750, margin=dict(l=10, r=10, b=10, t=50)
+            title=dict(
+                text=f"3D Crossover Fitness Landscape - f<sub>{fmt}</sub> ({FORMAT_NAMES[fmt].split('(')[1]}<br><sup>Dependence of Offspring Fitness (O) on Parental Fitness (P<sub>base</sub>, P<sub>donor</sub>)</sup>",
+                font=dict(size=14)
+            ),
+            scene=dict(
+                xaxis=dict(title='F(P<sub>base</sub>)', range=[0, global_max]),
+                yaxis=dict(title='F(P<sub>donor</sub>)', range=[0, global_max]),
+                zaxis=dict(title='F(O)', range=[0, global_max]),
+                aspectmode='cube'
+            ),
+            legend=dict(
+                x=0.01, y=0.99,
+                bgcolor='rgba(255, 255, 255, 0.90)',
+                bordercolor='rgba(160, 160, 160, 0.8)',
+                borderwidth=1,
+                font=dict(size=11)
+            ),
+            width=960, height=780, margin=dict(l=10, r=10, b=10, t=60)
         )
         fig.write_html(os.path.join(out_dir, f"crossover_3d_f{fmt}.html"), include_plotlyjs='cdn')
 
 
-def plot_parents_distribution(dfs: Dict[str, pd.DataFrame], out_dir: str, global_max: float):
-    """Figure 0: 2x2 grid of Sampled Parent Pairs with desaturated symbols and a unified common legend."""
-    fig, axes = plt.subplots(2, 2, figsize=(14, 12.5), sharex=True, sharey=True)
-    margin = global_max * 0.05
-    axis_lim = [0.0 - margin * 0.2, global_max + margin]
-
-    round_markers = {1: 'o', 2: 's', 3: '^', 4: 'D', 5: 'v'}
+def plot_parents_distribution(dfs: Dict[str, pd.DataFrame], out_dir: str, global_max: float, 
+                                round_markers = ['o', 's', '^', 'D', 'v', 'p', '*', 'h'], eps=1e-6
+                                ):
+    """Figure 0: 2x2 grid of Directed Parent Pairs (P_base, P_donor) samples distribution spanning the full symmetric square domain."""
+    fig, axes = plt.subplots(2, 2, figsize=(14, 12.8), sharex=True, sharey=True)
+    pad = global_max * 0.03
+    axis_lim = [-pad * 0.5, global_max + pad]
 
     def _desaturate(color, factor=0.50):
         rgb = mcolors.to_rgb(color)
         hsv = mcolors.rgb_to_hsv(rgb)
         return mcolors.hsv_to_rgb((hsv[0], hsv[1] * factor, hsv[2]))
 
-    for idx, fmt in enumerate(['0', '1', '4', 'H']):
+    n_rounds = max(d['shuffle_round'].nunique() for d in dfs.values() if not d.empty)
+    for idx, fmt in enumerate(FORMAT_NAMES):
         ax = axes.flatten()[idx]
         df = dfs.get(fmt, pd.DataFrame())
         if df.empty:
             continue
-        pairs_df = df[['pair_id', 'shuffle_round', 'p_low_fitness', 'p_high_fitness']].drop_duplicates('pair_id')
-        base_color = _desaturate(REPRESENTATION_COLORS.get(fmt, '#1f77b4'), factor=0.55)
+        if 'p_base_fitness' not in df.columns:
+            is_hl = df['direction'] == 'high_x_low'
+            df['p_base_fitness'] = np.where(is_hl, df['p_high_fitness'], df['p_low_fitness'])
+            df['p_donor_fitness'] = np.where(is_hl, df['p_low_fitness'], df['p_high_fitness'])
 
-        for r in sorted(pairs_df['shuffle_round'].unique()):
+        pairs_df = df[['pair_id', 'shuffle_round', 'direction', 'p_base_fitness', 'p_donor_fitness']].drop_duplicates(['pair_id', 'direction'])
+
+        # Colors: Saturated for upper half (P_donor >= P_base), Desaturated for lower half (P_donor < P_base)
+        upper_color, lower_color = _desaturate(REPRESENTATION_COLORS.get(fmt, '#1f77b4'), factor=0.90), _desaturate(REPRESENTATION_COLORS.get(fmt, '#1f77b4'), factor=0.20)
+
+        upper_mask = pairs_df['p_donor_fitness'] >= pairs_df['p_base_fitness']
+        upper_pts = pairs_df[upper_mask][['p_base_fitness', 'p_donor_fitness']].values
+        
+        # Uniformity testing on upper and lower triangles
+        u_res = test_triangle_uniformity(upper_pts, case='upper',eps=eps)
+        
+        for r in range(1, n_rounds+1):
             r_df = pairs_df[pairs_df['shuffle_round'] == r]
-            ax.scatter(r_df['p_low_fitness'], r_df['p_high_fitness'],
-                       marker=round_markers.get(int(r), 'o'),
-                       c=[base_color], alpha=0.60, s=26, edgecolors='black', linewidths=0.35)
+            r_upper = r_df[r_df['p_donor_fitness'] >= r_df['p_base_fitness']]
+            r_lower = r_df[r_df['p_donor_fitness'] < r_df['p_base_fitness']]
+
+            # Plot upper half (saturated)
+            ax.scatter(r_upper['p_base_fitness'], r_upper['p_donor_fitness'],
+                       marker=round_markers[(r-1)%len(round_markers)],
+                       c=[upper_color], alpha=0.72, s=24, edgecolors='black', linewidths=0.35)
+            # Plot lower half (desaturated)
+            ax.scatter(r_lower['p_base_fitness'], r_lower['p_donor_fitness'],
+                       marker=round_markers[(r-1)%len(round_markers)],
+                       c=[lower_color], alpha=0.45, s=20, edgecolors='#555555', linewidths=0.30)
 
         ax.plot(axis_lim, axis_lim, 'r--', lw=1.5)
-        ax.set_title(f"{FORMAT_NAMES[fmt]}\n500 Parent Pairs across 5 Shuffle Rounds", fontsize=12, fontweight='bold', pad=8)
+
+        title_text = (
+            f"{FORMAT_NAMES[fmt]} (N={len(pairs_df)})\n"
+            rf"$\mathbf{{\triangle_{{upper}}}}$: $\chi^2={u_res['chi2_stat']:.1f}$ ($p={0 if u_res['p_value'] < eps else u_res['p_value']:.2g}$), $D_{{KL}}={u_res['kl_divergence_nats']:.3f}$"
+            # "\n"
+            # rf"$\mathbf{{\triangledown_{{lower}}}}$: $\chi^2={l_res['chi2_stat']:.1f}$ ($p={l_res['p_value']:.2g}$), $D_{{KL}}={l_res['kl_divergence_nats']:.3f}$ (desaturated)"
+        )
+        ax.set_title(title_text, fontsize=10.5, fontweight='bold', pad=8)
         ax.set_xlim(axis_lim); ax.set_ylim(axis_lim); ax.set_aspect('equal'); ax.grid(True, linestyle=':', alpha=0.6)
         if idx in [2, 3]:
-            ax.set_xlabel(r'Lower-Fitness Parent $F(P_{low})$', fontsize=11, fontweight='bold')
+            ax.set_xlabel(r'Base Parent Fitness $F(P_{base})$ (Recipient)', fontsize=11, fontweight='bold')
         if idx in [0, 2]:
-            ax.set_ylabel(r'Higher-Fitness Parent $F(P_{high})$', fontsize=11, fontweight='bold')
+            ax.set_ylabel(r'Donor Parent Fitness $F(P_{donor})$ (Graft)', fontsize=11, fontweight='bold')
 
     # Common unified legend across all 4 subplots with desaturated neutral markers
-    legend_elements = [
-        Line2D([0], [0], marker='o', color='none', label='Round 1 (n=100)',
-               markerfacecolor='#888888', markeredgecolor='black', markersize=7.5, markeredgewidth=0.5),
-        Line2D([0], [0], marker='s', color='none', label='Round 2 (n=100)',
-               markerfacecolor='#888888', markeredgecolor='black', markersize=7.5, markeredgewidth=0.5),
-        Line2D([0], [0], marker='^', color='none', label='Round 3 (n=100)',
-               markerfacecolor='#888888', markeredgecolor='black', markersize=7.5, markeredgewidth=0.5),
-        Line2D([0], [0], marker='D', color='none', label='Round 4 (n=100)',
-               markerfacecolor='#888888', markeredgecolor='black', markersize=7.5, markeredgewidth=0.5),
-        Line2D([0], [0], marker='v', color='none', label='Round 5 (n=100)',
-               markerfacecolor='#888888', markeredgecolor='black', markersize=7.5, markeredgewidth=0.5),
-        Line2D([0], [0], linestyle='--', color='red', lw=1.5, label=r'$P_{high} = P_{low}$')
-    ]
+    legend_elements = [Line2D([0], [0], marker=round_markers[(r-1)%len(round_markers)], color='none', label=f'Round {r}',  
+                              markerfacecolor='#888888', markeredgecolor='black', markersize=7.5, markeredgewidth=0.5) 
+                       for r in range(1, n_rounds+1)
+                      ] + [
+                       Line2D([0], [0], linestyle='--', color='red', lw=1.5, label=r'$P_{base} = P_{donor}$')
+                      ]
 
-    fig.legend(handles=legend_elements, loc='lower center', ncol=6, fontsize=9.5,
-               framealpha=0.92, edgecolor='gray', bbox_to_anchor=(0.5, 0.012))
+    fig.legend(handles=legend_elements, loc='lower center', ncol=4, fontsize=9.5,
+               framealpha=0.92, edgecolor='gray', bbox_to_anchor=(0.5, 0.010))
 
-    plt.suptitle("Verification of Parent Pair Uniformity on 2D Fitness Plane\n"
-                 r"Fixed Globally Unified Scale $[0, F_{max}^{global}]$ with $P_{high} \geq P_{low}$ Triangle",
-                 fontsize=14, fontweight='bold', y=0.98)
-    plt.tight_layout(rect=[0, 0.045, 1, 0.95])
+    plt.suptitle("Distribution of Directed Parent Pair Samples on 2D Fitness Plane\n"
+                #  r"Full Globally Unified Square Domain $[0, F_{max}^{global}] \times [0, F_{max}^{global}]$ with Reciprocal Symmetry Diagonal"
+                , fontsize=13.5, fontweight='bold', y=0.985)
+    plt.tight_layout(rect=[0, 0.055, 1, 0.955])
     plt.savefig(os.path.join(out_dir, "crossover_parents_distribution_2x2.png"), dpi=300)
     plt.close()
 
 
-def plot_phase_portrait(dfs: Dict[str, pd.DataFrame], out_dir: str, global_max: float):
-    """Figure 3: 2D Hexbin Phase Portrait of Mean Gain over Higher-Fitness Parent (Delta F = F(O) - F(P_high))."""
+def plot_phase_portrait(dfs: Dict[str, pd.DataFrame], out_dir: str, global_max: float, vrange: tuple[float, float]):
+    """Figure 2: 2D Hexbin Phase Portrait across the full square (P_base, P_donor) domain on shared axes and unified symmetric color scale."""
     fig, axes = plt.subplots(2, 2, figsize=(14, 12), sharex=True, sharey=True)
-    margin = global_max * 0.05
-    axis_lim = [0.0 - margin * 0.2, global_max + margin]
+    pad = global_max * 0.03
+    axis_lim = [-pad * 0.5, global_max + pad]
 
-    for idx, fmt in enumerate(['0', '1', '4', 'H']):
+    # Unified symmetric diverging norm centered at 0.0 with dynamic bounds [-vmax, +vmax]
+    norm = mcolors.TwoSlopeNorm(vmin=vrange[0], vcenter=(vrange[0]+vrange[1])/2, vmax=vrange[1])
+    cmap = 'coolwarm_r'
+
+    hb_last = None
+    for idx, fmt in enumerate(FORMAT_NAMES):
         ax = axes.flatten()[idx]
         df = dfs.get(fmt, pd.DataFrame())
         if df.empty:
             continue
+        if 'p_base_fitness' not in df.columns:
+            is_hl = df['direction'] == 'high_x_low'
+            df['p_base_fitness'] = np.where(is_hl, df['p_high_fitness'], df['p_low_fitness'])
+            df['p_donor_fitness'] = np.where(is_hl, df['p_low_fitness'], df['p_high_fitness'])
 
-        hb = ax.hexbin(df['p_low_fitness'], df['p_high_fitness'], C=df['delta_high'],
-                       gridsize=22, reduce_C_function=np.mean, cmap='coolwarm_r',
+        hb = ax.hexbin(df['p_base_fitness'], df['p_donor_fitness'], C=df['delta_high'],
+                       gridsize=22, reduce_C_function=np.median, cmap=cmap, norm=norm,
                        extent=[axis_lim[0], axis_lim[1], axis_lim[0], axis_lim[1]], mincnt=1)
+        hb_last = hb
         ax.plot(axis_lim, axis_lim, 'k--', lw=1.2, alpha=0.7)
-        cb = fig.colorbar(hb, ax=ax)
-        cb.set_label(r'Mean $\Delta F = F(O) - F(P_{high})$', fontsize=10)
 
-        ax.set_title(f"{FORMAT_NAMES[fmt]}\nMean Gain over Best Parent: " + r"$\Delta F = F(O) - F(P_{high})$", fontsize=11, fontweight='bold', pad=8)
+        ax.set_title(f"{FORMAT_NAMES[fmt]}", fontsize=12, fontweight='bold', pad=8)
         ax.set_xlim(axis_lim); ax.set_ylim(axis_lim); ax.set_aspect('equal'); ax.grid(True, linestyle=':', alpha=0.6)
         if idx in [2, 3]:
-            ax.set_xlabel(r'Lower-Fitness Parent $F(P_{low})$', fontsize=11, fontweight='bold')
+            ax.set_xlabel(r'Base Parent Fitness $F(P_{base})$ (Recipient)', fontsize=11, fontweight='bold')
         if idx in [0, 2]:
-            ax.set_ylabel(r'Higher-Fitness Parent $F(P_{high})$', fontsize=11, fontweight='bold')
+            ax.set_ylabel(r'Donor Parent Fitness $F(P_{donor})$ (Graft)', fontsize=11, fontweight='bold')
+
+    # Common unified colorbar on the right across all 4 subplots
+    fig.subplots_adjust(right=0.88, top=0.89, bottom=0.07, left=0.08, hspace=0.22, wspace=0.12)
+    cbar_ax = fig.add_axes([0.90, 0.15, 0.025, 0.68])
+    cb = fig.colorbar(hb_last, cax=cbar_ax)
+    cb.set_label(r'Median $\Delta F = F(O) - \max(P_{base}, P_{donor})$ (Unified Scale $[-F(O)_{max}, +F(O)_{max}]$)', fontsize=11, fontweight='bold')
 
     plt.suptitle("Crossover Recombination Phase Portraits\n"
-                 r"Mean Fitness Advantage $\Delta F = F(O) - F(P_{high})$ across the $(F(P_{low}), F(P_{high}))$ Domain",
-                 fontsize=14, fontweight='bold', y=0.98)
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+                 r"Median Advantage $\Delta F = F(O) - \max(P_{base}, P_{donor})$ across $(F(P_{base}), F(P_{donor}))$ Square Domain",
+                 fontsize=13.5, fontweight='bold', y=0.975)
     plt.savefig(os.path.join(out_dir, "crossover_phase_portrait_2x2.png"), dpi=300)
     plt.close()
 
@@ -351,11 +552,10 @@ def main():
     os.makedirs(args.out_dir, exist_ok=True)
 
     # 1. Load parents directly from Task 1 CSVs
-    parents_by_fmt, max_f = {}, 0.0
+    parents_by_fmt = {}
     for fmt in args.formats:
         df_p = pd.read_csv(os.path.join(args.task1_dir, f"landscape_data_f{fmt}.csv"))[['parent_fitness', 'parent_genotype', 'parent_run']].drop_duplicates()
         parents_by_fmt[fmt] = df_p.to_dict('records')
-        max_f = max(max_f, float(df_p['parent_fitness'].max()))
         print(f"[LOAD] f{fmt}: Loaded {len(parents_by_fmt[fmt])} parents from Task 1 (Max F = {df_p['parent_fitness'].max():.6f})")
 
     # 2. Run Crossover or Load Existing Data
@@ -363,7 +563,12 @@ def main():
     for fmt in args.formats:
         csv_path = os.path.join(args.out_dir, f"crossover_data_f{fmt}.csv")
         if args.plot_only and os.path.exists(csv_path):
-            dfs[fmt] = pd.read_csv(csv_path)
+            df = pd.read_csv(csv_path)
+            if 'p_base_fitness' not in df.columns:
+                is_hl = df['direction'] == 'high_x_low'
+                df['p_base_fitness'] = np.where(is_hl, df['p_high_fitness'], df['p_low_fitness'])
+                df['p_donor_fitness'] = np.where(is_hl, df['p_low_fitness'], df['p_high_fitness'])
+            dfs[fmt] = df
             continue
 
         pairs = generate_shuffled_pairs(parents_by_fmt[fmt], rounds=1 if args.dry_run else args.shuffle_rounds)
@@ -386,11 +591,19 @@ def main():
         dfs[fmt] = df
 
     # 3. Export Tables & Plots
-    export_tables(dfs, args.out_dir)
-    plot_2d_scatter(dfs, args.out_dir, max_f)
-    plot_parents_distribution(dfs, args.out_dir, max_f)
-    plot_phase_portrait(dfs, args.out_dir, max_f)
-    plot_3d_interactive(dfs, args.out_dir, max_f)
+    # Compute global bounds dynamically across all representations (no hardcoding)
+    min_parent_fitness, max_parent_fitness = min(df['p_low_fitness'].min() for df in dfs.values() if not df.empty), max(df['p_high_fitness'].max() for df in dfs.values() if not df.empty)
+    min_offspring_fitness, max_offspring_fitness = min(df['offspring_fitness'].min() for df in dfs.values() if not df.empty), max(df['offspring_fitness'].max() for df in dfs.values() if not df.empty)
+    global_max = float(max(max_parent_fitness, max_offspring_fitness))
+    # Colorbar range for delta_high: symmetric around 0.0 so (vmin+vmax)/2 == 0.0 (neutral threshold)
+    max_delta = max(abs(df['delta_high']).max() for df in dfs.values() if not df.empty)
+    vrange = (-float(max_delta), float(max_delta))
+
+    export_tables(dfs, args.out_dir, exclude_metrics=["heritability"])
+    plot_2d_scatter(dfs, args.out_dir, global_max)
+    plot_parents_distribution(dfs, args.out_dir, global_max)
+    plot_phase_portrait(dfs, args.out_dir, global_max, vrange)
+    plot_3d_interactive(dfs, args.out_dir, global_max, vrange)
     print(f"\n[DONE] All Task 2 crossover deliverables saved to: {args.out_dir}")
 
 
