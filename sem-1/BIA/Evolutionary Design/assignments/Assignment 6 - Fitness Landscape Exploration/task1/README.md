@@ -56,16 +56,19 @@ First, 48 parallel runs of 300 generations with population size 100 were execute
 
 Second, the results were [aggregated](../../../scripts/analyze_fitness_landscape.py#L85) and infeasible/duplicate solutions were filtered out, yielding in total ~1.7-2.6k values per each encoding (e.g. there were around 30-60 improving solutions per run).
 
-Third, 200 solutions were selected from each pool. The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers).
+Third, 200 solutions were selected from each pool using stratified random binning across the fitness interval $[0, F_{\text{max}}]$ ($n_{\text{bins}} = \lfloor \sqrt{200} \rfloor = 14$ equal-width bins with $k \le \lceil 200/14 \rceil = 15$ samples per bin). The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers).
+- _Note: Genotypic diversity was not explicitly controlled: in high-density regions of the sample distribution solutions are chosen randomly, which inherently promotes diversity; while in low-density regions (e.g. in the case of the intermediate trajectories of the two lottery winners in_ $f_4$ _) the only available solutions could provide only scarce diversity._
 
-Fourth, for each of these 200 solutions, generated 20 unique 1-step mutants were generated. If a mutant was invalid or identical to the parent, it was regenerated up to 20 times. This resulted in a total of 4000 pairs of (parent, mutant) solutions for each representation. Finally, aggregated statistics for metrics such as fitness gain, improvement rate and other metrics were computed for each encoding, which are summarized in [Table 1](#table-neighborhood-characteristics) and visualized on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
+Fourth, for each of these 200 solutions, 20 unique 1-step mutants were generated. If a mutant was invalid or identical to the parent, it was regenerated up to 20 times. This resulted in a total of 4000 pairs of (parent, mutant) solutions for each representation. Finally, aggregated statistics for metrics such as fitness gain, improvement rate and other metrics were computed for each encoding, which are summarized in [Table 1](#table-neighborhood-characteristics) and visualized on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
 
 <a id="fig-distribution-parents-climbers"></a>
 
 <p align="center">
   <img src="./results/landscape/climbers_distribution_2x2.png" width="95%" alt="Distribution of Unique Evolutionary Climbers and Selected Parents"/>
   <br>
-  <em>Figure 0: Empirical distribution of all unique evolutionary climbers extracted from Phase 1 history (shaded histogram and continuous KDE curve) versus the distribution of the 200 selected parent solutions (red dashed step count), with marginal horizontal quartile diagrams (median and IQR) positioned directly below each panel across the four encodings on aligned shared axes.</em>
+
+_**Figure 0**: Empirical distribution of all unique evolutionary climbers extracted from Phase 1 history (shaded histogram and continuous KDE curve) versus the distribution of the 200 selected parent solutions (red dashed step count across 14 stratified equal-width bins): uniformity of the distribution of selected parents across fitness values is evaluated using_ $\chi^2$\-_test (_ $\chi^2$ _statistic, p-value, and Kullback-Leibler divergence_ $D_{\text{KL}}$ _in nats), with marginal horizontal quartile diagrams (median and IQR)._ 
+_Note: The distribution of original fitness values is naturally right-skewed. Quasi-uniform distribution of 200 selected solutions across fitness values were obtained in case of three representations_ ($D_{KL}< 0.105$), _while for_ $f_4$ _the distribution is highly non-uniform due to selection of two high-performing individuals' intermediate genomes with final fitness values around 0.03 and 0.04 (see [Figures 2](#fig-evolution-boxplots) and [3](#fig-best-creature-inspection))._
 </p>
 
 
@@ -87,7 +90,7 @@ Fourth, for each of these 200 solutions, generated 20 unique 1-step mutants were
 <p align="center">
   <img src="./results/optimization/plots/logbooks_confidence_std_1.0.png" width="85%" alt="Optimization Convergence Curves (Mean +- 1 Std)"/>
   <br>
-  <em>Figure 1: Evolutionary convergence curves showing mean best fitness and its confidence interval across 300 generations for all four encodings. Note the linear scale for generations 0–50 and logarithmic scale for generations 50–300.</em>
+  <em>Figure 1: Evolutionary convergence curves showing mean best fitness and its confidence interval across 300 generations for all four encodings.</em>
 </p>
 
 <a id="fig-evolution-boxplots"></a>
@@ -152,28 +155,28 @@ The table below reports the complete quantitative neighborhood characteristics w
 
 | Representation   |  Better ($y > x$)   | Neutral ($y \approx x$)   | Worse ($y < x$)   |   Pearson $r$ | Lethality Rate   | Max Parent Fitness   | Max Mutant Fitness   |
 |:-----------------|:-----------------|----------:|:----------|:-------------------|:--------------------------|:------------------|--------------:|
-| **f0**           | <span style="color: darkblue; font-weight: bold;">127 (3.17%)</span>        | 1,421 (35.52%)            | 2,457 (61.42%)    |        0.5230 | 0.50%            | 0.023337           | 0.023660           |
-| No outliers          | <span style="color: darkblue; font-weight: bold;">120 (3.53%)</span>        | 1,186 (34.88%)            | 2,099 (61.74%)    |        0.4937 | 0.56%            | 0.018528           | 0.018528           |
-| **f1**           | 111 (2.77%)        | 1,501 (37.52%)            | 2,390 (59.75%)    |        <span style="color: darkblue; font-weight: bold;">0.7035</span> | <span style="color: darkblue; font-weight: bold;">0.27%</span>            | <span style="color: darkred; font-weight: bold;">0.016334</span>           | <span style="color: darkred; font-weight: bold;">0.016266</span>           |
-| No outliers           | 55 (2.81%)         | 708 (36.12%)              | 1,199 (61.17%)    |        <span style="color: darkblue; font-weight: bold;">0.6888</span> | <span style="color: darkblue; font-weight: bold;">0.15%</span>            | <span style="color: darkred; font-weight: bold;">0.010705</span>           | <span style="color: darkred; font-weight: bold;">0.010705</span>           |
-| **f4**           | 104 (2.60%)        | 1,432 (35.80%)            | 2,470 (61.75%)    |        0.5514 | <span style="color: darkred; font-weight: bold;">2.30%</span>            | <span style="color: darkblue; font-weight: bold;">0.043587</span>           | <span style="color: darkblue; font-weight: bold;">0.043587</span>           |
-| No outliers           | 64 (2.34%)         | 1,019 (37.19%)            | 1,658 (60.51%)    |        0.4678 | <span style="color: darkred; font-weight: bold;">2.49%</span>            | 0.015195           | 0.015195           |
-| **fH**           | <span style="color: darkred; font-weight: bold;">56 (1.40%)</span>         | 2,331 (58.27%)            | <span style="color: darkblue; font-weight: bold;">1,614 (40.35%)</span>    |        0.5700 | 1.06%            | 0.028365           | 0.028365           |
-| No outliers           | <span style="color: darkred; font-weight: bold;">54 (1.45%)</span>         | 2,242 (60.27%)            | <span style="color: darkblue; font-weight: bold;">1,425 (38.31%)</span>    |        0.5856 | 1.12%            | <span style="color: darkblue; font-weight: bold;">0.024326</span>           | <span style="color: darkblue; font-weight: bold;">0.024326</span>           |
+| **f0**           | 114 (2.85%)        | 1,505 (37.62%)            | 2,407 (60.17%)    |        0.5526 | 0.47%            | 0.023337           | 0.023337           |
+| No outliers          | 101 (2.95%)        | 1,284 (37.54%)            | 2,061 (60.26%)    |        0.5256 | 0.49%            | 0.018528           | 0.018528           |
+| **f1**           | 100 (2.50%)        | 1,748 (43.70%)            | 2,162 (54.05%)    |        <span style="color: darkblue; font-weight: bold;">0.7085</span> | <span style="color: darkblue; font-weight: bold;">0.17%</span>            | <span style="color: darkred; font-weight: bold;">0.016334</span>           | <span style="color: darkred; font-weight: bold;">0.016334</span>           |
+| No outliers           | 48 (2.26%)         | 928 (43.77%)              | 1,154 (54.43%)    |        <span style="color: darkblue; font-weight: bold;">0.7284</span> | <span style="color: darkblue; font-weight: bold;">0.14%</span>            | <span style="color: darkred; font-weight: bold;">0.010705</span>           | <span style="color: darkred; font-weight: bold;">0.010705</span>           |
+| **f4**           | <span style="color: darkblue; font-weight: bold;">148 (3.70%)</span>        | 1,410 (35.25%)            | 2,473 (61.82%)    |        0.6039 | <span style="color: darkred; font-weight: bold;">2.01%</span>            | <span style="color: darkblue; font-weight: bold;">0.043587</span>           | <span style="color: darkblue; font-weight: bold;">0.043587</span>           |
+| No outliers           | <span style="color: darkblue; font-weight: bold;">116 (4.30%)</span>        | 983 (36.41%)              | 1,629 (60.33%)    |        0.5862 | <span style="color: darkred; font-weight: bold;">2.60%</span>            | 0.015195           | 0.015195           |
+| **fH**           | <span style="color: darkred; font-weight: bold;">60 (1.50%)</span>         | 2,329 (58.23%)            | <span style="color: darkblue; font-weight: bold;">1,629 (40.73%)</span>    |        0.6047 | 0.92%            | 0.028365           | 0.028365           |
+| No outliers           | <span style="color: darkred; font-weight: bold;">60 (1.62%)</span>         | 2,221 (60.03%)            | <span style="color: darkblue; font-weight: bold;">1,437 (38.84%)</span>    |        0.6146 | 0.99%            | <span style="color: darkblue; font-weight: bold;">0.024326</span>           | <span style="color: darkblue; font-weight: bold;">0.024326</span>           |
 
 ### Comparison of Representations
 
 - **Indirect handle-based representation** $f_H$ is the most consistent strategy with [peak average](#fig-evolution-mean-curves) and [median](#fig-evolution-boxplots) performance:
-  - Mean fitness is $0.012749$ and median is $0.012263$. Its climb is steady and sustained throughout the entire 300 generations, with low variance across seeds: _60%_ of all mutations (`fH_mut_handle` + `fH_mut_property` in [`eval-allcriteria.sim`](..//..//..//Framsticks55/data/eval-allcriteria.sim)) are continuous (Gaussian centered at previous value) coordinate/parameter adjustments, designed to provide minimal numerical change, frequently leaving cluster connectivity unchanged and shielding phenotypes from catastrophic breakdown (**lowest worse rate, 40.35%**).
+  - Mean fitness is $0.012749$ and median is $0.012263$. Its climb is steady and sustained throughout the entire 300 generations, with low variance across seeds: _60%_ of all mutations (`fH_mut_handle` + `fH_mut_property` in [`eval-allcriteria.sim`](..//..//..//Framsticks55/data/eval-allcriteria.sim)) are continuous (Gaussian centered at previous value) coordinate/parameter adjustments, designed to provide minimal numerical change, frequently leaving cluster connectivity unchanged and shielding phenotypes from catastrophic breakdown (**lowest worse rate, 40.73%**).
 
-  - **Extreme phenotypic buffering (58.27% neutrality)** appears as an intensely saturated line along $y = x$ on [Figure 4](#fig-parent-mutant-fitness-scatter-plots), caused by elements linking via spatial proximity between abstract coordinate handles: because elements connect only when handles are within a distance threshold, coordinate shifts often don't alter the topology threshold graph, explaining _58.27%_ neutrality rate and low-variance ascent.
+  - **Extreme phenotypic buffering (58.23% neutrality)** appears as an intensely saturated line along $y = x$ on [Figure 4](#fig-parent-mutant-fitness-scatter-plots), caused by elements linking via spatial proximity between abstract coordinate handles: because elements connect only when handles are within a distance threshold, coordinate shifts often don't alter the topology threshold graph, explaining _58.23%_ neutrality rate and low-variance ascent.
 
-  - While the immediate 1-step improvement rate is the lowest ($1.40\%$), populations **drift neutrally** across high-dimensional plateaus without falling off peaks, eventually discovering portals to higher fitness levels. This sustained neutral exploration yields the highest consistency (mean $0.012749$) and reliable rank preservation ($r = 0.5700$, $0.5856$ without outliers).
+  - While the immediate 1-step improvement rate is the lowest ($1.50\%$), populations **drift neutrally** across high-dimensional plateaus without falling off peaks, eventually discovering portals to higher fitness levels. This sustained neutral exploration yields the highest consistency (mean $0.012749$) and reliable rank preservation ($r = 0.6047$, $0.6146$ without outliers).
 
 - **Direct Low-Level Encoding** ($f_0$) is most mutationally beneficial, evolvable strategy:
   - **$f_0$ provides smooth and predictable ascent**. Direct representation demonstrates intermediate performance (mean $0.010111$, peak $0.023337$) with balanced variance, due to continuous/parametric adjustements (_64%_ of mutations).
-  - **Highest Improvement Rate (3.17%, 3.53% without outliers)**. Direct encoding of parts, coordinates, and synaptic weights provides unconstrained parametric control, creating smooth, continuous slopes where an offspring ($0.023660$) exceeded the 300-generation parent climber maximum ($0.023337$).
-  - **Decreased Locality with Exploratory Variance**. Pearson correlation ($r = 0.5230$) and median relative fitness change ($21.6\%$) reflect moderate mutational variance, visible as a tall vertical spray column at the right edge of the plume on [Figure 4](#fig-parent-mutant-fitness-scatter-plots). This step variance provides sufficient exploratory breadth to cross local irregularities.
+  - **High Improvement Rate (2.85%, 2.95% without outliers)**. Direct encoding of parts, coordinates, and synaptic weights provides unconstrained parametric control, creating smooth, continuous slopes.
+  - **Balanced Locality with Exploratory Variance**. Pearson correlation ($r = 0.5526$, $0.5256$ without outliers) reflects moderate mutational variance.
   - Harmful mutations degrade performance progressively rather than collapsing to zero, indicating accessible upward gradients.
 
 
@@ -189,7 +192,7 @@ The table below reports the complete quantitative neighborhood characteristics w
 
   - **$f_1$ struggles with premature stagnation**. Tree-developmental representation exhibited the lowest average fitness ($0.004749$) and lowest maximum ($0.016334$), flattening early in the run. In $f_1$, synaptic weight changes dominate (_67.1%_), while morphological structural disruptions are suppressed (_12.8%_).
 
-  - **Has highest mutational locality across all encodings**: strongest parent-mutant correlation ($r = 0.7035$, $0.6888$ without outliers) and lowest lethality ($0.27\%$), with conservative perturbations (mean absolute $|\Delta F| = 0.0025$, median relative change $7.3\%$).
+  - **Has highest mutational locality across all encodings**: strongest parent-mutant correlation ($r = 0.7085$, $0.7284$ without outliers) and lowest lethality ($0.17\%$, $0.14\%$ without outliers), with conservative perturbations (mean absolute $|\Delta F| = 0.0022$, median relative change $4.6\%$).
   - **Topological & Structural Bottlenecks** (see [Evolution Challenges and Fitness Bias](..//..//Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/README.md#evolution-challenges) in the previous work):
     - Neural connections in $f_1$ use _relative index offsets_: deleting intermediate unused nodes breaks down neural loops, entrenching the morphological search.
     - Independent neuron addition (`f1_nmNeu`) and synaptogenesis (`f1_nmConn`) cause new sensors to sprout unconnected, consuming mutation evaluations without delivering motor torque, _penalizing decoupled neural operators_.
@@ -202,12 +205,12 @@ The table below reports the complete quantitative neighborhood characteristics w
 ### Experimental Landscape Characterisation
 
 1. **Decoupling of Mutational Locality from Evolvability**:
-   - High mutational locality is conservative, not generative. In deceptive landscapes, superior locality ($f_1$, Pearson $r \approx 0.70$) confines populations to suboptimal basins of attraction. Conversely, moderate locality with parametric freedom ($f_0$, $r \approx 0.52$) or macro-mutational leaps ($f_4$, $r \approx 0.47$) is necessary to navigate past local attractors toward higher velocity ceilings.
+   - High mutational locality is conservative, not generative. In deceptive landscapes, superior locality ($f_1$, Pearson $r \approx 0.71$) confines populations to suboptimal basins of attraction. Conversely, moderate locality with parametric freedom ($f_0$, $r \approx 0.55$) or macro-mutational leaps ($f_4$, $r \approx 0.60$) is necessary to navigate past local attractors toward higher velocity ceilings.
 
 2. **Neural Redundancy**:
    - Across all representations, over $35\%$ of all mutations are functionally neutral (see [table](#table-neighborhood-characteristics) above).
-   - This baseline neutrality is driven by **universal neural redundancy**: because the current simulation settings impose zero metabolic penalty for unused neurons, champion genotypes across all encodings accumulate silent sensors, dead-end oscillators, and unconnected nodes ("junk DNA"). Forward locomotion relies on minimalist 1-to-2 reflex loops (e.g., _Gyroscope -> Bending Muscle_), meaning any mutation targeting the silent neural majority produces strictly zero fitness delta ($\Delta F = 0$). In $f_H$, this baseline is further amplified to $58.3\%$ by geometric handle clustering.
-   - When beneficial mutations are scarce ($1.4\% - 3.5\%$), these extensive neutral networks allow populations to traverse genetic sequence space at constant fitness, escaping local optima and achieving higher optimization consistency across runs.
+   - This baseline neutrality is driven by **universal neural redundancy**: because the current simulation settings impose zero metabolic penalty for unused neurons, champion genotypes across all encodings accumulate silent sensors, dead-end oscillators, and unconnected nodes ("junk DNA"). Forward locomotion relies on minimalist 1-to-2 reflex loops (e.g., _Gyroscope -> Bending Muscle_), meaning any mutation targeting the silent neural majority produces strictly zero fitness delta ($\Delta F = 0$). In $f_H$, this baseline is further amplified to $58.2\%$ by geometric handle clustering.
+   - When beneficial mutations are scarce ($1.5\% - 3.7\%$), these extensive neutral networks allow populations to traverse genetic sequence space at constant fitness, escaping local optima and achieving higher optimization consistency across runs.
 
 3. **Embodied Coordination & Rectilinear Objective Bias**:
    - Evolved locomotion does not rely on complex, cross-wired Central Pattern Generators; instead, multi-actuator synchronization emerges from **embodied physical coupling** (structural inertia, joint limits, gravity, and ground reaction forces dynamically driving the reflex loops).

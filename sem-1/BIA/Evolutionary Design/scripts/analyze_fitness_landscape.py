@@ -35,11 +35,14 @@ import json
 import pickle
 import argparse
 import random
-from typing import List, Dict, Any, Tuple
+import math
+import warnings
+from typing import List, Dict, Any, Tuple, Optional, Union, Sequence
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 from scipy.stats import gaussian_kde
 import matplotlib
 if os.environ.get('MPLBACKEND') == 'Agg' or '--headless' in sys.argv:
@@ -64,6 +67,13 @@ REPRESENTATION_COLORS = {
     '1': '#1f77b4',  # Blue
     '4': '#ff7f0e',  # Orange
     'H': '#9467bd',  # Purple
+}
+
+FORMAT_NAMES = {
+    '0': '$f_0$ (Direct)',
+    '1': '$f_1$ (Recurrent Tree)',
+    '4': '$f_4$ (Developmental Grammar)',
+    'H': '$f_H$ (Handle-based)'
 }
 
 
@@ -192,14 +202,144 @@ def identify_outlier_runs(
 
 
 # ==============================================================================
-# 2. Uniform Fitness Sampling
+# 2. Uniform & Stratified Fitness Sampling
 # ==============================================================================
+
+def binning(data: Union[int, Sequence, np.ndarray, Dict], k: float=1.0) -> int:
+    """
+    Computes default bin count using the square root choice of data size: int(sqrt(N)).
+    Supports an integer count, a sequence/collection/array, or a dictionary of sequences.
+    """
+    if isinstance(data, (int, np.integer)):
+        n = int(data)
+    elif isinstance(data, dict):
+        n = max((len(v) for v in data.values()), default=0)
+    else:
+        n = len(data)
+    return max(1, int(np.sqrt(k*n)))
+
+
+def sample_stratified_binned_fitness(
+    candidates: List[Dict[str, Any]],
+    num_samples: int = 200,
+    n_bins: Optional[int] = None,
+    exact_num: bool = True,
+    seed: Optional[int] = 42
+) -> List[Dict[str, Any]]:
+    """
+    Selects parent solutions across the fitness domain using Stratified Random Binning.
+    
+    The fitness interval [F_min, F_max] is partitioned into n_bins equal-width intervals
+    (by default n_bins = int(sqrt(num_samples)), e.g., 14 bins for num_samples=200). Within each bin,
+    k_per_bin = ceil(num_samples / n_bins) solutions (e.g., 15 for num_samples=200)
+    are randomly sampled without replacement.
+    
+    Parameters:
+        candidates: List of candidate records containing at least 'fitness' and 'genotype'.
+        num_samples: Target number of parent samples to select (default: 200).
+        n_bins: Optional custom number of bins. If None, computes int(sqrt(num_samples)).
+        exact_num: If True, guarantees that the returned list has length exactly num_samples:
+                   - If total sampled > num_samples (e.g., 14 * 15 = 210 > 200), randomly removes
+                     (total - num_samples) solutions.
+                   - If total sampled < num_samples (due to sparse/empty bins in high-fitness tails),
+                     tops up the deficit by randomly sampling from remaining unselected candidates.
+                   If False, returns whatever solutions were sampled across the bins (may be slightly
+                   greater or less than num_samples).
+        seed: Optional random seed for reproducible sampling (uses isolated Random instance).
+        
+    Returns:
+        Sorted list of selected parent candidate dictionaries (ascending by fitness).
+    """
+    if not candidates:
+        return []
+    if len(candidates) <= num_samples:
+        print(f"[INFO] Candidate count ({len(candidates)}) <= requested samples ({num_samples}). Keeping all candidates.")
+        return candidates
+
+    rng = random.Random(seed) if seed is not None else random
+
+    fits = np.array([c['fitness'] for c in candidates])
+    f_min, f_max = float(fits[0]), float(fits[-1])
+
+    if f_max <= f_min:
+        return rng.sample(candidates, num_samples)
+
+    # 1. Compute binning parameters: n_bins = binning(num_samples), k = ceil(N / n_bins)
+    if n_bins is None:
+        n_bins = binning(num_samples)
+    k_per_bin = int(math.ceil(num_samples / n_bins))
+    span = f_max - f_min
+
+    # 2. Partition candidate indices into n_bins
+    bin_indices: List[List[int]] = [[] for _ in range(n_bins)]
+    for idx, c in enumerate(candidates):
+        f = float(c['fitness'])
+        b = min(int((f - f_min) / span * n_bins), n_bins - 1)
+        bin_indices[b].append(idx)
+
+    # Shuffle each bin internally using rng for stochastic intra-bin selection
+    for b in range(n_bins):
+        rng.shuffle(bin_indices[b])
+
+    # 3. Initial allocation: up to target k_per_bin per bin
+    selected_indices: List[int] = []
+    unselected_per_bin: Dict[int, List[int]] = {}
+
+    for b in range(n_bins):
+        b_idxs = bin_indices[b]
+        k = min(k_per_bin, len(b_idxs))
+        selected_indices.extend(b_idxs[:k])
+        unselected_per_bin[b] = b_idxs[k:]
+
+    # 4. Handle exact_num adjustments
+    if exact_num:
+        if len(selected_indices) > num_samples:
+            excess = len(selected_indices) - num_samples
+            to_drop = set(rng.sample(range(len(selected_indices)), excess))
+            selected_indices = [idx for i, idx in enumerate(selected_indices) if i not in to_drop]
+        elif len(selected_indices) < num_samples:
+            deficit = num_samples - len(selected_indices)
+            # Round-robin top-up across bins that still have unselected candidates (i.e. bins are full)
+            active_bins = [b for b in range(n_bins) if len(unselected_per_bin[b]) > 0]
+            # Sort by remaining potential (least potential first)
+            active_bins.sort(key=lambda b: len(unselected_per_bin[b]))
+
+            while deficit > 0 and active_bins:
+                next_active = []
+                for b in active_bins:
+                    if deficit == 0:
+                        break
+                    selected_indices.append(unselected_per_bin[b].pop(0))
+                    deficit -= 1
+                    if len(unselected_per_bin[b]) > 0:
+                        next_active.append(b)
+                active_bins = next_active
+
+    selected_indices.sort()
+    return [candidates[i] for i in selected_indices]
+
 
 def sample_uniform_fitness(candidates: List[Dict[str, Any]], num_samples: int = 200) -> List[Dict[str, Any]]:
     """
-    Selects num_samples individuals whose fitnesses are as uniformly distributed
-    as possible between min_fitness and max_fitness without large gaps.
+    [DEPRECATED: Use sample_stratified_binned_fitness() instead]
+    
+    Selects num_samples individuals by matching an equidistant target grid spanning
+    [F_min, F_max] to the closest unique solution without replacement.
+    
+    Known Statistical Flaws:
+    1. Deterministic Point-Bias: In dense low-fitness regions (e.g. thousands of solutions
+       clustered near 0), it deterministically latches onto the single individual closest to
+       f_min + i * delta_f, discarding diverse genotypes in that same fitness stratum.
+    2. Sequential Point-Latching: Across sparse gaps (e.g. between normal runs and outlier
+       lottery peaks), multiple consecutive equidistant grid targets latch onto the same
+       sparse individual until exhausted, skewing local representation.
     """
+    warnings.warn(
+        "sample_uniform_fitness() is deprecated due to deterministic nearest-neighbor bias in dense regimes. "
+        "Use sample_stratified_binned_fitness() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     if len(candidates) <= num_samples:
         print(f"[INFO] Candidate count ({len(candidates)}) <= requested samples ({num_samples}). Keeping all candidates.")
         return candidates
@@ -208,7 +348,6 @@ def sample_uniform_fitness(candidates: List[Dict[str, Any]], num_samples: int = 
     f_min, f_max = fits[0], fits[-1]
 
     if f_max == f_min:
-        # Trivial case: all have same fitness
         return random.sample(candidates, num_samples)
 
     # Construct ideal target grid
@@ -350,12 +489,60 @@ def probe_landscape_parallel(
 # 4. Auxiliary Plotting: Climbers Distribution & Uniform Parents (Figure 0)
 # ==============================================================================
 
+def test_1d_uniformity(points, f_min: float = 0.0, f_max: Optional[float] = None, n_bins: Optional[int] = None, eps: float = 1e-6) -> Dict[str, Any]:
+    """
+    Tests 1D uniformity of parent fitness values along [f_min, f_max] using Chi-Square and KL divergence.
+    
+    Parameters:
+        points: array-like of shape (N,) containing parent fitness values.
+        f_min: lower bound of the interval (default: 0.0).
+        f_max: upper bound of the interval (default: max(points)).
+        n_bins: number of histogram bins for Chi-Square test (default: None then floor(sqrt(len(points)))).
+        eps: small numerical epsilon to avoid division/log by zero.
+        
+    Returns:
+        Dictionary with 'chi2_stat', 'p_value', 'kl_divergence_nats', and 'is_uniform'.
+    """
+
+    points = np.asarray(points)
+    if n_bins is None:
+        n_bins = binning(points)
+    if len(points) == 0:
+        return {"chi2_stat": 0.0, "p_value": 1.0, "kl_divergence_nats": 0.0, "is_uniform": True}
+    if f_max is None:
+        f_max = float(points.max())
+    span = f_max - f_min
+    if span <= 0:
+        return {"chi2_stat": 0.0, "p_value": 1.0, "kl_divergence_nats": 0.0, "is_uniform": True}
+
+    edges = np.linspace(f_min, f_max, n_bins + 1)
+    observed, _ = np.histogram(points, bins=edges)
+    total_dots = len(points)
+    expected = np.full(n_bins, total_dots / n_bins)
+
+    chi2_stat, p_val = stats.chisquare(f_obs=observed, f_exp=expected)
+
+    p_emp = observed / total_dots
+    q_uni = np.ones(n_bins) / n_bins
+    p_emp = np.where(p_emp == 0, eps, p_emp)
+    kl_div = stats.entropy(p_emp, q_uni)
+
+    return {
+        "chi2_stat": float(chi2_stat),
+        "p_value": float(p_val),
+        "kl_divergence_nats": float(kl_div),
+        "is_uniform": bool(p_val > 0.05)
+    }
+
+
 def plot_climbers_distribution(
     climbers_data: Dict[str, np.ndarray],
     parents_data: Dict[str, np.ndarray],
     out_dir: str,
     align_axes: bool = True,
-    target_metric_label: str = "Net rectilinear displacement speed"
+    align_binning: bool = False,
+    target_metric_label: str = "Net rectilinear displacement speed",
+    n_bins: Optional[int] = None
 ):
     """
     Plots a 2x2 grid of compound distribution panels (one for each representation).
@@ -365,19 +552,31 @@ def plot_climbers_distribution(
       - Bottom: Marginal horizontal quartile diagram (boxplot without dots, comparing Climbers vs. Parents).
 
     Parameters:
-      align_axes (bool): If True (default), aligns the x-axis and both y-axes across all 4 representations,
-                         suppresses inner tick labels, and minimizes whitespace between subplots.
-                         If False, each panel uses its own local fitness range and count limits.
+      align_axes (bool): If True (default), aligns the x-axis limits and both y-axes limits across all
+                         4 representations, suppresses redundant inner tick labels, and minimizes
+                         whitespace between subplots.
+                         If False, each panel uses completely independent local axes.
+      align_binning (bool): If True, unifies bin edges across the global fitness span [0, global_x_max]
+                         across all representations.
+                         If False (default), each representation maintains its own local support [0, f_max] with
+                         int(np.sqrt(N)) bins, matching the binning used in sample_stratified_binned_fitness
+                         and test_1d_uniformity to avoid Moiré/aliasing artifacts.
+      n_bins (Optional[int]): Number of bins for both histogram rendering and uniformity testing.
+                              If None, dynamically matches the stratified parent sampling method
+                              bin count via binning(parents_data). If specified as an int, forces a fixed bin count.
     """
     os.makedirs(out_dir, exist_ok=True)
     formats = ['0', '1', '4', 'H']
+
+    # Dynamically match the number of bins from the stratified sampling method
+    if n_bins is None:
+        n_bins = binning(parents_data)
 
     # 1. Compute global ranges if align_axes is True
     global_x_max = 0.0
     global_climber_max_count = 0
     global_parent_max_count = 0
 
-    n_bins = 35
     binned_data = {}
 
     for fmt in formats:
@@ -409,8 +608,8 @@ def plot_climbers_distribution(
             "p_counts": p_counts
         }
 
-    # If align_axes is True, recompute bins across unified range [0, global_x_max]
-    if align_axes:
+    # If align_binning is True, recompute bins across unified range [0, global_x_max]
+    if align_binning:
         unified_bins = np.linspace(0, global_x_max, n_bins + 1)
         unified_bin_width = unified_bins[1] - unified_bins[0]
         global_climber_max_count = 0
@@ -437,9 +636,9 @@ def plot_climbers_distribution(
 
     # Configure grid layout and spacing based on alignment
     if align_axes:
-        outer_grid = fig.add_gridspec(2, 2, left=0.07, right=0.93, top=0.90, bottom=0.07, wspace=0.07, hspace=0.18)
+        outer_grid = fig.add_gridspec(2, 2, left=0.07, right=0.93, top=0.865, bottom=0.065, wspace=0.07, hspace=0.22)
     else:
-        outer_grid = fig.add_gridspec(2, 2, left=0.08, right=0.92, top=0.90, bottom=0.07, wspace=0.28, hspace=0.32)
+        outer_grid = fig.add_gridspec(2, 2, left=0.08, right=0.92, top=0.865, bottom=0.065, wspace=0.28, hspace=0.34)
 
     for idx, fmt in enumerate(formats):
         row = idx // 2
@@ -463,9 +662,16 @@ def plot_climbers_distribution(
         # -------------------------------------------------------------
         # TOP AXIS: Main Distribution Histogram & Parents Step Curve
         # -------------------------------------------------------------
+        u_res = test_1d_uniformity(pfits, f_min=0.0, f_max=f_max, n_bins=n_bins)
+        p_val_str = "0" if u_res['p_value'] < 1e-4 else f"{u_res['p_value']:.2g}"
+        rep_label = FORMAT_NAMES.get(fmt, f"f{fmt}")
+        title_text = (
+            f"{rep_label} (Pool: {n_climbers:,} Climbers | {n_parents} Parents)\n"
+            rf"Uniformity: $\chi^2={u_res['chi2_stat']:.1f}$ ($p={p_val_str}$), $D_{{KL}}={u_res['kl_divergence_nats']:.3f}$"
+        )
         ax_main.set_title(
-            f"f{fmt} (Pool: {n_climbers:,} Unique Climbers | {n_parents} Selected Parents)",
-            fontsize=12,
+            title_text,
+            fontsize=11,
             fontweight='bold',
             pad=8
         )
@@ -483,7 +689,7 @@ def plot_climbers_distribution(
         # KDE line
         if n_climbers > 1:
             kde = gaussian_kde(cfits, bw_method='scott')
-            x_max_eval = global_x_max if align_axes else f_max
+            x_max_eval = global_x_max if align_binning else f_max
             x_eval = np.linspace(0, x_max_eval, 300)
             y_eval = kde(x_eval) * n_climbers * bin_width
             ax_main.plot(x_eval, y_eval, color=color, linewidth=2.2, label='Climber Density (KDE)')
@@ -502,6 +708,8 @@ def plot_climbers_distribution(
             )
             # Close step at the end
             ax2.plot([bin_edges[-2], bin_edges[-1]], [p_counts[-1], p_counts[-1]], color='#d62728', linewidth=1.8, linestyle='--')
+            if not align_binning:
+                ax2.plot([bin_edges[-1], bin_edges[-1]], [p_counts[-1], 0], color='#d62728', linewidth=1.8, linestyle='--')
 
         # -------------------------------------------------------------
         # BOTTOM AXIS: Marginal Quartile Boxplot Diagram (IQR & Median)
@@ -580,19 +788,18 @@ def plot_climbers_distribution(
         lines_2, labels_2 = ax2.get_legend_handles_labels()
         ax_main.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper right', fontsize=8.5, framealpha=0.92)
 
-    alignment_str = "Aligned Axes" if align_axes else "Independent Axes"
     plt.suptitle(
         f"Distribution of Unique Evolutionary Climbers ({target_metric_label})\n"
-        f"across different genetic representations (f0, f1, f4 and fH) [{alignment_str}]",
+        f"across different genetic representations (f0, f1, f4 and fH) [{n_bins} equal-width bins]",
         fontsize=14,
         fontweight='bold',
-        y=0.965
+        y=0.972
     )
 
     out_path = os.path.join(out_dir, "climbers_distribution_2x2.png")
     fig.savefig(out_path)
     plt.close(fig)
-    print(f"Saved climbers distribution plot ({alignment_str}) to: {out_path}")
+    print(f"Saved climbers distribution plot to: {out_path}")
 
 
 # ==============================================================================
@@ -1121,10 +1328,14 @@ def main():
     parser.add_argument('--plot-only', action='store_true', help="Skip mutant probing and re-generate plots from existing CSVs in out-dir")
     parser.add_argument('--align-axes', dest='align_axes', action='store_true', help="Align axes across representations in distribution plot (default: True)")
     parser.add_argument('--no-align-axes', dest='align_axes', action='store_false', help="Use local independent axes per representation")
-    parser.add_argument('--desaturate-outliers', dest='desaturate_outliers', action='store_true', help="Color mutants from outlier runs in gray on Figure 3 (default: True)")
-    parser.add_argument('--no-desaturate-outliers', dest='desaturate_outliers', action='store_false', help="Color all mutants in representation theme color on Figure 3")
+    parser.add_argument('--align-binning', dest='align_binning', action='store_true', help="Unify bin edges across the global fitness span [0, global_x_max] across representations (default: False)")
+    parser.add_argument('--no-align-binning', dest='align_binning', action='store_false', help="Use local independent bin edges [0, f_max] per representation")
+    parser.add_argument('--sampling-method', choices=['stratified', 'equidistant'], default='stratified', help="Parent sampling method: 'stratified' (stratified random binning) or 'equidistant' (deprecated nearest-neighbor grid)")
+    parser.add_argument('--exact-num', dest='exact_num', action='store_true', help="Strictly enforce exact parent count (default: True)")
+    parser.add_argument('--no-exact-num', dest='exact_num', action='store_false', help="Allow slight deviation in parent count based on raw bin totals")
+    parser.add_argument('--resample-parents', action='store_true', help="Re-sample parents using --sampling-method for distribution plot in --plot-only mode")
     parser.add_argument('--force-rescan', action='store_true', help="Bypass climber pool cache and re-extract from raw logbook files")
-    parser.set_defaults(align_axes=True, desaturate_outliers=True)
+    parser.set_defaults(align_axes=True, align_binning=False, desaturate_outliers=True, exact_num=True)
 
     args = parser.parse_args()
 
@@ -1204,12 +1415,26 @@ def main():
                 print(f"[WARN] Could not save climber cache: {e}")
 
         if any(len(v) > 0 for v in climbers_data.values()):
+            if args.resample_parents:
+                print(f"[RESAMPLE] Re-sampling parents using '{args.sampling_method}' (num_samples={args.num_samples}, exact_num={args.exact_num})...")
+                for fmt in args.formats:
+                    c_fits = climbers_data.get(fmt, np.array([]))
+                    if len(c_fits) > 0:
+                        cand_dicts = [{'fitness': float(f), 'genotype': ''} for f in c_fits]
+                        if args.sampling_method == 'stratified':
+                            sampled = sample_stratified_binned_fitness(cand_dicts, num_samples=args.num_samples, exact_num=args.exact_num)
+                        else:
+                            sampled = sample_uniform_fitness(cand_dicts, num_samples=args.num_samples)
+                        parents_data[fmt] = np.sort(np.array([p['fitness'] for p in sampled]))
+                        print(f"  f{fmt}: re-sampled {len(parents_data[fmt])} parents (min: {parents_data[fmt][0]:.6f}, max: {parents_data[fmt][-1]:.6f})")
+
             print("\n--- Generating Auxiliary Climbers Distribution Plot (Figure 0) ---")
             plot_climbers_distribution(
                 climbers_data=climbers_data,
                 parents_data=parents_data,
                 out_dir=args.out_dir,
                 align_axes=args.align_axes,
+                align_binning=args.align_binning,
                 target_metric_label="Net rectilinear displacement speed"
             )
 
@@ -1253,11 +1478,14 @@ def main():
             continue
         climbers_data[fmt] = np.array([c['fitness'] for c in candidates])
 
-        # 2. Select uniform fitness distribution
-        parents = sample_uniform_fitness(candidates, num_samples=args.num_samples)
+        # 2. Select parent fitness distribution
+        if args.sampling_method == 'stratified':
+            parents = sample_stratified_binned_fitness(candidates, num_samples=args.num_samples, exact_num=args.exact_num)
+        else:
+            parents = sample_uniform_fitness(candidates, num_samples=args.num_samples)
         p_fits = [p['fitness'] for p in parents]
         parents_data[fmt] = np.sort(np.array(p_fits))
-        print(f"Selected {len(parents)} parents spanning fitness [{min(p_fits):.6f}, {max(p_fits):.6f}].")
+        print(f"Selected {len(parents)} parents via '{args.sampling_method}' sampling (exact_num={args.exact_num}) spanning fitness [{min(p_fits):.6f}, {max(p_fits):.6f}].")
 
         # 3. Probe landscape in parallel
         probed_records = probe_landscape_parallel(
@@ -1299,6 +1527,7 @@ def main():
         parents_data=parents_data,
         out_dir=args.out_dir,
         align_axes=args.align_axes,
+        align_binning=args.align_binning,
         target_metric_label="Net rectilinear displacement speed"
     )
 
