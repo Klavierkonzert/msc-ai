@@ -52,6 +52,14 @@ flowchart LR
     D --> N["<a href=#table-neighborhood-characteristics><b>Table:</b></a><br>Neighbourhood characteristics: improvement rates, lethality / fragility rate"]
 ```
 
+First, 48 parallel runs of 300 generations with population size 100 were executed for each representation, while [only improving solutions were recorded to HoF of size 1](../../../scripts/FramsticksEvolutionScheduled.py#L99) (thus only monotonic climbing paths were recorded - in total 48 paths per encoding). Genotypes and fitness values of each HoF update were recorded to `./results/landscape/hof_history_*.csv` (one file per run). The results of evolution are presented on [Figures 1 and 2](#fig-evolution-mean-curves).
+
+Second, the results were [aggregated](../../../scripts/analyze_fitness_landscape.py#L85) and infeasible/duplicate solutions were filtered out, yielding in total ~1.7-2.6k values per each encoding (e.g. there were around 30-60 improving solutions per run).
+
+Third, 200 solutions were selected from each pool. The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers).
+
+Fourth, for each of these 200 solutions, generated 20 unique 1-step mutants were generated. If a mutant was invalid or identical to the parent, it was regenerated up to 20 times. This resulted in a total of 4000 pairs of (parent, mutant) solutions for each representation. Finally, aggregated statistics for metrics such as fitness gain, improvement rate and other metrics were computed for each encoding, which are summarized in [Table 1](#table-neighborhood-characteristics) and visualized on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
+
 <a id="fig-distribution-parents-climbers"></a>
 
 <p align="center">
@@ -59,11 +67,6 @@ flowchart LR
   <br>
   <em>Figure 0: Empirical distribution of all unique evolutionary climbers extracted from Phase 1 history (shaded histogram and continuous KDE curve) versus the distribution of the 200 selected parent solutions (red dashed step count), with marginal horizontal quartile diagrams (median and IQR) positioned directly below each panel across the four encodings on aligned shared axes.</em>
 </p>
-
-
-- **Infeasibility Filtering**: Invalid or broken genotypes (`fitness == FITNESS_VALUE_INFEASIBLE_SOLUTION`) are rejected and retried (up to 20 attempts per mutant), recording retry counts to quantify the **lethality / fragility rate** of each encoding.
-- **Evaluation**: Each mutant $m$ is evaluated under the identical simulation settings, recording $(F(P), F(m))$, which are depicted on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
-
 
 
 <div style="break-after: page;"></div>
@@ -116,7 +119,7 @@ flowchart LR
 
 $S = 200$ diversified parent solutions per encoding were selected from the climber history pool by matching an equidistant 200-point target grid spanning $[F_{\min}, F_{\max}^{(enc)}]$ to the closest unique solution without replacement, where $F_{\max}^{(enc)}$ is the maximum fitness achieved by the given encoding across all runs.
 
-Each selected parent was then probed by generating $N = 20$ valid 1-step mutants (rejecting infeasible configurations and generating a new mutant until a valid one is generated), producing in total $4\,000$ mutational evaluations per each format.
+Invalid or broken genotypes (`fitness == FITNESS_VALUE_INFEASIBLE_SOLUTION`) are rejected and retried (up to 20 attempts per mutant), recording retry counts to quantify the **lethality / fragility rate** of each encoding, and producing in total $4\,000$ mutational evaluations per each format.
 
 
 <a id="fig-parent-mutant-fitness-scatter-plots"></a>
