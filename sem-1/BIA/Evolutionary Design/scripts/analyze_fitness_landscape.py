@@ -1098,22 +1098,36 @@ def plot_fitness_landscape(
 
 def plot_mutation_fragility(
     format_data: Dict[str, pd.DataFrame],
-    out_dir: str
+    out_dir: str,
+    formats:Optional[list[str]] = ['0', '1', '4', 'H']
 ):
     """
     Analyzes and visualizes mutation fragility / lethality rates and attempt
     distributions across representations (f0, f1, f4, fH).
+
+    :param format_data: Dictionary of format data (format -> dataframe of mutations)
+    :param out_dir: Output directory
+    :param formats: List of formats (genetic encodings) to analyze. If not provided, defaults to ['0', '1', '4', 'H']. If None, all formats available in format_data will be analyzed.
+    :return: None
     """
     os.makedirs(out_dir, exist_ok=True)
-    formats = ['0', '1', '4', 'H']
 
     lethality_stats = []
     parent_breakdowns = []
 
+    num_samples = 0
+
+    if formats is None:
+        formats = list(format_data.keys())
     for fmt in formats:
         df = format_data.get(fmt, pd.DataFrame())
         if df.empty:
             continue
+
+        if num_samples == 0:
+            num_samples = len(df['parent_run'].unique())
+        else:
+            num_samples = min(num_samples, len(df['parent_run'].unique()))
 
         n_valid = len(df)
         if 'total_attempts' in df.columns:
@@ -1203,9 +1217,9 @@ def plot_mutation_fragility(
     ax2.bar(p_labels, p_1_2, width=w, bottom=p_0, label='Moderate Fragility (1-2 retries)', color='#ff7f0e', alpha=0.85, edgecolor='black', linewidth=1.1)
     ax2.bar(p_labels, p_3_plus, width=w, bottom=p_0 + p_1_2, label='High Fragility (≥3 retries)', color='#d62728', alpha=0.85, edgecolor='black', linewidth=1.1)
 
-    ax2.set_ylabel("Number of Parents (out of 200)", fontsize=11, fontweight='bold')
+    ax2.set_ylabel(f"Number of Parents (out of >={int(num_samples)})", fontsize=11, fontweight='bold')
     ax2.set_title("Parent Genotype Fragility Breakdown\n(Number of retries required to find 20 viable mutants)", fontsize=12, fontweight='bold', pad=10)
-    ax2.set_ylim(0, 265)
+    ax2.set_ylim(0, int(num_samples * 1.35))
     ax2.grid(axis='y', linestyle=':', alpha=0.6)
     ax2.legend(loc='upper right', fontsize=9, framealpha=0.95)
 

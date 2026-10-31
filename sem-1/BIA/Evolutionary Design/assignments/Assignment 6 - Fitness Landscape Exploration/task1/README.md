@@ -11,7 +11,7 @@ The objective of this task is to discover the topological nature of the combinat
 - [**$f_4$**](https://www.framsticks.com/a/al_geno_f4.html) - matrix/developmental grammar encoding.
 - [**$f_H$**](https://www.framsticks.com/a/al_geno_fh.html) - handle-based indirect representation (elements assemble and fuse based on vector similarity between evolving numerical handles).
 
-Because combinatorial solution spaces cannot be plotted directly against argument values, we study the landscape through **parent-offspring neighborhood probing**: sampling diverse solutions across the fitness spectrum and analyzing the distribution of their 1-step mutational neighbors relative to the $y = x$ reference line.
+Because combinatorial solution spaces cannot be plotted directly against argument values, the landscape is studied through **parent-offspring neighborhood probing**: sampling diverse solutions across the fitness spectrum and analyzing the distribution of their 1-step mutational neighbors relative to the $y = x$ reference line.
 
 
 
@@ -58,6 +58,7 @@ Second, the results were [aggregated](../../../scripts/analyze_fitness_landscape
 
 Third, 200 solutions were selected from each pool using stratified random binning across the fitness interval $[0, F_{\text{max}}]$ ($n_{\text{bins}} = \lfloor \sqrt{200} \rfloor = 14$ equal-width bins with $k \le \lceil 200/14 \rceil = 15$ samples per bin). The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers).
 - _Note: Genotypic diversity was not explicitly controlled: in high-density regions of the sample distribution solutions are chosen randomly, which inherently promotes diversity; while in low-density regions (e.g. in the case of the intermediate trajectories of the two lottery winners in_ $f_4$ _) the only available solutions could provide only scarce diversity._
+_FUSS-like sampling was probed earlier, but it yielded less uniform coverage of the fitness range._
 
 Fourth, for each of these 200 solutions, 20 unique 1-step mutants were generated. If a mutant was invalid or identical to the parent, it was regenerated up to 20 times. This resulted in a total of 4000 pairs of (parent, mutant) solutions for each representation. Finally, aggregated statistics for metrics such as fitness gain, improvement rate and other metrics were computed for each encoding, which are summarized in [Table 1](#table-neighborhood-characteristics) and visualized on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
 
@@ -138,7 +139,7 @@ Invalid or broken genotypes (`fitness == FITNESS_VALUE_INFEASIBLE_SOLUTION`) are
 
 To assess the influence of outliers on the conclusions, producing an additional set of figures is unnecessary: the same insights can be drawn directly from the existing plots. If outlier runs are excluded from the pool from which parents are sampled, the maximum fitness for each representation contracts to the rightmost edge of the colored plume on each subplot in [Figure 4](#fig-parent-mutant-fitness-scatter-plots). Sampling 200 parents within this reduced interval would simply populate the same region more densely, mirroring the colored clusters already displayed. Similarly, the uniform parent step distribution would scale proportionally to this lower maximum while maintaining its flat profile ([Figure 0](#fig-distribution-parents-climbers)). Thus, the existing dataset and color-coded separation sufficiently isolate the effect of outliers.
 
-_Note: motivation for isolating the effect of outliers is to prevent possible effects of "lottery winners" on the overall climbing (e.g. due to chance their trajectory could generate more beneficial mutations than average, and if we include them in the parent pool for landscape probing, we could overestimate the overall potential of a given representation)._
+_Note: motivation for isolating the effect of outliers is to prevent possible effects of "lottery winners" on the overall climbing (e.g. due to chance their trajectory could generate more beneficial mutations than average, and if they are included in the parent pool for landscape probing, one could overestimate the overall potential of a given representation)._
 
 
 <div style="break-after: page;"></div>

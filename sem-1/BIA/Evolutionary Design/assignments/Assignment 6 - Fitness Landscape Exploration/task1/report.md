@@ -1,6 +1,17 @@
 # Assignment 6: Fitness Landscape Exploration
 ## Task 1: Probing Landscape Topology across Various Genetic Encodings
 
+### Objective and Setup
+
+The objective of this task is to discover the topological nature of the combinatorial fitness landscape - its ruggedness, neutrality, mutational locality, and evolvability - for **net rectilinear locomotion speed** ([`velocity`](https://www.framsticks.com/a/al_params.html#exper-perfcalc)) with neural network control across four distinct genetic encodings:
+
+- [**$f_0$**](https://www.framsticks.com/a/al_geno_f0.html) - direct low-level representation (explicit 3D parts, joints, neurons, and synaptic connections).
+- [**$f_1$**](https://www.framsticks.com/a/al_geno_f1.html) - recurrent tree-developmental encoding with branching and structural repetition.
+- [**$f_4$**](https://www.framsticks.com/a/al_geno_f4.html) - matrix/developmental grammar encoding.
+- [**$f_H$**](https://www.framsticks.com/a/al_geno_fh.html) - handle-based indirect representation (elements assemble and fuse based on vector similarity between evolving numerical handles).
+
+Because combinatorial solution spaces cannot be plotted directly against argument values, the landscape is studied through **parent-offspring neighborhood probing**: sampling diverse solutions across the fitness spectrum and analyzing the distribution of their 1-step mutational neighbors relative to the $y = x$ reference line.
+
 ### Experiment design 
 
 ```mermaid
@@ -14,14 +25,12 @@ flowchart LR
     D --> N["<a href=#table-neighborhood-characteristics><b>Table:</b></a><br>Neighbourhood characteristics: improvement rates, lethality / fragility rate"]
 ```
 
-<div style="break-after: page;"></div>
 
 First, 48 parallel runs of 300 generations with population size 100 were executed for each representation, while [only improving solutions were recorded to HoF of size 1](../../../scripts/FramsticksEvolutionScheduled.py#L99) (thus only monotonic climbing paths were recorded - in total 48 paths per encoding). Genotypes and fitness values of each HoF update were recorded to `./results/landscape/hof_history_*.csv` (one file per run). The results of evolution are presented on [Figures 1 and 2](#fig-evolution-mean-curves).
 
 Second, the results were [aggregated](../../../scripts/analyze_fitness_landscape.py#L85) and infeasible/duplicate solutions were filtered out, yielding in total ~1.7-2.6k values per each encoding (e.g. there were around 30-60 improving solutions per run).
 
-Third, 200 solutions were selected from each pool using stratified random binning across the fitness interval $[0, F_{\text{max}}]$ ($n_{\text{bins}} = \lfloor \sqrt{200} \rfloor = 14$ equal-width bins with $k \le \lceil 200/14 \rceil = 15$ samples per bin). The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers).
-- _Note: Genotypic diversity was not explicitly controlled: in high-density regions of the sample distribution solutions are chosen randomly, which inherently promotes diversity; while in low-density regions (e.g. in the case of the intermediate trajectories of the two lottery winners in_ $f_4$ _) the only available solutions could provide only scarce diversity._
+Third, 200 solutions were selected from each pool using stratified random binning across the fitness interval $[0, F_{\text{max}}]$ ($n_{\text{bins}} = \lfloor \sqrt{200} \rfloor = 14$ equal-width bins with $k \le \lceil 200/14 \rceil = 15$ samples per bin). The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers). _Note: Genotypic diversity was not explicitly controlled: in high-density regions of the sample distribution solutions are chosen randomly, which inherently promotes diversity; while in low-density regions (e.g. in the case of the intermediate trajectories of the two lottery winners in_ $f_4$ _) the only available solutions could provide only scarce diversity._
 
 Fourth, for each of these 200 solutions, 20 unique 1-step mutants were generated. If a mutant was invalid or identical to the parent, it was regenerated up to 20 times. This resulted in a total of 4000 pairs of (parent, mutant) solutions for each representation. Finally, aggregated statistics for metrics such as fitness gain, improvement rate and other metrics were computed for each encoding, which are summarized in [Table 1](#table-neighborhood-characteristics) and visualized on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
 
