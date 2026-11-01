@@ -4,16 +4,17 @@ Coursework and experiments for the **Evolutionary Design** module of the Bio-Ins
 
 This module focuses on the evolution of 3D artificial creatures using the [Framsticks](https://www.framsticks.com/) simulator coupled with evolutionary algorithms implemented using the [DEAP](https://github.com/DEAP/deap) framework in Python.
 
----
 
 ## Assignments
 
-* **[Assignment 3: Mutation Intensity in Evolutionary Algorithms](./assignments/Assignment%203%20-%20Mutation%20Intensity%20in%20Evolutionary%20Algorithms/README.md)**: Investigating the influence of mutation intensity on search performance, premature convergence, local optima, and the critical role of crossover.
-* **[Assignment 4: EA with Different Genome Encodings](./assignments/Assignment%204%20-%20EA%20with%20different%20genome%20encodings/README.md)**: Comparing structural representations ($f_0, f_1, f_4, f_9$), analyzing neutral plateaus on uneven terrain, and formulating justified fitness modifications to guide evolution out of plateaus.
-* **[Assignment 5: Modifying Topology Exploration Path](./assignments/Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/README.md)**: Manipulating mutation types, operator probabilities (morphological vs. neural net balance), and active sensor/effector co-evolution for locomotion velocity.
-* **[Assignment 6: Fitness Landscape Exploration](./assignments/Assignment%206%20-%20Fitness%20Landscape%20Exploration/README.md)**: Probing topological ruggedness, neutrality, mutational locality, and evolvability across direct, tree-developmental, grammar, and handle-based genetic representations ($f_0, f_1, f_4, f_H$).
+|Index |Topic | Optimization objective | Encodings | Research Question|
+|---|---|---|---|---|
+|3  |**[Mutation Intensity in Evolutionary Algorithms](./assignments/Assignment%203%20-%20Mutation%20Intensity%20in%20Evolutionary%20Algorithms/README.md)**| `vertpos` (vertical coordinate of a c of mass of a creature)|$f_9$| Investigating the influence of mutation intensity on search performance, premature convergence, local optima, and the critical role of crossover in the optimization process.|
+|4 |**[EA with Different Genome Encodings](./assignments/Assignment%204%20-%20EA%20with%20different%20genome%20encodings/README.md)**|`vertpos`|$f_0, f_1, f_4, f_9$|Comparison of genome representations, analysis of neutral plateaus on uneven terrain, and formulating fitness modification to guide evolution out of plateaus.|
+|5| **[Modifying Topology Exploration Path](./assignments/Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/README.md)**|`velocity` (Net rectilinear displacement speed)|$f_1$|Manipulating mutation types, operator probabilities (morphological vs. neural net balance), and active sensor/effector co-evolution for locomotion velocity.
+|6| **[Fitness Landscape Exploration](./assignments/Assignment%206%20-%20Fitness%20Landscape%20Exploration/README.md)**|`velocity`|$f_0, f_1, f_4, f_H$|Probing topological ruggedness, neutrality, mutational locality, and evolvability across different grammars.
 
----
+
 
 ## Setup & Installation Instructions
 

@@ -2,11 +2,11 @@
 
 This assignment explores the space of possible designs - both structural and neural - by manipulating mutation types, operator probabilities, and fitness landscape definitions.
 
-The optimization objective in all tasks is to maximize the creature's `velocity`.
+The optimization objective in all tasks is to maximize the creature's `velocity` in $f_1$ genotype encoding.
 
 ## Setup
 
-Earlier tasks used only passive structures, now [active elements](https://www.framsticks.com/muscles_and_receptors) are introduced:
+Earlier, evolution design problems involved only passive structures (optimization of `vertpos`), now [active elements](https://www.framsticks.com/muscles_and_receptors) are introduced:
 
 - **Active sensors**:
     - **G - gyroscope** - returns signed relative difference of a vertical position of a stick's parts ($[-1, 1]$)
