@@ -35,6 +35,7 @@ _**Figure 0**: Distribution of fitness values across unique evolutionary climber
 <div style="break-after: page;"></div>
 
 <a id="fig-trajectories"></a>
+<a id="fig-trajectories-2x2"></a>
 
 <p align="center">
   <img src="./results/random_walks/random_walk_trajectories_2x2.png" width="95%" alt="Sequential Random Walk Fitness Trajectories 2x2 Grid"/>
@@ -47,6 +48,7 @@ _**Figure 1**: Sequential Random Walk Fitness Trajectories across 4 encodings. C
 - $f_H$ exhibits high initial sensitivity of the _top-tier_ solutions due to coordinate handle mismatches in Euclidean binding space; _mid-tier_ solutions show **robustness** to mutations (probably due to the threshold effect, specific to this grammar) - similar effect exhibited in [Task 1](../task1/report.md#comparison-of-representations) - moreover, this also explains emergence of sudden peaks (as on the 21st iteration).
 </p>
 
+<a id="interpretation-solution-as-memory--landscape-topology"></a>
 ### "Solution as Memory" & Landscape Topology
 
 1. **Decoherence of Genetic Memory**: Evolved high-fitness genotypes represent specialized "memory" storing phenotypic coordination discovered under selective pressure. In the absence of selection, unconstrained random walks produce exponential memory decay: fitness drops below 50% within $\approx 2..5$ mutational steps, collapsing to near zero ($< 10^{-4}$) by step 30 across all encodings.

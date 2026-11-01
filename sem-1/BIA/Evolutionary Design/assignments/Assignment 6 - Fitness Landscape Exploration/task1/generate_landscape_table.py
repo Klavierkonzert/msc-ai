@@ -20,7 +20,7 @@ import numpy as np
 
 
 def generate_landscape_metrics_table(
-    landscape_dir: str = "assignments/Assignment 6 - Fitness Landscape Exploration/task1/results/landscape",
+    landscape_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results", "landscape"),
     include_outliers_row: bool = False,
     compact: bool = True,
     eps: float = 1e-6,

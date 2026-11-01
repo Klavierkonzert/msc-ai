@@ -21,7 +21,7 @@ Because combinatorial solution spaces cannot be plotted directly against argumen
 
 - **Optimization Criterion (Fitness)** - `velocity` with max sampling period $T$ (net rectilinear displacement speed):
   $$v = \frac{\|\mathbf{x}(T) - \mathbf{x}(0)\|}{T}$$
-- **Simulation Environment ([`eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim`](..//..//..//Framsticks55/data/))**:
+- **Simulation Environment ([`eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim`](../../../Framsticks55/data/))**:
   - **Deterministic Physics (`deterministic.sim`)**: Eliminates sensory and mechanical noise (`randinit: 0.0`, `nnoise: 0.0`, `bnoise_vel: 0.0`) with central placement (`placement: 1`), enabling deterministic, noise-free single-trial evaluation (`evalcount: 1`).
   - **Lifespan Mechanism**: Controlled by metabolic energy consumption with starting energy $E_0 = 10\,000.0 \times n$ and idle metabolism $e_\text{meta} = 1.0 \times n$, yielding a constant lifespan of exactly $T = 10\,000$ simulation steps.
   - **Performance Sampling (`sample-period-longest.sim`)**: Configures `perfperiod: 999999`, which exceeds the lifespan, sampling coordinates strictly at birth ($t=0$) and death ($t=10\,000$) to measure rectilinear velocity without periodic sampling overhead.
@@ -48,19 +48,20 @@ flowchart LR
     B --> C["Uniform Fitness Sampling<br>(200+ parents spanning [0, F_max])"]
     C --> D["Neighborhood <br>(20 valid 1-step mutants per parent, invalid or broken genotypes rejected and retried up to 20 times)"]
     C --> ClimbersFitnessDistr["<a href=#fig-distribution-parents-climbers><b>Figure 0:</b></a> Distribution of Fitness values across unique fitness climbers"]
-    D --> E["<a href=#eoeu><b>Figure 4:</b></a> Landscape Visualizations<br>(Scatter plots with y=x, fixed scale)"]
+    D --> E["<a href=#fig-parent-mutant-fitness-scatter-plots><b>Figure 4:</b></a> Landscape Visualizations<br>(Scatter plots with y=x, fixed scale)"]
     D --> N["<a href=#table-neighborhood-characteristics><b>Table:</b></a><br>Neighbourhood characteristics: improvement rates, lethality / fragility rate"]
 ```
 
-First, 48 parallel runs of 300 generations with population size 100 were executed for each representation, while [only improving solutions were recorded to HoF of size 1](../../../scripts/FramsticksEvolutionScheduled.py#L99) (thus only monotonic climbing paths were recorded - in total 48 paths per encoding). Genotypes and fitness values of each HoF update were recorded to `./results/landscape/hof_history_*.csv` (one file per run). The results of evolution are presented on [Figures 1 and 2](#fig-evolution-mean-curves).
+_First_, 48 parallel runs of 300 generations with population size 100 were executed for each representation, while [only improving solutions were recorded to HoF of size 1](../../../scripts/FramsticksEvolutionScheduled.py#L99) (thus only monotonic climbing paths were recorded - in total 48 paths per encoding). Genotypes and fitness values of each HoF update were recorded to `./results/landscape/hof_history_*.csv` (one file per run). The results of evolution are presented on [Figures 1 and 2](#fig-evolution-mean-curves).
 
-Second, the results were [aggregated](../../../scripts/analyze_fitness_landscape.py#L85) and infeasible/duplicate solutions were filtered out, yielding in total ~1.7-2.6k values per each encoding (e.g. there were around 30-60 improving solutions per run).
+_Second_, the results were [aggregated](./analyze_fitness_landscape.py#L85) and infeasible/duplicate solutions were filtered out, yielding in total ~1.7-2.6k values per each encoding (e.g. there were around 30-60 improving solutions per run).
 
-Third, 200 solutions were selected from each pool using stratified random binning across the fitness interval $[0, F_{\text{max}}]$ ($n_{\text{bins}} = \lfloor \sqrt{200} \rfloor = 14$ equal-width bins with $k \le \lceil 200/14 \rceil = 15$ samples per bin). The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers).
+<a id="uniform-fitness-sampling"></a>
+_Third_, 200 solutions were selected from each pool using stratified random binning across the fitness interval $[0, F_{\text{max}}]$ ($n_{\text{bins}} = \lfloor \sqrt{200} \rfloor = 14$ equal-width bins with $k \le \lceil 200/14 \rceil = 15$ samples per bin). The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers).
 - _Note: Genotypic diversity was not explicitly controlled: in high-density regions of the sample distribution solutions are chosen randomly, which inherently promotes diversity; while in low-density regions (e.g. in the case of the intermediate trajectories of the two lottery winners in_ $f_4$ _) the only available solutions could provide only scarce diversity._
 _FUSS-like sampling was probed earlier, but it yielded less uniform coverage of the fitness range._
 
-Fourth, for each of these 200 solutions, 20 unique 1-step mutants were generated. If a mutant was invalid or identical to the parent, it was regenerated up to 20 times. This resulted in a total of 4000 pairs of (parent, mutant) solutions for each representation. Finally, aggregated statistics for metrics such as fitness gain, improvement rate and other metrics were computed for each encoding, which are summarized in [Table 1](#table-neighborhood-characteristics) and visualized on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
+_Fourth_, for each of these 200 solutions, 20 unique 1-step mutants were generated. If a mutant was invalid or identical to the parent, it was regenerated up to 20 times. This resulted in a total of 4000 pairs of (parent, mutant) solutions for each representation. Finally, aggregated statistics for metrics such as fitness gain, improvement rate and other metrics were computed for each encoding, which are summarized in [Table 1](#table-neighborhood-characteristics) and visualized on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
 
 <a id="fig-distribution-parents-climbers"></a>
 
@@ -68,7 +69,7 @@ Fourth, for each of these 200 solutions, 20 unique 1-step mutants were generated
   <img src="./results/landscape/climbers_distribution_2x2.png" width="95%" alt="Distribution of Unique Evolutionary Climbers and Selected Parents"/>
   <br>
 
-_**Figure 0**: Empirical distribution of all unique evolutionary climbers extracted from Phase 1 history (shaded histogram and continuous KDE curve) versus the distribution of the 200 selected parent solutions (red dashed step count across 14 stratified equal-width bins): uniformity of the distribution of selected parents across fitness values is evaluated using_ $\chi^2$\-_test (_ $\chi^2$ _statistic, p-value, and Kullback-Leibler divergence_ $D_{\text{KL}}$ _in nats), with marginal horizontal quartile diagrams (median and IQR)._ 
+_**Figure 0**: Empirical distribution of all unique evolutionary climbers extracted from first phase history (shaded histogram and continuous KDE curve) versus the distribution of the 200 selected parent solutions (red dashed step count across 14 stratified equal-width bins): uniformity of the distribution of selected parents across fitness values is evaluated using_ $\chi^2$\-_test (_ $\chi^2$ _statistic, p-value, and Kullback-Leibler divergence_ $D_{\text{KL}}$ _in nats), with marginal horizontal quartile diagrams (median and IQR)._ 
 _Note: The distribution of original fitness values is naturally right-skewed. Quasi-uniform distribution of 200 selected solutions across fitness values were obtained in case of three representations_ ($D_{KL}< 0.105$), _while for_ $f_4$ _the distribution is highly non-uniform due to selection of two high-performing individuals' intermediate genomes with final fitness values around 0.03 and 0.04 (see [Figures 2](#fig-evolution-boxplots) and [3](#fig-best-creature-inspection))._
 </p>
 
@@ -174,12 +175,16 @@ The table below reports the complete quantitative neighborhood characteristics w
 
   - While the immediate 1-step improvement rate is the lowest ($1.50\%$), populations **drift neutrally** across high-dimensional plateaus without falling off peaks, eventually discovering portals to higher fitness levels. This sustained neutral exploration yields the highest consistency (mean $0.012749$) and reliable rank preservation ($r = 0.6047$, $0.6146$ without outliers).
 
+<a id="comparison-f0"></a>
+
 - **Direct Low-Level Encoding** ($f_0$) is most mutationally beneficial, evolvable strategy:
   - **$f_0$ provides smooth and predictable ascent**. Direct representation demonstrates intermediate performance (mean $0.010111$, peak $0.023337$) with balanced variance, due to continuous/parametric adjustements (_64%_ of mutations).
   - **High Improvement Rate (2.85%, 2.95% without outliers)**. Direct encoding of parts, coordinates, and synaptic weights provides unconstrained parametric control, creating smooth, continuous slopes.
   - **Balanced Locality with Exploratory Variance**. Pearson correlation ($r = 0.5526$, $0.5256$ without outliers) reflects moderate mutational variance.
   - Harmful mutations degrade performance progressively rather than collapsing to zero, indicating accessible upward gradients.
 
+
+<a id="comparison-f4"></a>
 
 - **Developmental Grammar** ($f_4$) - volatile strategy with macro-mutations:
   - **$f_4$ achieves global peak with high variance**. While $f_4$ has a lower median ($0.006353$), its developmental grammar rules unlocked extraordinary locomotion velocity ($F_{\max} = 0.043587$ and the second best result $0.034267$). The high standard deviation ($\pm 0.007711$) reflects the combinatorial lottery of grammar evolution: many runs settle in mediocre local attractors, but successful runs discover coordinated modular gaits. Two lottery "winners" are depicted on [Figures 3a, b](#fig-best-creature-inspection).
@@ -189,12 +194,14 @@ The table below reports the complete quantitative neighborhood characteristics w
   - **Repetition operator** `#NUM(...)`, provided by the grammar, allows for modular repetition of genotype fragments, which helps with evolving complicated structures, this proved too volatile for continuous physics. Both champion genotypes evolved compact morphologies with no effectively repeated limbs, moved by simple one-legged pushed jumps while avoiding complex multi-segment modularity.
 
 
+<a id="comparison-f1"></a>
+
 - **Recurrent Tree Encoding** ($f_1$) - conservative strategy with restricted structural exploration:
 
   - **$f_1$ struggles with premature stagnation**. Tree-developmental representation exhibited the lowest average fitness ($0.004749$) and lowest maximum ($0.016334$), flattening early in the run. In $f_1$, synaptic weight changes dominate (_67.1%_), while morphological structural disruptions are suppressed (_12.8%_).
 
   - **Has highest mutational locality across all encodings**: strongest parent-mutant correlation ($r = 0.7085$, $0.7284$ without outliers) and lowest lethality ($0.17\%$, $0.14\%$ without outliers), with conservative perturbations (mean absolute $|\Delta F| = 0.0022$, median relative change $4.6\%$).
-  - **Topological & Structural Bottlenecks** (see [Evolution Challenges and Fitness Bias](..//..//Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/README.md#evolution-challenges) in the previous work):
+  - **Topological & Structural Bottlenecks** (see [Evolution Challenges and Fitness Bias](../../Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/report.md#evolution-challenges) in the previous work):
     - Neural connections in $f_1$ use _relative index offsets_: deleting intermediate unused nodes breaks down neural loops, entrenching the morphological search.
     - Independent neuron addition (`f1_nmNeu`) and synaptogenesis (`f1_nmConn`) cause new sensors to sprout unconnected, consuming mutation evaluations without delivering motor torque, _penalizing decoupled neural operators_.
     - High locality preserves conservative crawl movements, but escaping suboptimal basins requires coordinated restructuring across multiple subtrees, resulting in _deceptive basin trapping_.
@@ -215,5 +222,5 @@ The table below reports the complete quantitative neighborhood characteristics w
 
 3. **Embodied Coordination & Rectilinear Objective Bias**:
    - Evolved locomotion does not rely on complex, cross-wired Central Pattern Generators; instead, multi-actuator synchronization emerges from **embodied physical coupling** (structural inertia, joint limits, gravity, and ground reaction forces dynamically driving the reflex loops).
-   - Under a unidimensional rectilinear objective ($v = \Delta x / \Delta t$), lateral balance and multi-limb stabilization receive zero reward while introducing parasitic ground friction and limb collisions. Consequently, representations that readily decouple morphology to discover asymmetric, unilateral pushing gaits ($f_0, f_4$) outcompete symmetric branching encodings ($f_1$) which in its turn has to adapt to the same strategy (see [previous work](..//..//Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/README.md) for details).
+   - Under a unidimensional rectilinear objective ($v = \Delta x / \Delta t$), lateral balance and multi-limb stabilization receive zero reward while introducing parasitic ground friction and limb collisions. Consequently, representations that readily decouple morphology to discover asymmetric, unilateral pushing gaits ($f_0, f_4$) outcompete symmetric branching encodings ($f_1$) which in its turn has to adapt to the same strategy (see [previous work](../../Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/report.md) for details).
 

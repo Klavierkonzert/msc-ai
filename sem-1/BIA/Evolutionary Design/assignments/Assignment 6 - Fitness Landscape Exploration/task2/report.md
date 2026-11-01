@@ -23,9 +23,9 @@ flowchart LR
 <div style="break-after: page;"></div>
 
 #### 1. Sampling Strategy: Shuffled Parent Pairing
-Rather than drawing arbitrary random pairs or using complex grid stratification, **200 equasi-uniformly distributed parent solutions** [already sampled](../task1/results/landscape) along the 1D fitness spectrum $[0, F_{\max}]$ from Task 1 are used. By executing [the script](./analyze_crossover.py) with $R = 5$ independent random permutation rounds $r$ and pairing adjacent even-odd indices $(0_r, 1_r), (2_r, 3_r), \dots, (198_r, 199_r)$, one obtains:
+Rather than drawing arbitrary random pairs or using complex grid stratification, **200 quasi-uniformly distributed parent solutions** [already sampled](../task1/results/landscape) along the 1D fitness spectrum $[0, F_{\max}]$ from Task 1 are used. By executing [the script](./analyze_crossover.py) with $R = 5$ independent random permutation rounds $r$ and pairing adjacent even-odd indices $(0_r, 1_r), (2_r, 3_r), \dots, (198_r, 199_r)$, one obtains:
 - $100 \text{ pairs/round} \times 5 \text{ rounds} = \mathbf{500} \text{ unique parent pairs per representation}$.
-- Quasi-uniform marginal 1D distributions ([Task 1](..//task1/README.md#fig-distribution-parents-climbers)) guarantee a quasi-uniform 2D joint density across the Cartesian square $[0, F_{\max}] \times [0, F_{\max}]$ when both reciprocal directions are evaluated.
+- Quasi-uniform marginal 1D distributions ([Task 1](../task1/report.md#fig-distribution-parents-climbers)) guarantee a quasi-uniform 2D joint density across the Cartesian square $[0, F_{\max}] \times [0, F_{\max}]$ when both reciprocal directions are evaluated.
 
 #### 2. Framsticks Crossover Mechanics & Reciprocal Directionality
 In the Framsticks simulation framework, sexual recombination [`FramsticksLib.crossOver(g_base, g_donor)`](https://www.framsticks.com/files/classdoc/c_genman.html) operates as a **directional, single-offspring operator**:
@@ -48,10 +48,10 @@ Because swapping parent arguments (`crossOver(g1, g2)` vs. `crossOver(g2, g1)`) 
 -->
 
 #### 3. Infeasibility Rejection & Lethality Tracking
-Offspring producing syntactically invalid genotypes (`GENOTYPE_INVALID`) or failing physical simulation (`velocity == FITNESS_VALUE_INFEASIBLE_SOLUTION = -999999.0`) are immediately rejected and re-attempted (up to 20 retries, same as mutations are reattempted in [Task 1](..//task1/README.md#fitness-landscape-probing-results)), failed attempts are then used to calculate the **Crossover Lethality Rate**.
+Offspring producing syntactically invalid genotypes (`GENOTYPE_INVALID`) or failing physical simulation (`velocity == FITNESS_VALUE_INFEASIBLE_SOLUTION = -999999.0`) are immediately rejected and re-attempted (up to 20 retries, same as mutations are reattempted in [Task 1](../task1/report.md#fitness-landscape-probing-results)), failed attempts are then used to calculate the **Crossover Lethality Rate**.
 
 #### 4. Rationale for Excluding Outlier Isolation
-Unlike the local point-mutation analysis in [Task 1](..//task1/README.md#isolating-the-influence-of-outliers), identifying and isolating evolutionary "lottery" outlier lineages is deliberately omitted here. 
+Unlike the local point-mutation analysis in [Task 1](../task1/report.md#isolating-the-influence-of-outliers), identifying and isolating evolutionary "lottery" outlier lineages is deliberately omitted here. 
 
 When pairing parents across independently evolved runs, discarding pairs containing even one outlier parent introduces severe combinatorial entanglement and discards over 45% of sampled pairs, depriving the analysis of critical data in the high-fitness regime. Furthermore, empirical results in the Task 1 confirm that crossover mechanics do not severely skew overall metrics. Moreover, in both cases, the epistatic disruption of locomotion circuits and mechanics impairment follow identical physical laws. Retaining the complete, unpruned sample of 500 pairs per encoding guarantees uniform coverage across the entire parent fitness plane without arbitrary data loss, and avoids unnecessarily complicated analysis.
 
@@ -69,7 +69,7 @@ _**Figure 0:** Empirical distribution of the 1,000 directed crosses (500 parent 
 
 ### Quantitative Crossover Metrics
 
-To mathematically characterize the recombinant fitness landscape and determine single-number descriptors of crossover behavior in each representation, similar to  [Task 1](../task1/README.md#quantitative-landscape-metrics) , but in contrast to it, with special focus on the effect of the two-parent combinations:
+To mathematically characterize the recombinant fitness landscape and determine single-number descriptors of crossover behavior in each representation, similar to  [Task 1](../task1/report.md#quantitative-landscape-metrics) , but in contrast to it, with special focus on the effect of the two-parent combinations:
 
 #### 1. Primary Metric: Positive Heterosis Index ($H^+$)
 Following the analogous analysis in Task 1, this metric captures the empirical probability that crossover leads to offspring that **strictly outperform both parents** ($\epsilon = 10^{-6}$):
@@ -80,7 +80,7 @@ $$\mathbf{H^+}(S_{\text{cross}}^{\text{enc}}) = \frac{1}{|S_{\text{cross}}^{\tex
 - **$H^+ > 0\%$**, i.e. _fitness gain_ is often positive, implies crossover is beneficial and confirms genuine recombinant synergy (transgressive segregation / positive heterosis).
 
 #### 2. Multiple Correlation ($R$) & Weights $(\beta_{\text{base}}, \beta_{\text{donor}})$ 
-Following analogy of the role of Pearson correlation coefficient in the [Task 1](../task1/README.md#quantitative-landscape-metrics) results analysis, the multiple correlation coefficient is used as a descriptor of the linear relationship between the offspring fitness and the parental fitness, this time with two independent variables:
+Following analogy of the role of Pearson correlation coefficient in the [Task 1](../task1/report.md#quantitative-landscape-metrics) results analysis, the multiple correlation coefficient is used as a descriptor of the linear relationship between the offspring fitness and the parental fitness, this time with two independent variables:
 
 $$F(O) \sim \beta_0 + \beta_{\text{base}} F(P_{\text{base}}) + \beta_{\text{donor}} F(P_{\text{donor}})$$
 
@@ -162,7 +162,7 @@ In the case of [$f_4$](./results/crossover/crossover_3d_f4.html) and [$f_H$](./r
 2) The classical Genetic Algorithm assumption that crossover innovates by assembling independent building blocks is challenged by severe epistatic coupling. Positive heterosis ($H^+ > 0$) remains exceptionally rare (across all representations it is $\le 0.18\%=H^+(f_4)$). Hence **building block hypothesis requires elaborated implementation constraints**.
 3) **Inversion of Mutational vs. Recombinant Robustness in** $f_H$:
    A critical finding is the complete inversion of performance for the handle-based encoding $f_H$:
-   - Under **asexual point mutation** ([Task 1](..//task1/README.md#table-neighborhood-characteristics)), $f_H$ was the superior, most robust representation ($58.3\%$ neutrality, lowest disruption rate).
+   - Under **asexual point mutation** ([Task 1](../task1/report.md#table-neighborhood-characteristics)), $f_H$ was the superior, most robust representation ($58.3\%$ neutrality, lowest disruption rate).
    - Under **sexual crossover** ([Task 2](#table-crossover-summary)), $f_H$ suffered **extreme destructiveness (90.92%) & lethality (20.74%)**. The peak parent fitness of $0.028365$ collapsed to a maximum offspring fitness of only $0.004268$ (zero positive heterosis, $H^+ = 0.00\%$).
    This demonstrates that geometric handle clustering creates smooth local neutral networks for point mutation, but exhibits extreme non-locality and vulnerability under macro-recombination.
    - $f_H$ appears to be **completely unsuited for sexual crossover**: total heritability failure ($R = 0.0691$) and negligible parent trait transmission $(\beta_{\text{base}} = 0.002, \beta_{\text{donor}} = 0.001)$ confirm that.

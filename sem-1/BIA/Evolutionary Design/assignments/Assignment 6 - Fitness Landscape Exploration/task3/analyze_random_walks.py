@@ -30,11 +30,11 @@ TASK3_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSIGNMENT_DIR = os.path.abspath(os.path.join(TASK3_DIR, ".."))
 REPO_ROOT = os.path.abspath(os.path.join(ASSIGNMENT_DIR, "..", ".."))
 
-for p in [os.path.join(REPO_ROOT, "scripts"), os.path.join(REPO_ROOT, "framspy-download")]:
+for p in [ASSIGNMENT_DIR, os.path.join(REPO_ROOT, "framspy-download"), os.path.join(REPO_ROOT, "scripts")]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from analyze_fitness_landscape import (
+from landscape_utils import (
     extract_climbing_candidates, sample_stratified_binned_fitness,
     REPRESENTATION_COLORS, FORMAT_NAMES, FITNESS_VALUE_INFEASIBLE_SOLUTION
 )

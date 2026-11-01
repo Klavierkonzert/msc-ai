@@ -3,28 +3,6 @@
 analyze_fitness_landscape.py
 
 Comprehensive tool for Assignment 6 - Task 1: Fitness Landscape Exploration across representations (f0, f1, f4, fH).
-
-Pipeline:
-1. Ingests evolutionary runs from pickled logbooks (*.logbook.pkl) created by FramsticksEvolutionScheduled.py.
-2. Extracts candidate parent solutions from logbook.hof_history across all runs for each representation.
-3. Selects a uniform distribution of parent solutions across the fitness spectrum [0, F_max] (default: >= 200).
-4. Probes the local landscape by generating and evaluating N mutants-neighbors per parent (default: 20) in parallel.
-5. Filters infeasible individuals and tracks mutation lethality/retries.
-6. Generates scatter plots (Parent Fitness vs. Mutant Fitness) with:
-   - Diagonal y = x reference line.
-   - Unified fixed axes [0, global_F_max] across all representations.
-   - Fraction of beneficial mutants (% improved).
-7. Outputs detailed CSV data and summary statistics.
-
-Usage:
-  python scripts/analyze_fitness_landscape.py \
-      --stats-dir stats/2026-10-24_06 \
-      --frams-path Framsticks55 \
-      --formats 0 1 4 H \
-      --num-samples 200 \
-      --num-mutants 20 \
-      --workers 20 \
-      --out-dir "assignments/Assignment 6 - Fitness Landscape Exploration/task1/results"
 """
 
 import os
@@ -49,323 +27,31 @@ if os.environ.get('MPLBACKEND') == 'Agg' or '--headless' in sys.argv:
     matplotlib.use('Agg')
 else:
     try:
-        matplotlib.use("TkAgg")
+        matplotlib.use('TkAgg')
     except Exception:
-        matplotlib.use("Agg")
+        matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# Ensure framspy-download is accessible
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-FRAMSPY_DIR = os.path.join(REPO_ROOT, "framspy-download")
-if FRAMSPY_DIR not in sys.path:
-    sys.path.insert(0, FRAMSPY_DIR)
+TASK1_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSIGNMENT_DIR = os.path.abspath(os.path.join(TASK1_DIR, '..'))
+REPO_ROOT = os.path.abspath(os.path.join(ASSIGNMENT_DIR, '..', '..'))
+FRAMSPY_DIR = os.path.join(REPO_ROOT, 'framspy-download')
 
-FITNESS_VALUE_INFEASIBLE_SOLUTION = -999999.0
+for p in [ASSIGNMENT_DIR, FRAMSPY_DIR, os.path.join(REPO_ROOT, 'scripts')]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
-REPRESENTATION_COLORS = {
-    '0': '#2ca02c',  # Green
-    '1': '#1f77b4',  # Blue
-    '4': '#ff7f0e',  # Orange
-    'H': '#9467bd',  # Purple
-}
-
-FORMAT_NAMES = {
-    '0': '$f_0$ (Direct)',
-    '1': '$f_1$ (Recurrent Tree)',
-    '4': '$f_4$ (Developmental Grammar)',
-    'H': '$f_H$ (Handle-based)'
-}
-
-
-# ==============================================================================
-# 1. Loading and Extracting Candidates from Logbooks
-# ==============================================================================
-
-def find_logbooks_for_format(stats_dir: str, genformat: str) -> List[str]:
-    """Finds all *.logbook.pkl files belonging to a specific genome format in stats_dir."""
-    pattern = os.path.join(stats_dir, "**", f"*f{genformat}-*.logbook.pkl")
-    files = glob.glob(pattern, recursive=True)
-    if not files:
-        # Fallback to general pattern
-        pattern2 = os.path.join(stats_dir, "**", f"*{genformat}*.logbook.pkl")
-        files = glob.glob(pattern2, recursive=True)
-    return sorted(files)
-
-
-def extract_climbing_candidates(logbook_paths: List[str]) -> List[Dict[str, Any]]:
-    """
-    Extracts all (gen, fitness, genotype) records from logbook.hof_history
-    across the provided logbook files. Drops exact duplicates.
-    """
-    candidates = []
-    seen = set()
-
-    for p in logbook_paths:
-        try:
-            with open(p, 'rb') as f:
-                log = pickle.load(f)
-            history = getattr(log, 'hof_history', [])
-            run_name = os.path.splitext(os.path.basename(p))[0]
-            for r in history:
-                fit = float(r.get('fitness', 0.0))
-                geno = r.get('genotype', '').strip()
-                if not geno or fit <= FITNESS_VALUE_INFEASIBLE_SOLUTION:
-                    continue
-                # Unique signature: (round(fit, 8), geno)
-                sig = (round(fit, 8), geno)
-                if sig not in seen:
-                    seen.add(sig)
-                    candidates.append({
-                        "run": run_name,
-                        "gen": r.get('gen', 0),
-                        "fitness": fit,
-                        "genotype": geno
-                    })
-        except Exception as e:
-            print(f"[WARN] Failed to parse logbook '{p}': {e}")
-
-    # Sort ascending by fitness
-    candidates.sort(key=lambda x: x['fitness'])
-    return candidates
-
-
-def identify_outlier_runs(
-    stats_dir: str = None,
-    formats: List[str] = ['0', '1', '4', 'H'],
-    logbooks_by_format: Dict[str, List[str]] = None
-) -> Tuple[Dict[str, set], Dict[str, Dict[str, Any]]]:
-    """
-    Identifies evolutionary runs whose final best fitness exceeds the standard
-    Tukey boxplot upper fence: Q3 + 1.5 * IQR (matching Figure 2 boxplot outlier definition).
-    Uses high-efficiency pure Python dictionary buckets + compiled NumPy percentile (Option C).
-
-    Returns:
-      outlier_runs: Dict mapping format -> set of outlier run names (e.g. {'HoF-f4-37.logbook', ...})
-      outlier_stats: Dict mapping format -> summary statistics (q25, q75, iqr, upper_fence, n_runs, outliers)
-    """
-    # 1. Discover all logbook files in a single pass
-    if logbooks_by_format:
-        files = [p for flist in logbooks_by_format.values() for p in flist]
-    elif stats_dir and os.path.exists(stats_dir):
-        files = glob.glob(os.path.join(stats_dir, "**", "*.logbook.pkl"), recursive=True)
-    else:
-        files = []
-
-    # 2. Ingest last HoF individual per run into format-keyed dictionary buckets
-    fmt_runs: Dict[str, List[Tuple[str, float]]] = {fmt: [] for fmt in formats}
-    for p in files:
-        m = re.search(r'[-_]f([^-.]+)[-_.]', os.path.basename(p))
-        try:
-            with open(p, 'rb') as f:
-                log = pickle.load(f)
-            hist = getattr(log, 'hof_history', [])
-            if hist:
-                last_hof = hist[-1]
-                fmt = m.group(1) if m else last_hof.get('genotype', '').split('\n')[0].replace('//', '').strip()
-                if fmt in fmt_runs:
-                    run_name = os.path.splitext(os.path.basename(p))[0]
-                    fit = float(last_hof.get('fitness', 0.0))
-                    fmt_runs[fmt].append((run_name, fit))
-        except Exception as e:
-            print(f"[WARN] Error reading logbook '{p}': {e}")
-
-    # 3. High-efficiency NumPy percentile & Tukey fence calculation per format
-    outlier_runs: Dict[str, set] = {fmt: set() for fmt in formats}
-    outlier_stats: Dict[str, Dict[str, Any]] = {}
-
-    for fmt in formats:
-        items = fmt_runs.get(fmt, [])
-        if len(items) < 4:
-            continue
-
-        vals = np.array([fit for _, fit in items], dtype=np.float64)
-        q25, q75 = np.percentile(vals, [25, 75])
-        iqr = q75 - q25
-        upper_fence = q75 + 1.5 * iqr
-
-        outliers_dict = {run_name: fit for run_name, fit in items if fit > upper_fence}
-        outlier_runs[fmt] = set(outliers_dict.keys())
-        outlier_stats[fmt] = {
-            "n_runs": len(items),
-            "q25": float(q25),
-            "q75": float(q75),
-            "iqr": float(iqr),
-            "upper_fence": float(upper_fence),
-            "outliers": outliers_dict
-        }
-
-        print(f"[OUTLIERS] f{fmt}: {len(outliers_dict)}/{len(items)} runs classified as outliers (Upper Fence > {upper_fence:.6f}):")
-        for r_name, r_fit in sorted(outliers_dict.items(), key=lambda x: x[1], reverse=True):
-            print(f"   -> {r_name}: max fitness = {r_fit:.6f}")
-
-    return outlier_runs, outlier_stats
-
-
-# ==============================================================================
-# 2. Uniform & Stratified Fitness Sampling
-# ==============================================================================
-
-def binning(data: Union[int, Sequence, np.ndarray, Dict], k: float=1.0) -> int:
-    """
-    Computes default bin count using the square root choice of data size: int(sqrt(N)).
-    Supports an integer count, a sequence/collection/array, or a dictionary of sequences.
-    """
-    if isinstance(data, (int, np.integer)):
-        n = int(data)
-    elif isinstance(data, dict):
-        n = max((len(v) for v in data.values()), default=0)
-    else:
-        n = len(data)
-    return max(1, int(np.sqrt(k*n)))
-
-
-def sample_stratified_binned_fitness(
-    candidates: List[Dict[str, Any]],
-    num_samples: int = 200,
-    n_bins: Optional[int] = None,
-    exact_num: bool = True,
-    seed: Optional[int] = 42
-) -> List[Dict[str, Any]]:
-    """
-    Selects parent solutions across the fitness domain using Stratified Random Binning.
-    
-    The fitness interval [F_min, F_max] is partitioned into n_bins equal-width intervals
-    (by default n_bins = int(sqrt(num_samples)), e.g., 14 bins for num_samples=200). Within each bin,
-    k_per_bin = ceil(num_samples / n_bins) solutions (e.g., 15 for num_samples=200)
-    are randomly sampled without replacement.
-    
-    Parameters:
-        candidates: List of candidate records containing at least 'fitness' and 'genotype'.
-        num_samples: Target number of parent samples to select (default: 200).
-        n_bins: Optional custom number of bins. If None, computes int(sqrt(num_samples)).
-        exact_num: If True, guarantees that the returned list has length exactly num_samples:
-                   - If total sampled > num_samples (e.g., 14 * 15 = 210 > 200), randomly removes
-                     (total - num_samples) solutions.
-                   - If total sampled < num_samples (due to sparse/empty bins in high-fitness tails),
-                     tops up the deficit by randomly sampling from remaining unselected candidates.
-                   If False, returns whatever solutions were sampled across the bins (may be slightly
-                   greater or less than num_samples).
-        seed: Optional random seed for reproducible sampling (uses isolated Random instance).
-        
-    Returns:
-        Sorted list of selected parent candidate dictionaries (ascending by fitness).
-    """
-    if not candidates:
-        return []
-    if len(candidates) <= num_samples:
-        print(f"[INFO] Candidate count ({len(candidates)}) <= requested samples ({num_samples}). Keeping all candidates.")
-        return candidates
-
-    rng = random.Random(seed) if seed is not None else random
-
-    fits = np.array([c['fitness'] for c in candidates])
-    f_min, f_max = float(fits[0]), float(fits[-1])
-
-    if f_max <= f_min:
-        return rng.sample(candidates, num_samples)
-
-    # 1. Compute binning parameters: n_bins = binning(num_samples), k = ceil(N / n_bins)
-    if n_bins is None:
-        n_bins = binning(num_samples)
-    k_per_bin = int(math.ceil(num_samples / n_bins))
-    span = f_max - f_min
-
-    # 2. Partition candidate indices into n_bins
-    bin_indices: List[List[int]] = [[] for _ in range(n_bins)]
-    for idx, c in enumerate(candidates):
-        f = float(c['fitness'])
-        b = min(int((f - f_min) / span * n_bins), n_bins - 1)
-        bin_indices[b].append(idx)
-
-    # Shuffle each bin internally using rng for stochastic intra-bin selection
-    for b in range(n_bins):
-        rng.shuffle(bin_indices[b])
-
-    # 3. Initial allocation: up to target k_per_bin per bin
-    selected_indices: List[int] = []
-    unselected_per_bin: Dict[int, List[int]] = {}
-
-    for b in range(n_bins):
-        b_idxs = bin_indices[b]
-        k = min(k_per_bin, len(b_idxs))
-        selected_indices.extend(b_idxs[:k])
-        unselected_per_bin[b] = b_idxs[k:]
-
-    # 4. Handle exact_num adjustments
-    if exact_num:
-        if len(selected_indices) > num_samples:
-            excess = len(selected_indices) - num_samples
-            to_drop = set(rng.sample(range(len(selected_indices)), excess))
-            selected_indices = [idx for i, idx in enumerate(selected_indices) if i not in to_drop]
-        elif len(selected_indices) < num_samples:
-            deficit = num_samples - len(selected_indices)
-            # Round-robin top-up across bins that still have unselected candidates (i.e. bins are full)
-            active_bins = [b for b in range(n_bins) if len(unselected_per_bin[b]) > 0]
-            # Sort by remaining potential (least potential first)
-            active_bins.sort(key=lambda b: len(unselected_per_bin[b]))
-
-            while deficit > 0 and active_bins:
-                next_active = []
-                for b in active_bins:
-                    if deficit == 0:
-                        break
-                    selected_indices.append(unselected_per_bin[b].pop(0))
-                    deficit -= 1
-                    if len(unselected_per_bin[b]) > 0:
-                        next_active.append(b)
-                active_bins = next_active
-
-    selected_indices.sort()
-    return [candidates[i] for i in selected_indices]
-
-
-def sample_uniform_fitness(candidates: List[Dict[str, Any]], num_samples: int = 200) -> List[Dict[str, Any]]:
-    """
-    [DEPRECATED: Use sample_stratified_binned_fitness() instead]
-    
-    Selects num_samples individuals by matching an equidistant target grid spanning
-    [F_min, F_max] to the closest unique solution without replacement.
-    
-    Known Statistical Flaws:
-    1. Deterministic Point-Bias: In dense low-fitness regions (e.g. thousands of solutions
-       clustered near 0), it deterministically latches onto the single individual closest to
-       f_min + i * delta_f, discarding diverse genotypes in that same fitness stratum.
-    2. Sequential Point-Latching: Across sparse gaps (e.g. between normal runs and outlier
-       lottery peaks), multiple consecutive equidistant grid targets latch onto the same
-       sparse individual until exhausted, skewing local representation.
-    """
-    warnings.warn(
-        "sample_uniform_fitness() is deprecated due to deterministic nearest-neighbor bias in dense regimes. "
-        "Use sample_stratified_binned_fitness() instead.",
-        DeprecationWarning,
-        stacklevel=2
-    )
-    if len(candidates) <= num_samples:
-        print(f"[INFO] Candidate count ({len(candidates)}) <= requested samples ({num_samples}). Keeping all candidates.")
-        return candidates
-
-    fits = np.array([c['fitness'] for c in candidates])
-    f_min, f_max = fits[0], fits[-1]
-
-    if f_max == f_min:
-        return random.sample(candidates, num_samples)
-
-    # Construct ideal target grid
-    target_grid = np.linspace(f_min, f_max, num_samples)
-
-    selected_indices = []
-    available_indices = list(range(len(candidates)))
-
-    for target in target_grid:
-        # Find available candidate closest to target
-        best_idx = min(available_indices, key=lambda idx: abs(candidates[idx]['fitness'] - target))
-        selected_indices.append(best_idx)
-        available_indices.remove(best_idx)
-
-    selected_indices.sort()
-    selected_samples = [candidates[i] for i in selected_indices]
-    return selected_samples
-
+from landscape_utils import (
+    FITNESS_VALUE_INFEASIBLE_SOLUTION,
+    REPRESENTATION_COLORS,
+    FORMAT_NAMES,
+    find_logbooks_for_format,
+    extract_climbing_candidates,
+    identify_outlier_runs,
+    binning,
+    sample_stratified_binned_fitness,
+    sample_uniform_fitness,
+)
 
 # ==============================================================================
 # 3. Parallel Mutant Generation & Neighborhood Evaluation Worker
@@ -1329,8 +1015,8 @@ def export_markdown_summary(summary_rows: List[Dict[str, Any]], out_dir: str) ->
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze fitness landscape and mutational neighborhoods across representations.")
-    parser.add_argument('--stats-dir', default="stats", help="Directory containing .logbook.pkl files (default: stats)")
-    parser.add_argument('--frams-path', default="Framsticks55", help="Path to Framsticks library folder (default: Framsticks55)")
+    parser.add_argument('--stats-dir', default=os.path.join(TASK1_DIR, 'stats', '2026-10-24_19'), help="Directory containing .logbook.pkl files (default: stats)")
+    parser.add_argument('--frams-path', default=os.path.join(REPO_ROOT, 'Framsticks55'), help="Path to Framsticks library folder (default: Framsticks55)")
     parser.add_argument('--sim', default="eval-allcriteria.sim;deterministic.sim;sample-period-longest.sim", help="Sim file settings")
     parser.add_argument('--opt', default="velocity", help="Optimization criterion (default: velocity)")
     parser.add_argument('--formats', nargs='+', default=['0', '1', '4', 'H'], help="Representations to analyze (default: 0 1 4 H)")
@@ -1338,7 +1024,7 @@ def main():
     parser.add_argument('--num-mutants', type=int, default=20, help="Number of mutants evaluated per parent (default: 20)")
     parser.add_argument('--max-retries', type=int, default=20, help="Max retry attempts for infeasible mutants (default: 20)")
     parser.add_argument('--workers', type=int, default=os.cpu_count(), help="Parallel worker processes (default: CPU count)")
-    parser.add_argument('--out-dir', default="results/landscape", help="Output directory for data and plots")
+    parser.add_argument('--out-dir', default=os.path.join(TASK1_DIR, 'results', 'landscape'), help="Output directory for data and plots")
     parser.add_argument('--plot-only', action='store_true', help="Skip mutant probing and re-generate plots from existing CSVs in out-dir")
     parser.add_argument('--align-axes', dest='align_axes', action='store_true', help="Align axes across representations in distribution plot (default: True)")
     parser.add_argument('--no-align-axes', dest='align_axes', action='store_false', help="Use local independent axes per representation")

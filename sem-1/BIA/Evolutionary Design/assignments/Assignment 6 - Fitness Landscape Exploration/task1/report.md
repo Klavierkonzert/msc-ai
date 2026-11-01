@@ -12,7 +12,7 @@ The objective of this task is to discover the topological nature of the combinat
 
 Because combinatorial solution spaces cannot be plotted directly against argument values, the landscape is studied through **parent-offspring neighborhood probing**: sampling diverse solutions across the fitness spectrum and analyzing the distribution of their 1-step mutational neighbors relative to the $y = x$ reference line.
 
-### Experiment design 
+### Experiment design
 
 ```mermaid
 flowchart LR
@@ -25,17 +25,16 @@ flowchart LR
     D --> N["<a href=#table-neighborhood-characteristics><b>Table:</b></a><br>Neighbourhood characteristics: improvement rates, lethality / fragility rate"]
 ```
 
+_First_, 48 parallel runs of 300 generations with population size 100 were executed for each representation, while [only improving solutions were recorded to HoF of size 1](../../../scripts/FramsticksEvolutionScheduled.py#L99) (thus only monotonic climbing paths were recorded - in total 48 paths per encoding). Genotypes and fitness values of each HoF update were recorded to `./results/landscape/hof_history_*.csv` (one file per run). The results of evolution are presented on [Figures 1 and 2](#fig-evolution-mean-curves).
 
-First, 48 parallel runs of 300 generations with population size 100 were executed for each representation, while [only improving solutions were recorded to HoF of size 1](../../../scripts/FramsticksEvolutionScheduled.py#L99) (thus only monotonic climbing paths were recorded - in total 48 paths per encoding). Genotypes and fitness values of each HoF update were recorded to `./results/landscape/hof_history_*.csv` (one file per run). The results of evolution are presented on [Figures 1 and 2](#fig-evolution-mean-curves).
+_Second_, the results were [aggregated](./analyze_fitness_landscape.py#L85) and infeasible/duplicate solutions were filtered out, yielding in total ~1.7-2.6k values per each encoding (e.g. there were around 30-60 improving solutions per run).
 
-Second, the results were [aggregated](../../../scripts/analyze_fitness_landscape.py#L85) and infeasible/duplicate solutions were filtered out, yielding in total ~1.7-2.6k values per each encoding (e.g. there were around 30-60 improving solutions per run).
+<a id="uniform-fitness-sampling"></a>
+_Third_, 200 solutions were selected from each pool using stratified random binning across the fitness interval $[0, F_{\text{max}}]$ ($n_{\text{bins}} = \lfloor \sqrt{200} \rfloor = 14$ equal-width bins with $k \le \lceil 200/14 \rceil = 15$ samples per bin). The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers).
+- _Note: Genotypic diversity was not explicitly controlled: in high-density regions of the sample distribution solutions are chosen randomly, which inherently promotes diversity; while in low-density regions (e.g. in the case of the intermediate trajectories of the two lottery winners in_ $f_4$ _) the only available solutions could provide only scarce diversity._
+_FUSS-like sampling was probed earlier, but it yielded less uniform coverage of the fitness range._
 
-Third, 200 solutions were selected from each pool using stratified random binning across the fitness interval $[0, F_{\text{max}}]$ ($n_{\text{bins}} = \lfloor \sqrt{200} \rfloor = 14$ equal-width bins with $k \le \lceil 200/14 \rceil = 15$ samples per bin). The uniformity is evaluated on [Figure 0](#fig-distribution-parents-climbers). _Note: Genotypic diversity was not explicitly controlled: in high-density regions of the sample distribution solutions are chosen randomly, which inherently promotes diversity; while in low-density regions (e.g. in the case of the intermediate trajectories of the two lottery winners in_ $f_4$ _) the only available solutions could provide only scarce diversity._
-
-Fourth, for each of these 200 solutions, 20 unique 1-step mutants were generated. If a mutant was invalid or identical to the parent, it was regenerated up to 20 times. This resulted in a total of 4000 pairs of (parent, mutant) solutions for each representation. Finally, aggregated statistics for metrics such as fitness gain, improvement rate and other metrics were computed for each encoding, which are summarized in [Table 1](#table-neighborhood-characteristics) and visualized on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
-
-
-<div style="break-after: page;"></div>
+_Fourth_, for each of these 200 solutions, 20 unique 1-step mutants were generated. If a mutant was invalid or identical to the parent, it was regenerated up to 20 times. This resulted in a total of 4000 pairs of (parent, mutant) solutions for each representation. Finally, aggregated statistics for metrics such as fitness gain, improvement rate and other metrics were computed for each encoding, which are summarized in [Table 1](#table-neighborhood-characteristics) and visualized on [Figure 4](#fig-parent-mutant-fitness-scatter-plots).
 
 <a id="fig-distribution-parents-climbers"></a>
 
@@ -43,10 +42,9 @@ Fourth, for each of these 200 solutions, 20 unique 1-step mutants were generated
   <img src="./results/landscape/climbers_distribution_2x2.png" width="95%" alt="Distribution of Unique Evolutionary Climbers and Selected Parents"/>
   <br>
 
-_**Figure 0**: Empirical distribution of all unique evolutionary climbers extracted from Phase 1 history (shaded histogram and continuous KDE curve) versus the distribution of the 200 selected parent solutions (red dashed step count across 14 stratified equal-width bins): uniformity of the distribution of selected parents across fitness values is evaluated using_ $\chi^2$\-_test (_ $\chi^2$ _statistic, p-value, and Kullback-Leibler divergence_ $D_{\text{KL}}$ _in nats), with marginal horizontal quartile diagrams (median and IQR)._ 
+_**Figure 0**: Empirical distribution of all unique evolutionary climbers extracted from first phase history (shaded histogram and continuous KDE curve) versus the distribution of the 200 selected parent solutions (red dashed step count across 14 stratified equal-width bins): uniformity of the distribution of selected parents across fitness values is evaluated using_ $\chi^2$\-_test (_ $\chi^2$ _statistic, p-value, and Kullback-Leibler divergence_ $D_{\text{KL}}$ _in nats), with marginal horizontal quartile diagrams (median and IQR)._ 
 _Note: The distribution of original fitness values is naturally right-skewed. Quasi-uniform distribution of 200 selected solutions across fitness values were obtained in case of three representations_ ($D_{KL}< 0.105$), _while for_ $f_4$ _the distribution is highly non-uniform due to selection of two high-performing individuals' intermediate genomes with final fitness values around 0.03 and 0.04 (see [Figures 2](#fig-evolution-boxplots) and [3](#fig-best-creature-inspection))._
 </p>
-
 
 
 <div style="break-after: page;"></div>
@@ -99,7 +97,7 @@ _Note: The distribution of original fitness values is naturally right-skewed. Qu
 
 $S = 200$ diversified parent solutions per encoding were selected from the climber history pool by matching an equidistant 200-point target grid spanning $[F_{\min}, F_{\max}^{(enc)}]$ to the closest unique solution without replacement, where $F_{\max}^{(enc)}$ is the maximum fitness achieved by the given encoding across all runs.
 
-Each selected parent was then probed by generating $N = 20$ valid 1-step mutants (rejecting infeasible configurations and generating a new mutant until a valid one is generated), producing in total $4\,000$ mutational evaluations per each format.
+Invalid or broken genotypes (`fitness == FITNESS_VALUE_INFEASIBLE_SOLUTION`) are rejected and retried (up to 20 attempts per mutant), recording retry counts to quantify the **lethality / fragility rate** of each encoding, and producing in total $4\,000$ mutational evaluations per each format.
 
 
 <a id="fig-parent-mutant-fitness-scatter-plots"></a>
@@ -115,7 +113,7 @@ Each selected parent was then probed by generating $N = 20$ valid 1-step mutants
 
 To assess the influence of outliers on the conclusions, producing an additional set of figures is unnecessary: the same insights can be drawn directly from the existing plots. If outlier runs are excluded from the pool from which parents are sampled, the maximum fitness for each representation contracts to the rightmost edge of the colored plume on each subplot in [Figure 4](#fig-parent-mutant-fitness-scatter-plots). Sampling 200 parents within this reduced interval would simply populate the same region more densely, mirroring the colored clusters already displayed. Similarly, the uniform parent step distribution would scale proportionally to this lower maximum while maintaining its flat profile ([Figure 0](#fig-distribution-parents-climbers)). Thus, the existing dataset and color-coded separation sufficiently isolate the effect of outliers.
 
-_Note: motivation for isolating the effect of outliers is to prevent possible effects of "lottery winners" on the overall climbing (e.g. due to chance their trajectory could generate more beneficial mutations than average, and if we include them in the parent pool for landscape probing, we could overestimate the overall potential of a given representation)._
+_Note: motivation for isolating the effect of outliers is to prevent possible effects of "lottery winners" on the overall climbing (e.g. due to chance their trajectory could generate more beneficial mutations than average, and if they are included in the parent pool for landscape probing, one could overestimate the overall potential of a given representation)._
 
 
 <div style="break-after: page;"></div>
@@ -124,7 +122,7 @@ _Note: motivation for isolating the effect of outliers is to prevent possible ef
 
 Mutant performance relative to the parent solution is partitioned into three mutually exclusive categories based on the fitness delta $\Delta F = F(m) - F(P)$ with a numerical tolerance threshold $\epsilon = 10^{-6}$ depending on whether $\Delta F \ge \epsilon$ (better mutants), $|\Delta F| < \epsilon $ (neutral mutants) or $\Delta F \le -\epsilon$ (worse mutants).
 
-The tolerance $\epsilon = 10^{-6}$ is chosen to prevent infinitesimal floating-point fluctuations or minor contact timing variations in continuous physics from being falsely classified as improvements or degradations, ensuring that only numerically robust changes are registered.
+The tolerance $\epsilon = 10^{-6}$ is chosen to prevent infinitesimal floating-point jitter or minor contact timing variations in continuous physics from being falsely classified as selective improvements or degradations, ensuring that only genuine phenotypic changes are registered.
 
 The table below reports the complete quantitative neighborhood characteristics with and without outlying evolutionary paths.
 
@@ -150,12 +148,16 @@ The table below reports the complete quantitative neighborhood characteristics w
 
   - While the immediate 1-step improvement rate is the lowest ($1.50\%$), populations **drift neutrally** across high-dimensional plateaus without falling off peaks, eventually discovering portals to higher fitness levels. This sustained neutral exploration yields the highest consistency (mean $0.012749$) and reliable rank preservation ($r = 0.6047$, $0.6146$ without outliers).
 
+<a id="comparison-f0"></a>
+
 - **Direct Low-Level Encoding** ($f_0$) is most mutationally beneficial, evolvable strategy:
   - **$f_0$ provides smooth and predictable ascent**. Direct representation demonstrates intermediate performance (mean $0.010111$, peak $0.023337$) with balanced variance, due to continuous/parametric adjustements (_64%_ of mutations).
   - **High Improvement Rate (2.85%, 2.95% without outliers)**. Direct encoding of parts, coordinates, and synaptic weights provides unconstrained parametric control, creating smooth, continuous slopes.
   - **Balanced Locality with Exploratory Variance**. Pearson correlation ($r = 0.5526$, $0.5256$ without outliers) reflects moderate mutational variance.
   - Harmful mutations degrade performance progressively rather than collapsing to zero, indicating accessible upward gradients.
 
+
+<a id="comparison-f4"></a>
 
 - **Developmental Grammar** ($f_4$) - volatile strategy with macro-mutations:
   - **$f_4$ achieves global peak with high variance**. While $f_4$ has a lower median ($0.006353$), its developmental grammar rules unlocked extraordinary locomotion velocity ($F_{\max} = 0.043587$ and the second best result $0.034267$). The high standard deviation ($\pm 0.007711$) reflects the combinatorial lottery of grammar evolution: many runs settle in mediocre local attractors, but successful runs discover coordinated modular gaits. Two lottery "winners" are depicted on [Figures 3a, b](#fig-best-creature-inspection).
@@ -165,12 +167,14 @@ The table below reports the complete quantitative neighborhood characteristics w
   - **Repetition operator** `#NUM(...)`, provided by the grammar, allows for modular repetition of genotype fragments, which helps with evolving complicated structures, this proved too volatile for continuous physics. Both champion genotypes evolved compact morphologies with no effectively repeated limbs, moved by simple one-legged pushed jumps while avoiding complex multi-segment modularity.
 
 
+<a id="comparison-f1"></a>
+
 - **Recurrent Tree Encoding** ($f_1$) - conservative strategy with restricted structural exploration:
 
   - **$f_1$ struggles with premature stagnation**. Tree-developmental representation exhibited the lowest average fitness ($0.004749$) and lowest maximum ($0.016334$), flattening early in the run. In $f_1$, synaptic weight changes dominate (_67.1%_), while morphological structural disruptions are suppressed (_12.8%_).
 
   - **Has highest mutational locality across all encodings**: strongest parent-mutant correlation ($r = 0.7085$, $0.7284$ without outliers) and lowest lethality ($0.17\%$, $0.14\%$ without outliers), with conservative perturbations (mean absolute $|\Delta F| = 0.0022$, median relative change $4.6\%$).
-  - **Topological & Structural Bottlenecks** (see [Evolution Challenges and Fitness Bias](..//..//Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/README.md#evolution-challenges) in the previous work):
+  - **Topological & Structural Bottlenecks** (see [Evolution Challenges and Fitness Bias](../../Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/report.md#evolution-challenges) in the previous work):
     - Neural connections in $f_1$ use _relative index offsets_: deleting intermediate unused nodes breaks down neural loops, entrenching the morphological search.
     - Independent neuron addition (`f1_nmNeu`) and synaptogenesis (`f1_nmConn`) cause new sensors to sprout unconnected, consuming mutation evaluations without delivering motor torque, _penalizing decoupled neural operators_.
     - High locality preserves conservative crawl movements, but escaping suboptimal basins requires coordinated restructuring across multiple subtrees, resulting in _deceptive basin trapping_.
@@ -191,5 +195,5 @@ The table below reports the complete quantitative neighborhood characteristics w
 
 3. **Embodied Coordination & Rectilinear Objective Bias**:
    - Evolved locomotion does not rely on complex, cross-wired Central Pattern Generators; instead, multi-actuator synchronization emerges from **embodied physical coupling** (structural inertia, joint limits, gravity, and ground reaction forces dynamically driving the reflex loops).
-   - Under a unidimensional rectilinear objective ($v = \Delta x / \Delta t$), lateral balance and multi-limb stabilization receive zero reward while introducing parasitic ground friction and limb collisions. Consequently, representations that readily decouple morphology to discover asymmetric, unilateral pushing gaits ($f_0, f_4$) outcompete symmetric branching encodings ($f_1$) which in its turn has to adapt to the same strategy (see [previous work](..//..//Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/README.md) for details).
+   - Under a unidimensional rectilinear objective ($v = \Delta x / \Delta t$), lateral balance and multi-limb stabilization receive zero reward while introducing parasitic ground friction and limb collisions. Consequently, representations that readily decouple morphology to discover asymmetric, unilateral pushing gaits ($f_0, f_4$) outcompete symmetric branching encodings ($f_1$) which in its turn has to adapt to the same strategy (see [previous work](../../Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/report.md) for details).
 

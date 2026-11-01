@@ -32,14 +32,14 @@ import statsmodels.api as sm
 
 # Setup paths to import from shared scripts and framspy
 TASK2_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.abspath(os.path.join(TASK2_DIR, "..", "..", ".."))
-for p in [os.path.join(REPO_ROOT, "scripts"), os.path.join(REPO_ROOT, "framspy-download")]:
+ASSIGNMENT_DIR = os.path.abspath(os.path.join(TASK2_DIR, ".."))
+REPO_ROOT = os.path.abspath(os.path.join(ASSIGNMENT_DIR, "..", ".."))
+
+for p in [ASSIGNMENT_DIR, os.path.join(REPO_ROOT, "framspy-download"), os.path.join(REPO_ROOT, "scripts")]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from analyze_fitness_landscape import REPRESENTATION_COLORS, FITNESS_VALUE_INFEASIBLE_SOLUTION
-
-FORMAT_NAMES = {'0': '$f_0$ (Direct)', '1': '$f_1$ (Recurrent Tree)', '4': '$f_4$ (Developmental Grammar)', 'H': '$f_H$ (Handle-based)'}
+from landscape_utils import REPRESENTATION_COLORS, FORMAT_NAMES, FITNESS_VALUE_INFEASIBLE_SOLUTION
 
 
 # ==============================================================================
