@@ -26,12 +26,12 @@ Because combinatorial solution spaces cannot be plotted directly against argumen
   - **Lifespan Mechanism**: Controlled by metabolic energy consumption with starting energy $E_0 = 10\,000.0 \times n$ and idle metabolism $e_\text{meta} = 1.0 \times n$, yielding a constant lifespan of exactly $T = 10\,000$ simulation steps.
   - **Performance Sampling (`sample-period-longest.sim`)**: Configures `perfperiod: 999999`, which exceeds the lifespan, sampling coordinates strictly at birth ($t=0$) and death ($t=10\,000$) to measure rectilinear velocity without periodic sampling overhead.
 - **Morphological Limits**:
-  - Max parts: `30` (`-max_numparts 30`)
+  - Max parts: `-max_numparts 30`
 - **EA Parameters**:
-  - **Population size**: `100` (`--popsize 100`)
-  - **Generations**: `300` (`--generations 300`)
+  - **Population size**: `--popsize 100`
+  - **Generations**: `--generations 300`
   - **Selection**: Tournament (`size = 5`)
-  - **Crossover probability (`pxov`)**: `0.0` (pure asexual mutation-driven climb)
+  - **Crossover probability: (`pxov`)**: `0.0` (pure asexual mutation-driven climb)
   - **Mutation probability (`pmut`)**: `0.9` (standard Framsticks rate)
   - **Hall of Fame size**: `1`
   - **Replications**: `48` independent runs per representation (2 batches on 24 CPU cores)
