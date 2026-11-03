@@ -181,6 +181,7 @@ def compute_epistasis_matrix(
             g_double = setstr(g_double, j, ' ')
             g_double = g_double.replace(' ', '')
 
+            #F(g \ {i,j})
             f_double = evaluate_genotype(frams_lib, prefix, g_double, 
                                             fitness_metric=fitness_metric, default_val=np.nan)
             if np.isnan(f_double):
@@ -201,7 +202,7 @@ def compute_epistasis_matrix(
             #   dF_add = dF_i + dF_j
             # Epistasis (interaction deviation):
             #   e_{i,j} = dF_ij - (dF_i + dF_j)
-            e_ij = dF_ij - (dF_i + dF_j)
+            e_ij = dF_ij - (dF_i + dF_j) # <-------- The main formula
 
             epistasis_matrix[i, j] = e_ij
             epistasis_matrix[j, i] = e_ij
@@ -232,7 +233,7 @@ def compute_epistasis_for_individuals(
 
 
 def visualize_epistasis_matrices(
-    epistasis_tuple: Tuple[np.ndarray, ...],
+    epistasis_matrices : Tuple[np.ndarray, ...]|List[np.ndarray],
     genotypes: Optional[List[str]] = None,
     titles: Optional[List[str]] = None,
     save_path: Optional[str] = None,
@@ -248,7 +249,7 @@ def visualize_epistasis_matrices(
     - titles: optional list of subplot titles.
     - save_path: path to save figure (PNG / PDF).
     """
-    k = len(epistasis_tuple)
+    k = len(epistasis_matrices)
     if k == 0:
         print("No epistasis matrices provided for visualization.")
         return
@@ -276,7 +277,7 @@ def visualize_epistasis_matrices(
             ax.axis('off')
             continue
 
-        arr = epistasis_tuple[idx]
+        arr = epistasis_matrices[idx]
         L = arr.shape[0]
 
         # Determine symmetric normalization range around 0
