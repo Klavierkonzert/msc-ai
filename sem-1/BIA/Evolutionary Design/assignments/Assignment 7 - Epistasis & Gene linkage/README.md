@@ -1,0 +1,163 @@
+# Assignment 7: Epistasis & Gene Linkage
+## Empirical Estimation and 2D Matrix Visualization of Epistasis in Evolutionary Robotics
+
+The goal of this work is to investigate the phenomenon of **epistasis** (non-linear interactions between genes) in evolutionary robotics, optimizing for _center-of-mass height_ (`vertpos`) in creatures evolved under directional encoding ($f_9$) with the following 6-character directional stick encoding semantics (each indicates a direction towards which the respective stick grows from the parent (last added) stick):
+- `F` - forward
+- `B` - backward
+- `L` - left
+- `R` - right
+- `U` - up
+- `D` - down
+
+Firstly, [evolutionary optimization](#evolutionary-performance) is run under the following [parameters](#parameters-setup). Then 3 dissimilar individuals $s_1, s_2, s_3$ are selected from the final population $S^{G}, G=300$ of evolved creatures as follows:
+
+$$s_1\mathrel{:=}\arg\max_{s \in S^{G}} \text{vertpos}$$
+
+$$s_2\mathrel{:=}\arg\max_{s \in S^{G}\setminus\{s_1\}} \mathbb{d}(s, s_1)$$
+
+$$s_3\mathrel{:=}\arg\max_{s \in S^{G}\setminus\{s_1, s_2\}} \min{\big(\mathbb{d}(s, s_1), \mathbb{d}(s, s_2)}\big)$$
+
+where $\mathbb{d}(g_1, g_2)$ denotes weighted Normalized Levenshtein Distance and Directional Composition Divergence (see the [script](select_dissimilar.py) for the exact implementation).
+
+<a id="parameters-setup"></a>
+
+<details>
+<summary><h3 style="display:inline">Parameters &amp; Setup</h3></summary>
+<br>
+
+- **Optimization Criterion (Fitness)**: `vertpos` (maximizing vertical position of the mass center).
+- **Genetic Representation**: [**$f_9$ Representation**](https://www.framsticks.com/a/al_geno_f9.html).
+- **Simulation Environment ([`eval-allcriteria.sim;deterministic.sim;sample-period-2.sim;only-body.sim`](../../Framsticks55/data/))**:
+  - **Deterministic Physics (`deterministic.sim`)**: Eliminates sensory, neural, and physical perturbation noise (`randinit: 0.0`, `nnoise: 0.0`, `bnoise_vel: 0.0`, `placement: 1`), enabling deterministic, noise-free single-trial evaluation (`evalcount: 1`).
+  - **Sampling Period (`sample-period-2.sim`)**: Telemetry sampled every 2 simulation steps (`perfperiod: 2`) to ensure reliable vertical position evaluation throughout the creature lifespan.
+  - **Morphological Focus (`only-body.sim`)**: Disables brain/neural mutations, ensuring evolutionary search focuses strictly on mechanical morphology.
+- **Morphological & Syntactic Limits**:
+  - **Max parts**: `-max_numparts 30`
+- **EA Parameters**:
+  - **Population size**: `--popsize 100`
+  - **Generations**: `--generations 300`
+  - **Selection**: `--tournament 5` (size 5)
+  - **Crossover probability (`pxov`)**: `0.0` (pure asexual mutation-driven climb)
+  - **Mutation probability (`pmut`)**: `0.9` (default Framsticks rate)
+  - **Hall of Fame size**: `-hof_size 1`
+  - **Replications**: `24` independent runs run in parallel on 24 physical cores
+
+</details>
+
+<a id="evolutionary-performance"></a>
+
+<details>
+<summary><h3 style="display:inline">Evolutionary Convergence &amp; Performance</h3></summary>
+<br>
+
+<p align="center">
+  <img src="./results/evolution/plots/logbooks_best_series.png" width="49%" alt="Hall of Fame Trajectories Across 24 Runs"/>
+  <img src="./results/evolution/plots/logbooks_confidence_std_1.0.png" width="49%" alt="Mean Fitness with Confidence Band"/>
+  <br>
+  <em><b>Figure 1a:</b> Hall of Fame best-fitness trajectories across 24 independent runs over 300 generations (left). <b>1b:</b> Mean best fitness across generations with confidence interval band (right).</em>
+</p>
+
+<p align="center">
+  <img src="./results/evolution/plots/boxplot_summary.png" width="55%" alt="Distribution of Final Best Fitness"/>
+  <br>
+  <em><b>Figure 2:</b> Final Hall of Fame best fitness distribution and evaluation time across 24 replications.</em>
+</p>
+
+</details>
+
+
+### Epistasis Estimation Methodology
+
+For an intact genotype $g$ of length $L$ with baseline fitness $F(g)$:
+- $F(g \setminus \{i\})$: fitness after disabling gene $i$.
+- $F(g \setminus \{j\})$: fitness after disabling gene $j$.
+- $F(g \setminus \{i, j\})$: fitness after simultaneously disabling both genes $i$ and $j$.
+
+The additive null model predicts the joint knockout effect to be the sum of independent single knockouts:
+$$\Delta F_i = F(g \setminus \{i\}) - F(g), \qquad \Delta F_j = F(g \setminus \{j\}) - F(g)$$
+
+Pairwise epistasis $\varepsilon_{i,j}$ measures the interaction deviation from additivity:
+$$\varepsilon_{i,j} = \big[F(g \setminus \{i, j\}) - F(g)\big] - \big(\Delta F_i + \Delta F_j\big) = F(g \setminus \{i, j\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) + F(g)$$
+
+- **$\varepsilon_{i,j} = 0$ (White)**: Additive / independent genes.
+- **$\varepsilon_{i,j} > 0$ (Green)**: Positive epistasis (synergistic cooperation or functional redundancy / buffering).
+- **$\varepsilon_{i,j} < 0$ (Red)**: Negative epistasis (antagonistic breakdown / synthetic collapse).
+- **Diagonal ($i = j$)**: Stores the single-gene knockout effect $\Delta F_i = F(g \setminus \{i\}) - F(g)$.
+
+
+### Pairwise Epistasis Matrices (Task 1)
+
+Using[ `select_dissimilar.py`](./select_dissimilar.py) (based on hybrid Levenshtein edit distance and 6D directional composition divergence), $k=3$ dissimilar tall structures were [selected](./selected/) from the evolutionary pool:
+1. [`/*9*/DDDDRLLRBBFUUUU`](./selected/selected_1_HoF-f9-14.gen) ($F = 1.0755$, $L = 15$) - top champion with vertical trunk ($UUUU$) on an asymmetric base.
+2. [`/*9*/FLLRFBLRRUUUUL`](./selected/selected_2_HoF-f9-2.gen) ($F = 0.9854$, $L = 14$) - wide-base tripod posture transitioning into a vertical mast.
+3. [`/*9*/DDDUDFRRBUUUDUF`](./selected/selected_3_HoF-f9-6.gen) ($F = 0.8776$, $L = 15$) - alternating stabilizing loops with upward segments.
+
+<p align="center">
+  <img src="./selected/3-selected-creatures.png" width="50%" alt="Selected Creatures"/>
+  <br>
+
+_**Figure 3:** Selected creatures (order preserved - left to right). All the creatures feature two main body parts: <u> a plinthed base</u> and a tall, erect <u>spine (chord)</u>. **Center of mass** of each creature (black fat dots) is located above the base. Shaded in dark regions denote <u>convex hulls formed by the support points (base sticks)</u>. **The criteria of static stability**: a projection of the center of mass onto the ground must lie strictly inside this convex hull (projections are indicated by black arrows)._ 
+</p>
+
+<a id="fig-epistasis-matrices"></a>
+<p align="center">
+  <img src="./results/epistasis/epistasis_matrices.png" width="95%" alt="Pairwise Epistasis Matrices"/>
+  <br>
+
+_**Figure 4:** Pairwise epistasis matrices for $k=3$ dissimilar tall structures arranged in a grid. Axis labels display gene letter and positional index. Off-diagonal elements show epistatic interaction_ $\varepsilon_{i,j}$, _while diagonal elements show single-gene knockout effects_ $\Delta F_i$.
+</p>
+
+### Interpretation of individual effects and interactions
+<a id="table-epistasis-genes"></a>
+
+|Phenotypic specialization| [Creature 1](../selected/selected_1_HoF-f9-14.gen)<br><code>/\*9\*/</code><code style="color: blue">DDDD</code><code style="color: purple">R</code><code style="color:red">LL</code><code style="color:purple">R</code><code style="color:green">BB</code><code style="color:lime">F</code><code style="color:darkcyan">UUUU</code> | [Creature 2](../selected/selected_2_HoF-f9-2.gen)<br> <code>/\*9\*/</code><code style="color:lime">F</code><code style="color: red">LL</code><code style="color:purple">R</code><code style="color:lime">F</code><code style="color:green">B</code><code style="color:red">L</code><code style="color:purple">RR</code><code style="color:darkcyan">UUUU</code><code style="color:red">L</code> | [Creature 3](../selected/selected_3_HoF-f9-6.gen)<br><code>/\*9\*/</code><code style="color: blue">DDD</code><code style="color:darkcyan">U</code><code style="color:blue">D</code><code style="color:lime">F</code><code style="color:purple">R</code><code style="color:purple">R</code><code style="color:green">B</code><code style="color:darkcyan">UUU</code><code style="color:blue">D</code><code style="color:darkcyan">U</code><code style="color:lime">F</code> | 
+|-| ---------- | ---------- | ---------- | 
+|**Spine growth genes**| **0-3, 11-14**. The first 4 `D` and the last 4 `U` genes correspond to the <em><span style="color:blue">blue</span></em> and <em><span style="color:darkcyan">cyan</span></em> _twin-chords_, directly responsible for the **height** of the creature. Having **two (redundant) copies** slightly increases the center of the mass height (`vertpos`). Deleting these letters individually only slightly decreases `vertpos` (rows and columns 0 to 3 and 11 to 14 are mainly zero value). |**9-13**. Since these genes program growth of the spine (`UUUUL`) only (increasing `vertpos`), they do not interact with each other, but their positive (in terms of `vertpos`) effect depends on _base_ genes (_0-3, 5-8_). In contrast to genes _9-12_, gene `L` serves stabilization purpuse.|**0-3, 9-14**. Similar to the first (best) creature, there are 2 spines - <em><span style="color:blue">blue</span></em> and <em><span style="color:darkcyan">cyan</span></em>, encoded by the genes at the ends of genome. In contrast to the former creature, 2 genes - `U`<sup>3</sup> and `D`<sup>12</sup> are the **key gene responsble for the stability** of the creature, since both decrease long chords lengths (and hence <u>two pairs of genes <`U`<sup>3</sup>, `D`> and <`D`<sup>12</sup>, `U`> cancel out</u> - the same effect described in the second creature) - without them creature overturnns. **4**. The role of the gene `D`<sup>4</sup> is complement to the gene `U`<sup>3</sup>, making it a **key gene responsible for morphological stability** - without this the <em><span style="color:blue">blue</span></em> chord would grow below _the base_ level, overturning the creature. 
+|**Plinth genes**|**4**. Gene `R` tells the direction to place the <em><span style="color:blue">blue</span></em> spine (`DDDD`) in the center of creature's plinth, critical to the stability of the creature - removing this gene places the center of mass allows small physical perturbations to overturn the creature, coloring the 4th row and column into green (definetely positive effect). However, removal of just one `D` places the center of mass safely above the base. **5-6**. These genes are responsible for symmetry of a base, and hence are **critical for stability** of the whole creature (interaction with genes _4-10_). Genes encoding _spines_ has little mutual effect with these two genes individually, the relationship will appear on 3D map of epistasis. **7**. Gene `R` here is directly responsible for the symmetry of the base, placing center of the mass directly on the median segment of the base hull, yielding the highest "collaboration rate" (central green cross on the matrix). **8-9**. Each of two genes `B` allows <em><span style="color:darkcyan">cyan</span></em> chord to be placed - without one of these two genes the second spine disappears and `vertpos` drops noticeably. **10** Gene `F` places the <em><span style="color:darkcyan">cyan</span></em> spine towards the center of the base, which is critical for stability (without this gene a creature overturns).| **0-2**. Gene `F` allows for one of the supporting stiks to emerge (**key for stabilization**), genes `LL` move this 'leg' towards the only place, where the position of the creature is stable. **3-4**. These genes alter the base form but in the way that does not affect the stability of the creature, thus these genes show **little epistasis** (~zero rows/colums). **5-8**. These genes influence on the shape of _the base_ (`BL`) and position of _the spine_ on it (`RR`), and thus have positive epistasis with spine-genes. Gene `L` specifically has strong interaction with `RR` genes, shortening the base extended by 2 _R_-direction genes, thus **making the base hull compact**. <u>Hence a pair `LR` cancels out (redundant subsequence)</u>|**5-8**. Genes `FRRB` form a U-shaped _base_, placing the center of mass strictly inside _the base hull_. Each gene here has an individual interaction with every other base gene.
+
+#### Specialization of genes extracted from pairwise epistasis matrix
+[The table](#table-epistasis-genes") above can be summarized as follows: after canceling out redundant subsequences of genes, rows and columns that form bright `green` squares correspond to the _plinthed base_ phenes and the rows and columns that has near zero interaction with each other (`white` squares) and intermediate interactions (`light green`) with the other genes, form _spine_ phene groups. See [Figure 4](#fig-epistasis-matrices)
+
+#### Individual effects (red diagonales)
+...
+
+
+
+
+
+### How to Run
+```powershell
+#### 1. Parallel Evolutionary Run (24 Replications on 24 Cores)
+python scripts\run_parallel.py `
+    --script scripts\FramsticksEvolutionScheduled.py `
+    --frams-path Framsticks55 `
+    --sim "eval-allcriteria.sim;deterministic.sim;sample-period-2.sim;only-body.sim" `
+    --opt vertpos `
+    --max-numparts 30 `
+    --popsize 100 `
+    --generations 300 `
+    --genformats 9 `
+    --num-experiments 24 `
+    --workers 24 `
+    --out "assignments\Assignment 7 - Epistasis & Gene linkage\runs" `
+    --stats-dir "assignments\Assignment 7 - Epistasis & Gene linkage\stats"
+
+#### 2. Generate Evolutionary Plots
+python scripts\analyze_hof.py `
+    --headless `
+    --logbook-dirs "assignments\Assignment 7 - Epistasis & Gene linkage\stats\2026-11-02_03" `
+    --outdir "assignments\Assignment 7 - Epistasis & Gene linkage\results\evolution"
+
+#### 3. Select Dissimilar Structures
+python "assignments\Assignment 7 - Epistasis & Gene linkage\select_dissimilar.py" `
+    --runs-dir "assignments\Assignment 7 - Epistasis & Gene linkage\runs" `
+    --k 3
+
+#### 4. Estimate and Visualize Epistasis Matrices
+python "assignments\Assignment 7 - Epistasis & Gene linkage\estimate_epistasis.py" `
+    --frams-path Framsticks55 `
+    --genotypes-folder "assignments\Assignment 7 - Epistasis & Gene linkage\selected" `
+    #--genotypes "/*9*/BLU" `
+    --out "assignments\Assignment 7 - Epistasis & Gene linkage\results\epistasis\epistasis_matrices.png"
+```
+
