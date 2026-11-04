@@ -13,7 +13,7 @@ This module focuses on the evolution of 3D artificial creatures using the [Frams
 |4 |**[EA with Different Genome Encodings](./assignments/Assignment%204%20-%20EA%20with%20different%20genome%20encodings/README.md)**|`vertpos`|$f_0, f_1, f_4, f_9$|Comparison of genome representations, analysis of neutral plateaus on uneven terrain, and formulating fitness modification to guide evolution out of plateaus.|
 |5| **[Modifying Topology Exploration Path](./assignments/Assignment%205%20-%20Modifying%20topology%20exploration%20path.%20Evolution%20of%20Designs/README.md)**|`velocity` (Net rectilinear displacement speed)|$f_1$|Manipulating mutation types, operator probabilities (morphological vs. neural net balance), and active sensor/effector co-evolution for locomotion velocity.
 |6| **[Fitness Landscape Exploration](./assignments/Assignment%206%20-%20Fitness%20Landscape%20Exploration/README.md)**|`velocity`|$f_0, f_1, f_4, f_H$|Probing topological ruggedness, neutrality, mutational locality, and evolvability across different grammars.
-|7| **[Epistasis and Gene Linkage](./assignments/Assignment%206%20-%20Fitness%20Landscape%20Exploration/README.md)**|`vertpos`|$f_9$| Detection, estimation and visualisation of epistasis/gene linkage.
+|7| **[Epistasis and Gene Linkage](./assignments/Assignment%207%20-%20Epistasis%20&%20Gene%20linkage/README.md)**|`vertpos`|$f_9$| Detection, estimation and visualisation of epistasis/gene linkage.
 
 
 ## Setup & Installation Instructions

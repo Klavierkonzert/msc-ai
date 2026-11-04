@@ -92,6 +92,56 @@ def setstr(s: str, pos: int, char: str = ' ') -> str:
     return s[:pos] + char + s[pos + 1:]
 
 
+def evaluate_genotypes_chunk(
+    frams_lib,
+    full_genos_chunk: List[str],
+    fitness_metric: str = "vertpos",
+    default_val: float = np.nan
+) -> List[float]:
+    """
+    Evaluates a chunk of full genotype strings (including prefix) using FramsticksLib.
+    """
+    scores = []
+    try:
+        res = frams_lib.evaluate(full_genos_chunk)
+        if not res or len(res) == 0:
+            scores.extend([default_val] * len(full_genos_chunk))
+            return scores
+
+        for eval_dict in res:
+            if 'evaluations' in eval_dict and '' in eval_dict['evaluations']:
+                fit = eval_dict['evaluations'][''].get(fitness_metric, default_val)
+                if fit < -900000.0:
+                    scores.append(default_val)
+                else:
+                    scores.append(float(fit))
+            elif fitness_metric in eval_dict:
+                scores.append(float(eval_dict[fitness_metric]))
+            else:
+                scores.append(default_val)
+    except Exception as e:
+        scores.extend([default_val] * len(full_genos_chunk))
+    return scores
+
+def evaluate_batch_genotypes(
+    frams_lib,
+    full_genos: List[str],
+    fitness_metric: str = "vertpos",
+    default_val: float = np.nan,
+    batch_size: int = 150
+) -> List[float]:
+    """
+    Wrapper for `evaluate_genotypes_chunk()` for multiple genotypes.
+    Evaluates full genotype strings (including prefix) in batches of size `batch_size` using FramsticksLib.
+    """
+    scores = []
+    total = len(full_genos)
+    for start in range(0, total, batch_size):
+        chunk = full_genos[start:start + batch_size]
+        res = evaluate_genotypes_chunk(frams_lib, chunk, fitness_metric, default_val)
+        scores.extend(res)
+    return scores
+
 def evaluate_genotype(
     frams_lib,
     prefix: str,
@@ -100,27 +150,12 @@ def evaluate_genotype(
     default_val: float = 0.0,
 ) -> float:
     """
+    Wrapper for `evaluate_genotypes_chunk()` for single genotype.
     Evaluates a genotype in Framsticks and returns `crit` fitness.
-    Catches invalid genotypes and returns default_val or None.
+    Catches invalid genotypes and returns `default_val`.
     """
     full_geno = prefix + geno_str
-    try:
-        res = frams_lib.evaluate([full_geno])
-        if not res or len(res) == 0:
-            return default_val
-        eval_dict = res[0]
-        # Check if valid evaluation occurred
-        if 'evaluations' in eval_dict and '' in eval_dict['evaluations']:
-            fit = eval_dict['evaluations'][''].get(fitness_metric, default_val)
-            # Filter infeasible marker
-            if fit < -900000.0:
-                return default_val
-            return float(fit)
-        elif fitness_metric in eval_dict:
-            return float(eval_dict[fitness_metric])
-        return default_val
-    except Exception as e:
-        return default_val
+    return evaluate_genotypes_chunk(frams_lib, [full_geno], fitness_metric, default_val)[0]
 
 
 def compute_epistasis_matrix(

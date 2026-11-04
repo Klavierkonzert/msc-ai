@@ -21,7 +21,7 @@ $$\displaystyle s_3\mathrel{:=}\arg\max_{s \in S^{G}\setminus\{s_1, s_2\}} \min{
 
 where $d(g_1, g_2)$ denotes weighted Normalized Levenshtein Distance and Directional Composition Divergence (see the [script](select_dissimilar.py) for the exact implementation). 
 
-Secondly, [pairwise epistasis](#epistasis-estimation) was [estimated](./estimate_epistasis.py) for the selected creatures based on the formula provided below.
+Secondly, [pairwise epistasis](#pairwise-epistasis) was [estimated](./estimate_epistasis.py) for the selected creatures based on the formula provided below. In the end, [epistasis between triplets of genes](#triple-epistasis) was estimated.
 
 <a id="parameters-setup"></a>
 
@@ -69,21 +69,24 @@ Secondly, [pairwise epistasis](#epistasis-estimation) was [estimated](./estimate
 
 </details>
 
+## Pairwise Epistasis
 
-### Epistasis Estimation Formula
+<a id = "pairwise-epistasis-formula"></a>
+
+### Estimation
 
 For an intact genotype $g$ of length $L$ with baseline fitness $F(g)$:
 - $F(g \setminus \{i\})$ - fitness after disabling gene $i$.
 - $F(g \setminus \{j\})$ -  fitness after disabling gene $j$.
 - $F(g \setminus \{i, j\})$ - fitness after simultaneously disabling both genes $i$ and $j$.
 
-The additive null model predicts the joint knockout effect to be the sum of independent single knockouts (this holds iff genes are independent) ${\Delta F_{ij}}\equiv \Delta F_{i} + \Delta F_{j}$, where:
+The additive null model  $\mathcal{H}_0^1$ predicts the joint knockout effect to be the sum of independent single knockouts (this holds iff genes are independent) ${\Delta F_{ij}}\equiv \Delta F_{i} + \Delta F_{j}$, where:
 
 $$\Delta F_i = F(g \setminus \{i\}) - F(g), \qquad \Delta F_j = F(g \setminus \{j\}) - F(g)$$
 
 For two genes $i\ne j$, pairwise epistasis $\varepsilon_{i,j}$ measures the interaction deviation from additivity:
 
-$$\varepsilon_{i,j} = \underbrace{\big[F(g \setminus \{i, j\}) - F(g)\big] }_{\Delta F_{ij}}- \big(\Delta F_i + \Delta F_j\big) = F(g \setminus \{i, j\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) + F(g)$$
+$$\varepsilon_{i,j} = \underbrace{\big[F(g \setminus \{i, j\}) - F(g)\big] }_{\Delta F_{ij}}- \big(\Delta F_i + \Delta F_j\big) \equiv F(g \setminus \{i, j\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) + F(g)$$
 
 - $\varepsilon_{i,j} = 0 \implies $ additive / independent genes (White).
 - $\varepsilon_{i,j} > 0 \implies$ positive epistasis (synergistic cooperation or functional redundancy / buffering - Green).
@@ -131,10 +134,68 @@ Individual (diagonal) effects $\Delta F_i$ take negative values since extraction
 - gene encodes a part of _plinth_ $\implies$ creature immediately falls down yielding near-zero fitness.
 
 
+## Triple Epistasis (Task 2)
+
+### Estimation Formulas
+
+In the **first-order approach** (Baseline 1), the null model $\mathcal{H}_0^1$ assumes independence and additive decomposability of individual fitness effects : 
+$$\mathcal{H}_0^1:\quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k$$
+
+The triplet epistasis measures the total interaction deviation from additivity:
+
+$$\varepsilon_{ijk}^{(1)} \mathrel{:=} \underbrace{\big[F(g \setminus \{i, j, k\}) - F(g)\big]}_{\Delta F_{ijk}} - (\Delta F_i + \Delta F_j + \Delta F_k) \equiv F(g \setminus \{i, j, k\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) - F(g \setminus \{k\}) + 2F(g)$$
+
+In the **second-order approach** (Baseline 2), the null model ($\mathcal{H}_0^2$) accounts for both single-gene knockouts ($\Delta F_i$) and all pairwise epistatic interactions between the three genes ($\varepsilon_{ij}$): 
+
+$$\mathcal{H}_0^2: \quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k + \underbrace{\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}}_{\text{2nd-order effects}} \equiv \Delta F_{ij} + \Delta F_{ik} + \Delta F_{jk} - (\Delta F_i + \Delta F_j + \Delta F_k)$$
+
+Hence epistasis is calculated as:
+$$\varepsilon^{(2)}_{i,j,k} \mathrel{:=} \Delta F_{ijk}- \big(\Delta F_i + \Delta F_j + \Delta F_k + \varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}\big)$$
+
+That is
+
+$$\varepsilon^{(2)}_{i,j,k} \equiv \varepsilon^{(1)}_{i,j,k} - (\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk})$$
 
 
+In the calculated 3D tensors $(L \times L \times L)$:
+- The main diagonal ($i = j = k$) stores the single-gene knockout effect $\Delta F_i (\equiv \Delta F_{iii})$.
+- The 2D lateral planes/diagonals ($i = j \ne k$, etc.) store the pairwise epistases $\varepsilon_{ij}$.
+- The off-diagonal entries ($i \ne j \ne k \ne i$) store the triplet epistasis ($\varepsilon_{ijk}^{(\cdot)}$).
 
-### How to Run
+### 3D Epistasis Heatmaps
+
+<p align="center">
+  <img src="./results/epistasis/epistasis_3d_combined.png" width="98%" alt="3D Epistasis Heatmaps across Baseline 1 and Baseline 2"/>
+  <br>
+
+_**Figure 5:** 3D epistasis heatmaps (balls arranged in a 3D grid) for $k=3$ dissimilar creatures. **Top row:** Baseline 1 (relative to individual genes_ $\varepsilon_{ijk}^{(1)}$). _**Bottom row:** Baseline 2 (relative to pairwise interactions_ $\varepsilon_{ijk}^{(2)}$). _**Colormap:** Green - positive synergy / buffering; Red - negative / synthetic breakdown._
+</p>
+
+### Epistasis Matrix Sums Comparison
+
+<a id="table-3d-epistasis-sums"></a>
+
+| Creature | Genotype | $L$ | Triplet Count $\binom{L}{3}$ | Baseline 1 (1st-Order)<br>$\sum \varepsilon^{(1)}$ | Baseline 1 (1st-Order)<br> $\sum \lvert\varepsilon^{(1)}\rvert$ | Baseline 2 (2nd-Order)<br> $\sum \varepsilon^{(2)}$ | Baseline 2 (2nd-Order)<br> $\sum \lvert\varepsilon^{(2)}\rvert$ |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1** | [`/*9*/DDDDRLLRBBFUUUU`](./selected/selected_1_HoF-f9-14.gen) | 15 | 455 | **+375.02** | 377.74 | **-171.78** | 224.35 |
+| **2** | [`/*9*/FLLRFBLRRUUUUL`](./selected/selected_2_HoF-f9-2.gen) | 14 | 364 | **+344.29** | 344.55 | **-149.80** | 183.42 |
+| **3** | [`/*9*/DDDUDFRRBUUUDUF`](./selected/selected_3_HoF-f9-6.gen) | 15 | 455 | **+274.31** | 276.66 | **-62.25** | 142.43 |
+
+
+### Interpretation of 3D Triplet Epistasis
+
+1. **Baseline 1 ($\sum \varepsilon^{(1)} \gg 0$, Strong Positive Buffering)**:
+   - When evaluated against independent single-gene effects, all creatures exhibit overwhelming positive epistasis ($\sum \varepsilon^{(1)} > 0$, nearly all green balls).
+   - This occurs because removing any single base gene (e.g. anchor `R`$^4$, symmetry genes `LL`$^{5-6}$, or stabilizer `F`$^{10}$ in Creature 1) causes the structure to topple over ($\Delta F \approx -1.0$). Summing three such single knockout penalties predicts an impossible fitness penalty of $-3.0$, whereas the simultaneous triple knockout cannot reduce fitness below ground level ($F=0$). Thus, the actual fitness is buffered against cumulative linear collapse ($\Delta F_{ijk} \gg \sum \Delta F$).
+
+2. **Baseline 2 ($\sum \varepsilon^{(2)} < 0$, Irreducible Negative 3-Way Epistasis)**:
+   - Once all pairwise interactions are accounted for, the total epistasis flips to negative ($\sum \varepsilon^{(2)} < 0$, prominent red clusters).
+   - As predicted in [Task 1](#table-epistasis-genes), base-symmetry genes (e.g. `LL`$^{5-6}$ and `R`$^7$ in Creature 1, or `BL` and `RR`$^{5-8}$ in Creature 2) have strong pairwise collaborations with the spine anchors (`R`$^4$, `F`$^{10}$). When two of these genes are knocked out, the creature has already completely toppled over; knocking out a third gene (such as a spinal segment `UUUU`) produces diminishing marginal damage compared to what the pairwise sum predicts, manifesting as negative third-order interaction.
+   - Creature 3 features the lowest magnitude of 3-way epistasis ($|\sum \varepsilon^{(2)}| = 62.25$ vs $171.78$ in Creature 1) because its alternating loops (`DDDUDFRRBUUUDUF`) distribute structural stabilization across several self-canceling sub-segments (`UD`, `DU`), making its higher-order genetic interactions more modular.
+
+---
+
+## How to Run
 ```powershell
 #### 1. Parallel Evolutionary Run (24 Replications on 24 Cores)
 python scripts\run_parallel.py `
@@ -162,11 +223,15 @@ python "assignments\Assignment 7 - Epistasis & Gene linkage\select_dissimilar.py
     --runs-dir "assignments\Assignment 7 - Epistasis & Gene linkage\runs" `
     --k 3
 
-#### 4. Estimate and Visualize Epistasis Matrices
+#### 4. Estimate and Visualize Pairwise Epistasis Matrices (Task 1)
 python "assignments\Assignment 7 - Epistasis & Gene linkage\estimate_epistasis.py" `
     --frams-path Framsticks55 `
     --genotypes-folder "assignments\Assignment 7 - Epistasis & Gene linkage\selected" `
-    #--genotypes "/*9*/BLU" `
     --out "assignments\Assignment 7 - Epistasis & Gene linkage\results\epistasis\epistasis_matrices.png"
+
+#### 5. Estimate and Visualize 3D Triplet Epistasis (Task 2)
+python "assignments\Assignment 7 - Epistasis & Gene linkage\estimate_3d_epistasis.py" `
+    --frams-path Framsticks55 `
+    --genotypes-folder "assignments\Assignment 7 - Epistasis & Gene linkage\selected"
 ```
 
