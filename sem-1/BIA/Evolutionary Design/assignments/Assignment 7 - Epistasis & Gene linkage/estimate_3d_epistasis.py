@@ -87,6 +87,12 @@ def compute_3d_epistasis_for_genotype(
     Reuses compute_epistasis_matrix from estimate_epistasis.py for wild-type fitness,
     valid genes, single knockouts (dF_i), and pairwise epistasis (eps_ij).
     Uses NumPy vectorization for rapid tensor calculations.
+
+    :param frams_lib: FramsticksLib object.
+    :param geno: Genotype string.
+    :param prefix: Prefix for genotype strings.
+    :param fitness_metric: Fitness metric to use.
+    :return: Dictionary containing epistasis results.
     """
     L = len(geno)
 
@@ -251,15 +257,10 @@ def _resolve_baseline_config(baseline: Any) -> Tuple[int, Dict[str, str]]:
     return b_num, BASELINE_DEFS[b_num]
 
 
-def plot_creature_3d_heatmap(
-    ax: Axes3D,
-    res: Dict[str, Any],
-    baseline: int = 1,
-    creature_idx: Optional[int] = None,
-    elev: float = 24,
-    azim: float = 48,
-    ball_size: float = 32.0,
-    cmap: Optional[Any] = None
+def plot_creature_3d_heatmap(ax: Axes3D,
+    res: Dict[str, Any], baseline: int = 1, creature_idx: Optional[int] = None,
+    elev: float = 24, azim: float = 48, ball_size: float = 32.0, cmap: Optional[Any] = None,
+    norm: Optional[Any] = None, show_cbar: bool = True
 ) -> Optional[Any]:
     """
     Renders a single 3D scatter heatmap subplot ("small balls arranged in a 3D grid")
@@ -283,12 +284,13 @@ def plot_creature_3d_heatmap(
     zs = [r['k'] for r in triplets]
     vals = np.array([r[eps_key] for r in triplets])
 
-    vmax = np.nanmax(np.abs(vals)) if len(vals) > 0 and np.nanmax(np.abs(vals)) > 0 else 1.0
-    norm = CenteredNorm(vcenter=0.0, halfrange=vmax)
+    if norm is None:
+        vmax = np.nanmax(np.abs(vals)) if len(vals) > 0 and np.nanmax(np.abs(vals)) > 0 else 1.0
+        norm = CenteredNorm(vcenter=0.0, halfrange=vmax)
 
     abs_vals = np.abs(vals)
-    max_abs = np.nanmax(abs_vals) if len(abs_vals) > 0 and np.nanmax(abs_vals) > 0 else 1.0
-    sizes = ball_size * (0.6 + 0.8 * (abs_vals / max_abs))
+    ref_max = norm.halfrange if (hasattr(norm, 'halfrange') and norm.halfrange is not None and norm.halfrange > 0) else (np.nanmax(abs_vals) if len(abs_vals) > 0 and np.nanmax(abs_vals) > 0 else 1.0)
+    sizes = ball_size * (0.6 + 0.8 * (abs_vals / ref_max))
 
     sc = ax.scatter(
         xs, ys, zs,
@@ -338,9 +340,10 @@ def plot_creature_3d_heatmap(
     ax.set_ylim(-0.5, L - 0.5)
     ax.set_zlim(-0.5, L - 0.5)
 
-    cbar = ax.figure.colorbar(sc, ax=ax, fraction=0.035, pad=0.08, shrink=0.7)
-    cbar.ax.tick_params(labelsize=6.5)
-    cbar.set_label(rf"$\varepsilon_{{ijk}}^{{({b_num})}}$", fontsize=7.5)
+    if show_cbar:
+        cbar = ax.figure.colorbar(sc, ax=ax, fraction=0.035, pad=0.08, shrink=0.7)
+        cbar.ax.tick_params(labelsize=6.5)
+        cbar.set_label(rf"$\varepsilon_{{ijk}}^{{({b_num})}}$", fontsize=7.5)
 
     return sc
 
@@ -353,7 +356,11 @@ def visualize_3d_heatmaps(
     save_path: Optional[str] = None,
     elev: float = 24,
     azim: float = 48,
-    ball_size: float = 32.0
+    ball_size: float = 32.0,
+    same_scale: bool = True,
+    shared_norm: Optional[Any] = None,
+    show_row_cbar: bool = True,
+    cax: Optional[plt.Axes] = None
 ) -> Tuple[Optional[plt.Figure], Optional[List[Axes3D]]]:
     """
     Renders 3D scatter heatmaps for a single epistasis baseline across tested creatures.
@@ -367,25 +374,56 @@ def visualize_3d_heatmaps(
     b_num, cfg = _resolve_baseline_config(baseline)
     created_fig = False
 
+    if same_scale and shared_norm is None:
+        eps_key = cfg['eps_key']
+        b_vals = [
+            r[eps_key] for res in results_list
+            for r in res.get('triplet_records', [])
+            if not np.isnan(r.get(eps_key, np.nan))
+        ]
+        vmax = float(np.nanmax(np.abs(b_vals))) if len(b_vals) > 0 and np.nanmax(np.abs(b_vals)) > 0 else 1.0
+        shared_norm = CenteredNorm(vcenter=0.0, halfrange=vmax)
+
     if fig is None or axes is None:
         created_fig = True
-        fig = plt.figure(figsize=(5.6 * k, 5.2))
-        axes = [fig.add_subplot(1, k, col_idx + 1, projection='3d') for col_idx in range(k)]
+        if same_scale:
+            from matplotlib.gridspec import GridSpec
+            fig = plt.figure(figsize=(5.6 * k + 1.2, 5.2))
+            gs = GridSpec(1, k + 1, figure=fig, width_ratios=[1.0] * k + [0.035],
+                          wspace=0.25, left=0.04, right=0.93, top=0.93, bottom=0.06)
+            axes = [fig.add_subplot(gs[0, col_idx], projection='3d') for col_idx in range(k)]
+            cax = fig.add_subplot(gs[0, k])
+        else:
+            fig = plt.figure(figsize=(5.6 * k, 5.2))
+            axes = [fig.add_subplot(1, k, col_idx + 1, projection='3d') for col_idx in range(k)]
 
+    last_sc = None
     for col_idx, (ax, res) in enumerate(zip(axes, results_list)):
-        plot_creature_3d_heatmap(
+        sc = plot_creature_3d_heatmap(
             ax=ax,
             res=res,
             baseline=b_num,
             creature_idx=col_idx + 1,
             elev=elev,
             azim=azim,
-            ball_size=ball_size
+            ball_size=ball_size,
+            norm=shared_norm if same_scale else None,
+            show_cbar=(not same_scale)
         )
+        if sc is not None:
+            last_sc = sc
+
+    if same_scale and show_row_cbar and last_sc is not None and cax is not None:
+        pos = cax.get_position()
+        cax.set_position([pos.x0, pos.y0 + 0.12 * pos.height, pos.width, pos.height * 0.76])
+        cb = fig.colorbar(last_sc, cax=cax)
+        cb.ax.tick_params(labelsize=7.5)
+        cb.set_label(rf"$\varepsilon_{{ijk}}^{{({b_num})}}$", fontsize=9, fontweight='bold', labelpad=8)
 
     if created_fig:
         fig.suptitle(cfg['title'], fontsize=12, fontweight='bold', y=0.98)
-        plt.subplots_adjust(left=0.04, right=0.96, top=0.93, bottom=0.06, wspace=0.20, hspace=0.30)
+        if not same_scale:
+            plt.subplots_adjust(left=0.04, right=0.96, top=0.93, bottom=0.06, wspace=0.20, hspace=0.30)
         if save_path:
             os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -398,13 +436,9 @@ def visualize_3d_heatmaps(
     return fig, axes
 
 
-def visualize_combined_3d_heatmaps(
-    results_list: List[Dict[str, Any]],
-    mode: int = 3,
-    save_path: Optional[str] = None,
-    elev: float = 24,
-    azim: float = 48,
-    ball_size: float = 32.0
+def visualize_combined_3d_heatmaps(results_list: List[Dict[str, Any]], mode: int = 3,
+    save_path: Optional[str] = None, elev: float = 24, azim: float = 48, ball_size: float = 32.0,
+    same_scale: bool = True
 ):
     """
     Renders 3D scatter subplots ("small balls arranged in a 3D grid")
@@ -415,6 +449,9 @@ def visualize_combined_3d_heatmaps(
       - Bit 0 (0b01 = 1): Baseline 1 (Individual Genes / 1st-Order Null Model)
       - Bit 1 (0b10 = 2): Baseline 2 (Pairwise Epistasis / 2nd-Order Null Model)
       - Both bits (0b11 = 3): Both baselines arranged as a 2 x k grid.
+
+    :param same_scale: If True (default), uses the same colorbar scale for all plots
+                       (even across both baselines) and renders one colorbar per row.
     """
     k = len(results_list)
     if k == 0:
@@ -429,39 +466,78 @@ def visualize_combined_3d_heatmaps(
 
     active_baselines = [i + 1 for i, b in enumerate(b_enabled) if b]
     n_rows = len(active_baselines)
-    fig = plt.figure(figsize=(5.6 * k, 5.2 * n_rows))
 
-    for row_idx, b_num in enumerate(active_baselines):
-        row_axes = [
-            fig.add_subplot(n_rows, k, row_idx * k + col_idx + 1, projection='3d')
-            for col_idx in range(k)
-        ]
-        # Modularity: Reuse visualize_3d_heatmaps for rendering the row
-        visualize_3d_heatmaps(
-            results_list=results_list,
-            baseline=b_num,
-            fig=fig,
-            axes=row_axes,
-            elev=elev,
-            azim=azim,
-            ball_size=ball_size
+    if same_scale:
+        from matplotlib.gridspec import GridSpec
+        all_vals = []
+        for b_num in active_baselines:
+            cfg = BASELINE_DEFS[b_num]
+            eps_key = cfg['eps_key']
+            for res in results_list:
+                for r in res.get('triplet_records', []):
+                    val = r.get(eps_key, np.nan)
+                    if not np.isnan(val):
+                        all_vals.append(val)
+        vmax = float(np.nanmax(np.abs(all_vals))) if len(all_vals) > 0 and np.nanmax(np.abs(all_vals)) > 0 else 1.0
+        shared_norm = CenteredNorm(vcenter=0.0, halfrange=vmax)
+
+        fig = plt.figure(figsize=(5.6 * k + 1.2, 5.2 * n_rows))
+        gs = GridSpec(n_rows, k + 1, figure=fig, width_ratios=[1.0] * k + [0.035],
+                      wspace=0.25, hspace=0.32, left=0.04, right=0.93,
+                      top=0.93 if n_rows == 1 else 0.94, bottom=0.06)
+
+        for row_idx, b_num in enumerate(active_baselines):
+            row_axes = [
+                fig.add_subplot(gs[row_idx, col_idx], projection='3d')
+                for col_idx in range(k)
+            ]
+            row_cax = fig.add_subplot(gs[row_idx, k])
+            visualize_3d_heatmaps(
+                results_list=results_list,
+                baseline=b_num,
+                fig=fig,
+                axes=row_axes,
+                elev=elev,
+                azim=azim,
+                ball_size=ball_size,
+                same_scale=same_scale,
+                shared_norm=shared_norm,
+                show_row_cbar=True,
+                cax=row_cax
+            )
+    else:
+        fig = plt.figure(figsize=(5.6 * k, 5.2 * n_rows))
+        for row_idx, b_num in enumerate(active_baselines):
+            row_axes = [
+                fig.add_subplot(n_rows, k, row_idx * k + col_idx + 1, projection='3d')
+                for col_idx in range(k)
+            ]
+            visualize_3d_heatmaps(
+                results_list=results_list,
+                baseline=b_num,
+                fig=fig,
+                axes=row_axes,
+                elev=elev,
+                azim=azim,
+                ball_size=ball_size,
+                same_scale=False,
+                show_row_cbar=False
+            )
+        plt.subplots_adjust(
+            left=0.04, right=0.96,
+            top=0.93 if n_rows == 1 else 0.95,
+            bottom=0.06,
+            wspace=0.20,
+            hspace=0.30
         )
 
-    # Suptitles and Layout
+    # Suptitles
     if n_rows == 1:
         cfg = BASELINE_DEFS[active_baselines[0]]
         fig.suptitle(cfg['title'], fontsize=12, fontweight='bold', y=0.98)
     else:
-        fig.text(0.5, 0.99, BASELINE_DEFS[1]['title'], ha='center', fontsize=12, fontweight='bold')
-        fig.text(0.5, 0.495, BASELINE_DEFS[2]['title'], ha='center', fontsize=12, fontweight='bold')
-
-    plt.subplots_adjust(
-        left=0.04, right=0.96,
-        top=0.93 if n_rows == 1 else 0.95,
-        bottom=0.06,
-        wspace=0.20,
-        hspace=0.30
-    )
+        fig.text(0.48, 0.985, BASELINE_DEFS[1]['title'], ha='center', fontsize=12, fontweight='bold')
+        fig.text(0.48, 0.490, BASELINE_DEFS[2]['title'], ha='center', fontsize=12, fontweight='bold')
 
     if save_path:
         os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
@@ -513,6 +589,8 @@ def main():
                         help="Output image path for 3D epistasis plot. If omitted, saves based on --mode to <outdir>.")
     parser.add_argument("--outdir", default=r"assignments\Assignment 7 - Epistasis & Gene linkage\results\epistasis",
                         help="Output directory for 3D epistasis plots and summary CSV.")
+    parser.add_argument("--no-same-scale", "--independent-scale", dest="same_scale", action="store_false", default=True,
+                        help="Use independent colorbar scales for each subplot instead of a unified row colorbar scale.")
     args = parser.parse_args()
 
     # Collect genotypes using shared collect_genotypes helper
@@ -557,11 +635,7 @@ def main():
         else:
             out_plot = os.path.join(outdir, "epistasis_3d_combined.png")
 
-    visualize_combined_3d_heatmaps(
-        results_list,
-        mode=args.mode,
-        save_path=out_plot
-    )
+    visualize_combined_3d_heatmaps(results_list, mode=args.mode, save_path=out_plot, same_scale=args.same_scale)
 
     print("\n[Done] All 3D triplet epistasis analyses and visualizations complete!")
 

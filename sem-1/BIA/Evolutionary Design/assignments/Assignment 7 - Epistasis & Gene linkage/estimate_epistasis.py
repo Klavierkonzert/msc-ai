@@ -271,20 +271,31 @@ def compute_epistasis_for_individuals(frams_lib, genotypes: List[str], prefix: s
 
 
 def plot_epistasis_matrix(ax: plt.Axes, matrix: np.ndarray, geno: Optional[str] = None,
-                            title: Optional[str] = None, cmap=None) -> Any:
+                          title: Optional[str] = None, cmap=None, norm: Optional[Any] = None,
+                          show_cbar: bool = True) -> Any:
     """
     Renders a single 2D pairwise epistasis heatmap subplot.
+    
+    :param ax: Matplotlib Axes object.
+    :param matrix: 2D numpy array containing epistasis values.
+    :param geno: Genotype string for axis labels.
+    :param title: Subplot title.
+    :param cmap: Colormap.
+    :param norm: Color normalization - the same scale will be used for all the visualized matrices.
+    :param show_cbar: Whether to show colorbar for this matrix (True for the last matrix).
     """
     L = matrix.shape[0]
-    valid_vals = matrix[~np.isnan(matrix)]
-    vmax = np.nanmax(np.abs(valid_vals)) if len(valid_vals) > 0 and np.nanmax(np.abs(valid_vals)) > 0 else 1.0
-    norm = colors.CenteredNorm(vcenter=0.0, halfrange=vmax)
+    if norm is None:
+        valid_vals = matrix[~np.isnan(matrix)]
+        vmax = np.nanmax(np.abs(valid_vals)) if len(valid_vals) > 0 and np.nanmax(np.abs(valid_vals)) > 0 else 1.0
+        norm = colors.CenteredNorm(vcenter=0.0, halfrange=vmax)
 
     im = ax.imshow(matrix, cmap=cmap or RWG_CMAP, norm=norm, interpolation='nearest')
 
-    cbar = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.ax.tick_params(labelsize=8)
-    cbar.set_label(r"Epistasis $\varepsilon_{ij}$", fontsize=8)
+    if show_cbar:
+        cbar = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        cbar.ax.tick_params(labelsize=8)
+        cbar.set_label(r"Epistasis $\varepsilon_{ij}$", fontsize=8)
 
     if title:
         ax.set_title(title, fontsize=11, fontweight='bold', pad=8)
@@ -304,22 +315,38 @@ def plot_epistasis_matrix(ax: plt.Axes, matrix: np.ndarray, geno: Optional[str] 
 
     return im
 
+def wrapper_plot_epistasis(ax: plt.Axes, idx: int, k: int, epistasis_matrices: Tuple[np.ndarray, ...] | List[np.ndarray], 
+                            genotypes: Optional[List[str]], titles: Optional[List[str]], 
+                            cmap, shared_norm: Optional[Any], show_cbar: bool,
+                            genotype_prefix: str) -> Any:
+    """
+    Wrapper function for plot_epistasis_matrix to handle edge cases and formatting.
+    """
+    if idx >= k:
+        ax.axis('off')
+        return None
+    arr = epistasis_matrices[idx]
+    g_clean = genotypes[idx].replace(genotype_prefix, "").strip().upper() if (genotypes and idx < len(genotypes)) else None
+    t = titles[idx] if (titles and idx < len(titles)) else f"Individual {idx + 1}"
+    im = plot_epistasis_matrix(ax=ax, matrix=arr, geno=g_clean, title=t, cmap=cmap or RWG_CMAP, norm=shared_norm, show_cbar=show_cbar)
+    return im
 
 def visualize_epistasis_matrices(epistasis_matrices: Tuple[np.ndarray, ...] | List[np.ndarray],
                                 genotypes: Optional[List[str]] = None,
                                 titles: Optional[List[str]] = None,
                                 save_path: Optional[str] = None,
                                 genotype_prefix: str = "/*9*/",
-                                cmap=None
+                                cmap=None, same_scale: bool = True
 ):
     """
     Visualizes epistasis matrices in a floor(sqrt(k)) x ceil(sqrt(k)) grid. 
     Reuses `plot_epistasis_matrix` for rendering each subplot.
 
-    :param: epistasis_matrices: k-tuple of 2D numpy arrays containing epistasis values.
-    :param: genotypes: list of raw genotype strings for axis labels.
-    :param: titles: optional list of subplot titles.
-    :param: save_path: path to save figure (PNG / PDF).
+    :param epistasis_matrices: k-tuple of 2D numpy arrays containing epistasis values.
+    :param genotypes: list of raw genotype strings for axis labels.
+    :param titles: optional list of subplot titles.
+    :param save_path: path to save figure (PNG / PDF).
+    :param same_scale: whether to use the same colorbar scale for all plots (placing one colorbar per row).
     """
     k = len(epistasis_matrices)
     if k == 0:
@@ -329,24 +356,39 @@ def visualize_epistasis_matrices(epistasis_matrices: Tuple[np.ndarray, ...] | Li
     n_rows = max(1, int(math.floor(math.sqrt(k))))
     n_cols = max(1, int(math.ceil(k / n_rows)))
 
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5.5 * n_cols, 5.0 * n_rows), squeeze=False)
+    if same_scale:
+        from matplotlib.gridspec import GridSpec
+        all_valid = [arr[~np.isnan(arr)] for arr in epistasis_matrices if arr is not None]
+        all_valid = np.concatenate([v.ravel() for v in all_valid if len(v) > 0]) if all_valid else np.array([])
+        vmax = float(np.nanmax(np.abs(all_valid))) if len(all_valid) > 0 and np.nanmax(np.abs(all_valid)) > 0 else 1.0
+        shared_norm = colors.CenteredNorm(vcenter=0.0, halfrange=vmax)
 
-    for idx in range(n_rows * n_cols):
-        r = idx // n_cols
-        c = idx % n_cols
-        ax = axes[r, c]
+        fig = plt.figure(figsize=(5.5 * n_cols + 1.0, 5.0 * n_rows))
+        gs = GridSpec(n_rows, n_cols + 1, figure=fig, width_ratios=[1.0] * n_cols + [0.035],
+                      wspace=0.32, hspace=0.28, left=0.05, right=0.93, top=0.92, bottom=0.08)
 
-        if idx >= k:
-            ax.axis('off')
-            continue
+        for r in range(n_rows):
+            last_im = None
+            for c in range(n_cols):
+                idx = r * n_cols + c
+                ax = fig.add_subplot(gs[r, c])
+                im = wrapper_plot_epistasis(ax, idx, k, epistasis_matrices, genotypes, titles, cmap, shared_norm, show_cbar=False, genotype_prefix=genotype_prefix)
+                if im is not None:
+                    last_im = im
 
-        arr = epistasis_matrices[idx]
-        g_clean = genotypes[idx].replace(genotype_prefix, "").strip().upper() if (genotypes and idx < len(genotypes)) else None
-        t = titles[idx] if (titles and idx < len(titles)) else f"Individual {idx + 1}"
-
-        plot_epistasis_matrix(ax=ax, matrix=arr, geno=g_clean, title=t, cmap=cmap or RWG_CMAP)
-
-    plt.tight_layout()
+            if last_im is not None:
+                cax = fig.add_subplot(gs[r, n_cols])
+                pos = cax.get_position()
+                cax.set_position([pos.x0, pos.y0 + 0.10 * pos.height, pos.width, pos.height * 0.80])
+                cbar = fig.colorbar(last_im, cax=cax)
+                cbar.ax.tick_params(labelsize=8)
+                cbar.set_label(r"Epistasis $\varepsilon_{ij}$", fontsize=9, fontweight='bold', labelpad=8)
+    else:
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(5.5 * n_cols, 5.0 * n_rows), squeeze=False)
+        for idx in range(n_rows * n_cols):
+            ax = axes[idx // n_cols, idx % n_cols]
+            wrapper_plot_epistasis(ax, idx, k, epistasis_matrices, genotypes, titles, cmap, shared_norm=None, show_cbar=True, genotype_prefix=genotype_prefix)
+        plt.tight_layout()
 
     if save_path:
         os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
@@ -369,6 +411,8 @@ def main():
     parser.add_argument("--genotypes-folder", default=None, help="Folder containing .gen files to evaluate.")
     parser.add_argument("--out", default=r"assignments\Assignment 7 - Epistasis & Gene linkage\results\epistasis\epistasis_matrices.png",
                         help="Output image path for epistasis matrices.")
+    parser.add_argument("--no-same-scale", "--independent-scale", dest="same_scale", action="store_false", default=True,
+                        help="Use independent colorbar scales for each subplot instead of a unified row colorbar scale.")
     args = parser.parse_args()
 
     # Collect genotypes using shared collect_genotypes helper
@@ -399,7 +443,8 @@ def main():
 
     # Visualize
     visualize_epistasis_matrices(epistasis_tuple, genotypes=genotypes_to_eval,
-                                    titles=titles_to_display, save_path=args.out, genotype_prefix=prefix)
+                                    titles=titles_to_display, save_path=args.out,
+                                    genotype_prefix=prefix, same_scale=args.same_scale)
 
 
 if __name__ == "__main__":
