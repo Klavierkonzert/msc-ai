@@ -12,12 +12,13 @@ Single-gene knockout effect (main effect / additive component):
   dF_i = F(g \ {i}) - F(g)
   dF_j = F(g \ {j}) - F(g)
 
-Expected(!) double knockout under additive (null) model - but this is true under linear additivity of ind. genes' effects
+Expected double knockout under additive (null) model (assuming linear additivity of ind. genes' effects):
   F_add(g \ {i, j}) = F(g) + dF_i + dF_j
 
 Epistasis (interaction deviation):
   e_{i,j} = F(g \ {i, j}) - F_add(g \ {i, j}) # the non-linear effect of interaction of ij.
           = [F(g \ {i, j}) - F(g)] - [F(g \ {i}) - F(g)] - [F(g \ {j}) - F(g)]
+          = dF_ij - (dF_i + dF_j)
 
 On the diagonal (i == j):
   Stores the single knockout effect dF_i = F(g \ {i}) - F(g).
@@ -29,11 +30,13 @@ import glob
 import re
 import math
 import argparse
+import itertools
+from typing import List, Tuple, Dict, Optional, Any
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib.colors import LinearSegmentedColormap
-from typing import List, Tuple, Dict, Optional
 
 # Ensure repository paths are configured
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -44,12 +47,37 @@ if FRAMSPY_DIR not in sys.path:
 try:
     from FramsticksLib import FramsticksLib
 except ImportError:
-    # Alternative import path
-    import frams
-    FramsticksLib = None
+    try:
+        from FramsticksLibCompetition import FramsticksLib
+    except ImportError:
+        FramsticksLib = None
+
+# Centered Red-White-Green colormap shared across 2D and 3D epistasis visualizations
+RWG_CMAP = LinearSegmentedColormap.from_list(
+    'red_white_green', ["#d73027", "#f7f7f7", "#1a9850"], N=256
+)
 
 
-def load_genotypes_from_folder(folder_path: str, genformat: str) -> List[Tuple[str, str]]:
+def setstr(s: str, pos: int, char: str = ' ') -> str:
+    """Replaces character at `pos` with `char`."""
+    assert len(char) == 1
+    assert 0 <= pos < len(s)
+    return s[:pos] + char + s[pos + 1:]
+
+
+def knockout_genes(geno: str, *indices: int) -> str:
+    """
+    Returns genotype string with specified 0-based gene indices removed.
+    Supports single, double, triple, or N-gene knockouts efficiently.
+    Example:
+        geno = "ABCDE"
+        knockout_genes(geno, 1, 3) == "ACE"
+    """
+    idx_set = set(indices)
+    return "".join(c for pos, c in enumerate(geno) if pos not in idx_set)
+
+
+def load_genotypes_from_folder(folder_path: str, genformat: str = "9") -> List[Tuple[str, str]]:
     """
     Scans a folder for *.gen files and parses genotype strings.
     Returns list of tuples: (raw_genotype, source_label)
@@ -67,11 +95,10 @@ def load_genotypes_from_folder(folder_path: str, genformat: str) -> List[Tuple[s
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # Search for f<genformat>
-            #  string
+            # Search for f<genformat> string
             geno_match = re.search(r"genotype:~?(/\*" + re.escape(str(genformat)) + r"\*/[^\r\n~]+)~?", content)
             if not geno_match:
-                geno_match = re.search(r"(/\*"+genformat+r"\*/[A-Za-z]+)", content)
+                geno_match = re.search(r"(/\*" + re.escape(str(genformat)) + r"\*/[A-Za-z]+)", content)
 
             if geno_match:
                 raw_geno = geno_match.group(1).strip("~")
@@ -85,25 +112,40 @@ def load_genotypes_from_folder(folder_path: str, genformat: str) -> List[Tuple[s
     return results
 
 
-def setstr(s: str, pos: int, char: str = ' ') -> str:
-    """Replaces character at `pos` with `char`."""
-    assert len(char) == 1
-    assert 0 <= pos < len(s)
-    return s[:pos] + char + s[pos + 1:]
-
-
-def evaluate_genotypes_chunk(
-    frams_lib,
-    full_genos_chunk: List[str],
-    fitness_metric: str = "vertpos",
-    default_val: float = np.nan
-) -> List[float]:
+def collect_genotypes(folder: Optional[str] = None, genotypes: Optional[List[str]] = None, genformat: str = "9") -> List[Dict[str, str]]:
     """
-    Evaluates a chunk of full genotype strings (including prefix) using FramsticksLib.
+    Collects and deduplicates genotypes from folder and/or explicit string list.
+    Returns list of dicts: {'raw': raw_geno, 'clean': clean_geno, 'title': label}
+    """
+    collected = []
+    seen = set()
+    prefix = f"/*{genformat}*/"
+
+    if folder:
+        folder_items = load_genotypes_from_folder(folder, genformat=genformat)
+        for raw_g, label in folder_items:
+            clean_g = raw_g.replace(prefix, "").strip().upper()
+            if clean_g not in seen:
+                seen.add(clean_g)
+                collected.append({"raw": raw_g, "clean": clean_g, "title": label })
+
+    if genotypes:
+        for idx, g in enumerate(genotypes, 1):
+            clean_g = g.replace(prefix, "").strip().upper()
+            if clean_g not in seen:
+                seen.add(clean_g)
+                collected.append({"raw": g, "clean": clean_g, "title": f"Genotype {idx}"})
+
+    return collected
+
+
+def evaluate_genotypes_chunk(frams_lib, full_genos_chunk: List[str], fitness_metric: str = "vertpos", default_val: float = np.nan) -> List[float]:
+    """
+    Evaluates a chunk of full genotype strings (including prefix) using FramsticksLib. Returns list of fitness scores (default_val if invalid).
     """
     scores = []
     try:
-        res = frams_lib.evaluate(full_genos_chunk)
+        res = frams_lib.evaluate(full_genos_chunk) # <------- main action (calls Framsticks)
         if not res or len(res) == 0:
             scores.extend([default_val] * len(full_genos_chunk))
             return scores
@@ -123,16 +165,10 @@ def evaluate_genotypes_chunk(
         scores.extend([default_val] * len(full_genos_chunk))
     return scores
 
-def evaluate_batch_genotypes(
-    frams_lib,
-    full_genos: List[str],
-    fitness_metric: str = "vertpos",
-    default_val: float = np.nan,
-    batch_size: int = 150
-) -> List[float]:
+def evaluate_batch_genotypes(frams_lib, full_genos: List[str], fitness_metric: str = "vertpos", default_val: float = np.nan, batch_size: int = 150) -> List[float]:
     """
-    Wrapper for `evaluate_genotypes_chunk()` for multiple genotypes.
-    Evaluates full genotype strings (including prefix) in batches of size `batch_size` using FramsticksLib.
+    _Wrapper for `evaluate_genotypes_chunk()` for multiple genotypes._
+    Evaluates full genotype strings in chunks of size `batch_size` via FramsticksLib. Returns list of fitness scores (`default_val` if invalid).
     """
     scores = []
     total = len(full_genos)
@@ -142,15 +178,9 @@ def evaluate_batch_genotypes(
         scores.extend(res)
     return scores
 
-def evaluate_genotype(
-    frams_lib,
-    prefix: str,
-    geno_str: str,
-    fitness_metric: str = "vertpos",
-    default_val: float = 0.0,
-) -> float:
+def evaluate_genotype(frams_lib, prefix: str, geno_str: str, fitness_metric: str = "vertpos", default_val: float = 0.0) -> float:
     """
-    Wrapper for `evaluate_genotypes_chunk()` for single genotype.
+    _Wrapper for `evaluate_genotypes_chunk()` for single genotype._
     Evaluates a genotype in Framsticks and returns `crit` fitness.
     Catches invalid genotypes and returns `default_val`.
     """
@@ -158,14 +188,10 @@ def evaluate_genotype(
     return evaluate_genotypes_chunk(frams_lib, [full_geno], fitness_metric, default_val)[0]
 
 
-def compute_epistasis_matrix(
-    frams_lib,
-    geno: str,
-    prefix: str = "/*9*/",
-    fitness_metric: str = "vertpos"
-) -> Tuple[np.ndarray, np.ndarray, float, List[int]]:
+def compute_epistasis_matrix(frams_lib, geno: str, prefix: str = "/*9*/", fitness_metric: str = "vertpos") -> Tuple[np.ndarray, np.ndarray, float, List[int]]:
     r"""
-    Computes the epistasis matrix for a single genotype.
+    Computes the pairwise epistasis matrix for a single genotype.
+    Uses batch evaluation and NumPy vectorization for high efficiency.
 
     Returns:
     - epistasis_matrix: (L x L) float matrix of pairwise epistasis e_{i,j} (diagonal has single knockout effect)
@@ -177,80 +203,57 @@ def compute_epistasis_matrix(
     wild_fit = evaluate_genotype(frams_lib, prefix, geno, fitness_metric=fitness_metric)
     print(f"Genotype: {geno} (length={L}), Wild-type fitness ({fitness_metric}): {wild_fit:.5f}")
 
-    # Step 1: Precompute single-gene knockouts & identify valid / essential genes
-    single_fits = np.full(L, np.nan)
-    valid_genes = []
+    # Step 1: Single-gene knockouts in batch
+    single_genos = [prefix + knockout_genes(geno, i) for i in range(L)]
+    single_fits = np.array(evaluate_batch_genotypes(frams_lib, 
+                                single_genos, fitness_metric=fitness_metric))
 
-    for i in range(L): #iterate over gene letters in `geno`me
-        g_single = setstr(geno, i, ' ').replace(' ', '') #delete gene #i
-        if len(g_single) == 0:
-            continue
-        f_single = evaluate_genotype(frams_lib, prefix, g_single, 
-                                    fitness_metric = fitness_metric, default_val=np.nan)
-        if not np.isnan(f_single):
-            single_fits[i] = f_single
-            valid_genes.append(i)
-        else:
-            print(f" [Warning] Gene {i} ('{geno[i]}') knockout produced invalid genotype; ignoring in epistasis.")
+    valid_genes = [i for i, f in enumerate(single_fits) if not np.isnan(f)]
+    invalid_genes = [i for i in range(L) if i not in valid_genes]
+    for i in invalid_genes:
+        print(f" [Warning] Gene {i} ('{geno[i]}') knockout produced invalid genotype; ignoring in epistasis.")
 
-    # Step 2: Compute double-knockout matrix and epistasis
-    raw_delta_matrix = np.full((L, L), np.nan)  # dF_ij = F(g \ {i, j}) - F(g)
-    epistasis_matrix = np.full((L, L), np.nan)  # e_{i,j} = delta_F_ij - (delta_F_i + delta_F_j)
+    # Step 2: Double-gene knockouts in batch across valid genes
+    pairs = list(itertools.combinations(valid_genes, 2))
+    pair_genos = [prefix + knockout_genes(geno, i, j) for i, j in pairs]
 
-    for i in range(L):
-        for j in range(i, L):
-            # Diagonal stores single knockout effect: dF_i = F(g \ {i}) - F(g)
-            if i == j:
-                if not np.isnan(single_fits[i]):
-                    dF_i = single_fits[i] - wild_fit
-                    raw_delta_matrix[i, i] = dF_i
-                    epistasis_matrix[i, i] = dF_i
-                continue
+    if pair_genos:
+        pair_fits_list = evaluate_batch_genotypes(frams_lib, pair_genos, fitness_metric=fitness_metric)
+    else:
+        pair_fits_list = []
 
-            # If either gene produces an invalid genotype alone, skip pair
-            if np.isnan(single_fits[i]) or np.isnan(single_fits[j]):
-                continue
+    # Step 3: Vectorized delta and epistasis matrix computation
+    
+    # Individual single-gene knockout fitness changes:
+    #   dF_i = F(g \ {i}) - F(g)
+    dF = single_fits - wild_fit
+    raw_delta_matrix = np.full((L, L), np.nan)
+    raw_delta_matrix[np.arange(L), np.arange(L)] = dF
 
-            # Double knockout: remove gene i and gene j
-            g_double = setstr(geno, i, ' ')
-            g_double = setstr(g_double, j, ' ')
-            g_double = g_double.replace(' ', '')
+    if pairs:
+        pi, pj = zip(*pairs)
+        pi, pj = np.array(pi), np.array(pj)
+        # Observed fitness change for double knockout: dF_ij = F(g \ {i, j}) - F(g)
+        dF_pairs = np.array(pair_fits_list) - wild_fit
+        valid_mask = ~np.isnan(dF_pairs)
+        raw_delta_matrix[pi[valid_mask], pj[valid_mask]] = dF_pairs[valid_mask]
+        raw_delta_matrix[pj[valid_mask], pi[valid_mask]] = dF_pairs[valid_mask]
 
-            #F(g \ {i,j})
-            f_double = evaluate_genotype(frams_lib, prefix, g_double, 
-                                            fitness_metric=fitness_metric, default_val=np.nan)
-            if np.isnan(f_double):
-                continue
-
-            # Observed fitness change for double knockout: dF_ij = F(g \ {i, j}) - F(g)
-            dF_ij = f_double - wild_fit
-            raw_delta_matrix[i, j] = dF_ij
-            raw_delta_matrix[j, i] = dF_ij
-
-            # Individual single-gene knockout fitness changes:
-            #   dF_i = F(g \ {i}) - F(g)
-            #   dF_j = F(g \ {j}) - F(g)
-            dF_i = single_fits[i] - wild_fit
-            dF_j = single_fits[j] - wild_fit
-
-            # Expected double knockout under additive null model:
-            #   dF_add = dF_i + dF_j
-            # Epistasis (interaction deviation):
+    # Vectorized additive null model
+    # Expected double knockout under additive null model:
+    #   dF_add = dF_i + dF_j
+    expected_add = dF[:, None] + dF[None, :]
+    # Epistasis (interaction deviation):
             #   e_{i,j} = dF_ij - (dF_i + dF_j)
-            e_ij = dF_ij - (dF_i + dF_j) # <-------- The main formula
+    epistasis_matrix = raw_delta_matrix - expected_add
 
-            epistasis_matrix[i, j] = e_ij
-            epistasis_matrix[j, i] = e_ij
+    # Restore diagonal convention: e_{i,i} = dF_i
+    np.fill_diagonal(epistasis_matrix, dF)
 
     return epistasis_matrix, raw_delta_matrix, wild_fit, valid_genes
 
 
-def compute_epistasis_for_individuals(
-    frams_lib,
-    genotypes: List[str],
-    prefix: str = "/*9*/",
-    fitness_metric: str = "vertpos"
-) -> Tuple[np.ndarray, ...]:
+def compute_epistasis_for_individuals(frams_lib, genotypes: List[str], prefix: str = "/*9*/", fitness_metric: str = "vertpos") -> Tuple[np.ndarray, ...]:
     """
     Computes pairwise epistasis for k individuals.
     
@@ -267,41 +270,66 @@ def compute_epistasis_for_individuals(
     return tuple(epistasis_matrices)
 
 
-def visualize_epistasis_matrices(
-    epistasis_matrices : Tuple[np.ndarray, ...]|List[np.ndarray],
-    genotypes: Optional[List[str]] = None,
-    titles: Optional[List[str]] = None,
-    save_path: Optional[str] = None,
-    genotype_prefix: str = "/*9*/", 
-    cmap_name: str = "custom_rwg"
+def plot_epistasis_matrix(ax: plt.Axes, matrix: np.ndarray, geno: Optional[str] = None,
+                            title: Optional[str] = None, cmap=None) -> Any:
+    """
+    Renders a single 2D pairwise epistasis heatmap subplot.
+    """
+    L = matrix.shape[0]
+    valid_vals = matrix[~np.isnan(matrix)]
+    vmax = np.nanmax(np.abs(valid_vals)) if len(valid_vals) > 0 and np.nanmax(np.abs(valid_vals)) > 0 else 1.0
+    norm = colors.CenteredNorm(vcenter=0.0, halfrange=vmax)
+
+    im = ax.imshow(matrix, cmap=cmap or RWG_CMAP, norm=norm, interpolation='nearest')
+
+    cbar = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.ax.tick_params(labelsize=8)
+    cbar.set_label(r"Epistasis $\varepsilon_{ij}$", fontsize=8)
+
+    if title:
+        ax.set_title(title, fontsize=11, fontweight='bold', pad=8)
+
+    if geno and len(geno) == L:
+        step = max(1, L // 15)
+        tick_locs = list(range(0, L, step))
+        tick_labels = [f"{geno[p]}\n({p})" for p in tick_locs]
+        ax.set_xticks(tick_locs)
+        ax.set_xticklabels(tick_labels, fontsize=7)
+        ax.set_yticks(tick_locs)
+        ax.set_yticklabels([f"{geno[p]} ({p})" for p in tick_locs], fontsize=7)
+
+    ax.set_xlabel("Gene index j", fontsize=9)
+    ax.set_ylabel("Gene index i", fontsize=9)
+    ax.grid(False)
+
+    return im
+
+
+def visualize_epistasis_matrices(epistasis_matrices: Tuple[np.ndarray, ...] | List[np.ndarray],
+                                genotypes: Optional[List[str]] = None,
+                                titles: Optional[List[str]] = None,
+                                save_path: Optional[str] = None,
+                                genotype_prefix: str = "/*9*/",
+                                cmap=None
 ):
     """
-    Visualizes epistatic matrices as subplots arranged in floor(sqrt(k)) x ceil(sqrt(k)) grid.
+    Visualizes epistasis matrices in a floor(sqrt(k)) x ceil(sqrt(k)) grid. 
+    Reuses `plot_epistasis_matrix` for rendering each subplot.
 
-    Parameters:
-    - epistasis_tuple: k-tuple of 2D numpy arrays containing epistasis values.
-    - genotypes: list of raw genotype strings for axis labels.
-    - titles: optional list of subplot titles.
-    - save_path: path to save figure (PNG / PDF).
+    :param: epistasis_matrices: k-tuple of 2D numpy arrays containing epistasis values.
+    :param: genotypes: list of raw genotype strings for axis labels.
+    :param: titles: optional list of subplot titles.
+    :param: save_path: path to save figure (PNG / PDF).
     """
     k = len(epistasis_matrices)
     if k == 0:
         print("No epistasis matrices provided for visualization.")
         return
 
-    # Subplot grid dimensions: floor(sqrt(k)) rows x ceil(sqrt(k)) cols
     n_rows = max(1, int(math.floor(math.sqrt(k))))
     n_cols = max(1, int(math.ceil(k / n_rows)))
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(5.5 * n_cols, 5.0 * n_rows), squeeze=False)
-
-    # Custom Red-White-Green colormap centered at 0
-    # Red: Negative epistasis (decompensatory / antagonistic interaction)
-    # White: Zero epistasis (pure additivity / independent genes)
-    # Green: Positive epistasis (synergistic cooperation)
-    red_white_green = LinearSegmentedColormap.from_list(
-        'red_white_green', ["#d73027", "#f7f7f7", "#1a9850"], N=256
-    )
 
     for idx in range(n_rows * n_cols):
         r = idx // n_cols
@@ -313,38 +341,10 @@ def visualize_epistasis_matrices(
             continue
 
         arr = epistasis_matrices[idx]
-        L = arr.shape[0]
-
-        # Determine symmetric normalization range around 0
-        valid_vals = arr[~np.isnan(arr)]
-        vmax = np.nanmax(np.abs(valid_vals)) if len(valid_vals) > 0 and np.nanmax(np.abs(valid_vals)) > 0 else 1.0
-        norm = colors.CenteredNorm(vcenter=0.0, halfrange=vmax)
-
-        im = ax.imshow(arr, cmap=red_white_green, norm=norm, interpolation='nearest')
-
-        # Add colorbar for each subplot
-        cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-        cbar.ax.tick_params(labelsize=8)
-
-        # Title
+        g_clean = genotypes[idx].replace(genotype_prefix, "").strip().upper() if (genotypes and idx < len(genotypes)) else None
         t = titles[idx] if (titles and idx < len(titles)) else f"Individual {idx + 1}"
-        ax.set_title(t, fontsize=11, fontweight='bold', pad=8)
 
-        # Ticks and gene character labels
-        if genotypes and idx < len(genotypes):
-            g_str = genotypes[idx].replace(genotype_prefix, "").strip().upper()
-            if len(g_str) == L:
-                step = max(1, L // 15)
-                tick_locs = list(range(0, L, step))
-                tick_labels = [f"{g_str[p]}\n({p})" for p in tick_locs]
-                ax.set_xticks(tick_locs)
-                ax.set_xticklabels(tick_labels, fontsize=7)
-                ax.set_yticks(tick_locs)
-                ax.set_yticklabels([f"{g_str[p]} ({p})" for p in tick_locs], fontsize=7)
-
-        ax.set_xlabel("Gene index j", fontsize=9)
-        ax.set_ylabel("Gene index i", fontsize=9)
-        ax.grid(False)
+        plot_epistasis_matrix(ax=ax, matrix=arr, geno=g_clean, title=t, cmap=cmap or RWG_CMAP)
 
     plt.tight_layout()
 
@@ -364,72 +364,43 @@ def main():
     parser.add_argument("--sim", default="eval-allcriteria.sim;deterministic.sim;sample-period-2.sim;only-body.sim",
                         help="Simulation settings files separated by semicolons.")
     parser.add_argument("--genformat", default="9", help="Genetic format to use (default: 9, e.g. /*9*/BLU).")
-    parser.add_argument('--opt', default='vertpos', help="Target to be optimized. By default, 'vertpos'")
-    parser.add_argument("--genotypes", nargs="*", default=None,help="List of genotype strings to evaluate (e.g. /*9*/BLU).")
-    parser.add_argument("--genotypes-folder", default=None, help="Folder containing .gen files to evaluate (e.g. ./selected).")
+    parser.add_argument('--opt', default='vertpos', help="Fitness optimization criterion (default: 'vertpos').")
+    parser.add_argument("--genotypes", nargs="*", default=None, help="List of genotype strings to evaluate.")
+    parser.add_argument("--genotypes-folder", default=None, help="Folder containing .gen files to evaluate.")
     parser.add_argument("--out", default=r"assignments\Assignment 7 - Epistasis & Gene linkage\results\epistasis\epistasis_matrices.png",
                         help="Output image path for epistasis matrices.")
     args = parser.parse_args()
 
-    # Collect genotypes from both --genotypes and --genotypes-folder without duplicates
-    # Store as list of dicts: {'clean': ..., 'raw': ..., 'title': ...}
-    collected = []
-    seen = set()
+    # Collect genotypes using shared collect_genotypes helper
+    prefix = f"/*{args.genformat}*/"
+    collected = collect_genotypes(
+        folder=args.genotypes_folder,
+        genotypes=args.genotypes,
+        genformat=args.genformat
+    )
 
-    prefix = "/*" + args.genformat + "*/"
-
-    # 1. From --genotypes-folder if provided
-    if args.genotypes_folder:
-        folder_items = load_genotypes_from_folder(args.genotypes_folder, genformat=args.genformat)
-        for raw_g, label in folder_items:
-            clean_g = raw_g.replace(prefix, "").strip().upper()
-            if clean_g not in seen:
-                seen.add(clean_g)
-                collected.append({
-                    "raw": raw_g,
-                    "clean": clean_g,
-                    "title": f"{label}\n({clean_g})"
-                })
-
-    # 2. From --genotypes if provided
-    if args.genotypes:
-        for idx, g in enumerate(args.genotypes, 1):
-            clean_g = g.replace(prefix, "").strip().upper()
-            if clean_g not in seen:
-                seen.add(clean_g)
-                collected.append({
-                    "raw": g,
-                    "clean": clean_g,
-                    "title": f"Genotype {idx}\n({clean_g})"
-                })
-
-    # Fallback default if neither is provided
     if not collected:
-        raise Exception("No genotypes provided. Use --genotypes or --genotypes-folder.")
+        raise ValueError("No genotypes provided. Use --genotypes or --genotypes-folder.")
 
     genotypes_to_eval = [item['raw'] for item in collected]
-    titles_to_display = [item['title'] for item in collected]
+    titles_to_display = [f"{item['title']}\n({item['clean']})" for item in collected]
 
     print(f"\nTotal unique genotypes to analyze for epistasis: {len(genotypes_to_eval)}")
     for idx, item in enumerate(collected, 1):
-        print(f" [{idx}] {item['title'].replace(chr(10), ' - ')} | Genotype: {item['raw']}")
+        print(f" [{idx}] {item['title']} | Genotype: {item['raw']}")
 
     # Initialize FramsticksLib
+    if FramsticksLib is None:
+        raise RuntimeError("Could not import FramsticksLib from framspy-download.")
     frams_lib = FramsticksLib(args.frams_path, None, args.sim)
 
     # Compute epistasis tuple
     epistasis_tuple = compute_epistasis_for_individuals(frams_lib, genotypes_to_eval, prefix, args.opt)
 
     # Visualize
-    visualize_epistasis_matrices(
-        epistasis_tuple,
-        genotypes=genotypes_to_eval,
-        titles=titles_to_display,
-        save_path=args.out,
-        genotype_prefix=prefix
-    )
+    visualize_epistasis_matrices(epistasis_tuple, genotypes=genotypes_to_eval,
+                                    titles=titles_to_display, save_path=args.out, genotype_prefix=prefix)
 
 
 if __name__ == "__main__":
     main()
-

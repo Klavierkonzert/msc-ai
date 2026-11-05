@@ -80,7 +80,7 @@ For an intact genotype $g$ of length $L$ with baseline fitness $F(g)$:
 - $F(g \setminus \{j\})$ -  fitness after disabling gene $j$.
 - $F(g \setminus \{i, j\})$ - fitness after simultaneously disabling both genes $i$ and $j$.
 
-The additive null model  $\mathcal{H}_0^1$ predicts the joint knockout effect to be the sum of independent single knockouts (this holds iff genes are independent) ${\Delta F_{ij}}\equiv \Delta F_{i} + \Delta F_{j}$, where:
+The additive null model  $\mathcal{H}_0^1$ predicts the joint knockout effect to be the sum of independent single knockouts (this holds iff genes are independent) ${\Delta F_{ij}}\equiv \Delta F_{i} + \Delta F_{j}$ , where:
 
 $$\Delta F_i = F(g \setminus \{i\}) - F(g), \qquad \Delta F_j = F(g \setminus \{j\}) - F(g)$$
 
@@ -138,7 +138,8 @@ Individual (diagonal) effects $\Delta F_i$ take negative values since extraction
 
 ### Estimation Formulas
 
-In the **first-order approach** (Baseline 1), the null model $\mathcal{H}_0^1$ assumes independence and additive decomposability of individual fitness effects : 
+In the **first-order approach** (Baseline 1), the null model $\mathcal{H}_0^1$ assumes independence and additive decomposability of individual fitness effects: 
+
 $$\mathcal{H}_0^1:\quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k$$
 
 The triplet epistasis measures the total interaction deviation from additivity:
@@ -150,6 +151,7 @@ In the **second-order approach** (Baseline 2), the null model ($\mathcal{H}_0^2$
 $$\mathcal{H}_0^2: \quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k + \underbrace{\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}}_{\text{2nd-order effects}} \equiv \Delta F_{ij} + \Delta F_{ik} + \Delta F_{jk} - (\Delta F_i + \Delta F_j + \Delta F_k)$$
 
 Hence epistasis is calculated as:
+
 $$\varepsilon^{(2)}_{i,j,k} \mathrel{:=} \Delta F_{ijk}- \big(\Delta F_i + \Delta F_j + \Delta F_k + \varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}\big)$$
 
 That is

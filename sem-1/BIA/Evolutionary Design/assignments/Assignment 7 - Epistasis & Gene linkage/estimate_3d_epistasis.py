@@ -3,11 +3,12 @@
 estimate_3d_epistasis.py
 
 Empirical estimation and 3D visualization of triplet gene epistasis in Framsticks f9 genotypes.
-Reuses 2D epistasis estimation and genotype loading from estimate_epistasis.py:
-  - load_genotypes_from_folder
-  - setstr
+Reuses 2D epistasis estimation, genotype collection, and colormap from estimate_epistasis.py:
+  - collect_genotypes
+  - knockout_genes
   - evaluate_batch_genotypes
   - compute_epistasis_matrix
+  - RWG_CMAP
 
 Evaluates all gene triplets (i, j, k) across two null-model baselines:
   - Baseline 1 (Individual genes / 1st-order null model):
@@ -33,7 +34,7 @@ from typing import List, Tuple, Dict, Optional, Any
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.colors import LinearSegmentedColormap, CenteredNorm
+from matplotlib.colors import CenteredNorm
 
 # Ensure access to sibling scripts and FramsticksLib
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -56,9 +57,12 @@ except ImportError:
 # Reuse functions directly from estimate_epistasis
 from estimate_epistasis import (
     load_genotypes_from_folder,
+    collect_genotypes,
+    knockout_genes,
     setstr,
     evaluate_batch_genotypes,
-    compute_epistasis_matrix
+    compute_epistasis_matrix,
+    RWG_CMAP,
 )
 
 
@@ -82,6 +86,7 @@ def compute_3d_epistasis_for_genotype(
       - (i, j, k) with distinct i, j, k: triplet epistasis eps_{ijk}
     Reuses compute_epistasis_matrix from estimate_epistasis.py for wild-type fitness,
     valid genes, single knockouts (dF_i), and pairwise epistasis (eps_ij).
+    Uses NumPy vectorization for rapid tensor calculations.
     """
     L = len(geno)
 
@@ -90,97 +95,102 @@ def compute_3d_epistasis_for_genotype(
     eps_2d, raw_delta_2d, wild_fit, valid_genes = compute_epistasis_matrix(
         frams_lib, geno, prefix=prefix, fitness_metric=fitness_metric
     )
-    # Step 3: Triplet knockouts across valid genes
+
+    # Step 3: Triplet knockouts across valid genes in batch
     triplet_list = list(itertools.combinations(valid_genes, 3))
-    triplet_genos = []
-    for (i, j, k) in triplet_list:
-        g_t = setstr(setstr(setstr(geno, i, ' '), j, ' '), k, ' ').replace(' ', '')
-        triplet_genos.append(prefix + g_t if len(g_t) > 0 else prefix + "X")
+    triplet_genos = [prefix + knockout_genes(geno, i, j, k) for i, j, k in triplet_list]
 
     print(f" Evaluating {len(triplet_list)} gene triplets in batches...")
     triplet_fits_list = evaluate_batch_genotypes(frams_lib, triplet_genos, fitness_metric=fitness_metric)
 
-    # Step 4: Populate 3D Tensors
+    # Step 4: Populate 3D Tensors (Vectorized)
     tensor_base1 = np.full((L, L, L), np.nan)
-    # tensor_base2 = np.full((L, L, L), np.nan) # defined below
     raw_delta_3d = np.full((L, L, L), np.nan)
 
     # 1D Diagonals: (i, i, i) -> single knockout effect dF_i
-    for i in valid_genes:
-        d_val = raw_delta_2d[i, i]
-        tensor_base1[i, i, i] = d_val
-        raw_delta_3d[i, i, i] = d_val
+    v_idx = np.array(valid_genes, dtype=int)
+    tensor_base1[v_idx, v_idx, v_idx] = raw_delta_2d[v_idx, v_idx]
+    raw_delta_3d[v_idx, v_idx, v_idx] = raw_delta_2d[v_idx, v_idx]
 
     # 2D Lateral Diagonals: (i, i, j), (i, j, i), (j, i, i) -> pairwise epistasis eps_ij
-    for i in valid_genes:
-        for j in valid_genes:
-            if i == j:
-                continue
-            eps_ij = eps_2d[i, j]
-            dF_ij = raw_delta_2d[i, j]
+    pairs = np.array(list(itertools.permutations(valid_genes, 2)), dtype=int)
+    if len(pairs) > 0:
+        pi, pj = pairs[:, 0], pairs[:, 1]
+        eps_pairs = eps_2d[pi, pj]
+        dF_pairs = raw_delta_2d[pi, pj]
+        for p1, p2, p3 in [(pi, pi, pj), (pi, pj, pi), (pj, pi, pi)]:
+            tensor_base1[p1, p2, p3] = eps_pairs
+            raw_delta_3d[p1, p2, p3] = dF_pairs
 
-            tensor_base1[i, i, j] = eps_ij
-            tensor_base1[i, j, i] = eps_ij
-            tensor_base1[j, i, i] = eps_ij
+    tensor_base2 = tensor_base1.copy()
 
-            # dF_ij == dF_iij etc.
-            raw_delta_3d[i, i, j] = dF_ij
-            raw_delta_3d[i, j, i] = dF_ij
-            raw_delta_3d[j, i, i] = dF_ij
-
-    tensor_base2 = tensor_base1.copy()  # so far the calculations were the same
-
-    # 3D Triplet entries (i != j != k != i)
+    # 3D Triplet entries: Vectorized calculation across all triplets
     triplet_records = []
-    for (i, j, k), f_ijk in zip(triplet_list, triplet_fits_list):
-        if np.isnan(f_ijk):
-            continue
-        if np.isnan(raw_delta_2d[i, j]) or np.isnan(raw_delta_2d[j, k]) or np.isnan(raw_delta_2d[i, k]):
-            continue
+    if triplet_list:
+        triplet_arr = np.array(triplet_list, dtype=int)
+        ti, tj, tk = triplet_arr[:, 0], triplet_arr[:, 1], triplet_arr[:, 2]
+        dF_ijk = np.array(triplet_fits_list) - wild_fit
 
-        dF_ijk = f_ijk - wild_fit
-        dF_i = raw_delta_2d[i, i]
-        dF_j = raw_delta_2d[j, j]
-        dF_k = raw_delta_2d[k, k]
+        dF_i = raw_delta_2d[ti, ti]
+        dF_j = raw_delta_2d[tj, tj]
+        dF_k = raw_delta_2d[tk, tk]
 
-        dF_ij = raw_delta_2d[i, j]
-        dF_jk = raw_delta_2d[j, k]
-        dF_ik = raw_delta_2d[i, k]
+        eps_ij = eps_2d[ti, tj]
+        eps_jk = eps_2d[tj, tk]
+        eps_ik = eps_2d[ti, tk]
 
-        eps_ij = eps_2d[i, j]
-        eps_jk = eps_2d[j, k]
-        eps_ik = eps_2d[i, k]
+        # Vectorized Baseline 1: Individual Genes (1st-order null model)
+        eps1_all = dF_ijk - (dF_i + dF_j + dF_k)
 
-        # Baseline 1: Individual Genes (1st-order null model)
-        eps1 = dF_ijk - (dF_i + dF_j + dF_k)
+        # Vectorized Baseline 2: Pairwise Epistasis (2nd-order null model)
+        eps2_all = eps1_all - (eps_ij + eps_jk + eps_ik)
 
-        # Baseline 2: Pairwise Epistasis (2nd-order null model)
-        eps2 = eps1 - (eps_ij + eps_jk + eps_ik)
+        valid_mask = (
+            ~np.isnan(dF_ijk) &
+            ~np.isnan(eps_ij) &
+            ~np.isnan(eps_jk) &
+            ~np.isnan(eps_ik)
+        )
 
-        triplet_records.append({
-            'i': i, 'j': j, 'k': k,
-            'genes': f"{geno[i]}{geno[j]}{geno[k]}",
-            'f_triple': f_ijk,
-            'dF_ijk': dF_ijk,
-            'eps1': eps1,
-            'eps2': eps2
-        })
+        # Vectorized assignment of all 6 permutations into the 3D tensor
+        perms = [
+            (ti[valid_mask], tj[valid_mask], tk[valid_mask]),
+            (ti[valid_mask], tk[valid_mask], tj[valid_mask]),
+            (tj[valid_mask], ti[valid_mask], tk[valid_mask]),
+            (tj[valid_mask], tk[valid_mask], ti[valid_mask]),
+            (tk[valid_mask], ti[valid_mask], tj[valid_mask]),
+            (tk[valid_mask], tj[valid_mask], ti[valid_mask]),
+        ]
+        for p1, p2, p3 in perms:
+            tensor_base1[p1, p2, p3] = eps1_all[valid_mask]
+            tensor_base2[p1, p2, p3] = eps2_all[valid_mask]
+            raw_delta_3d[p1, p2, p3] = dF_ijk[valid_mask]
 
-        # Assign all permutations in 3D tensors
-        pi, pj, pk = zip(*itertools.permutations([i, j, k]))
-        tensor_base1[pi, pj, pk] = eps1
-        tensor_base2[pi, pj, pk] = eps2
-        raw_delta_3d[pi, pj, pk] = dF_ijk
+        # Build triplet records for scatter plotting
+        valid_indices = np.where(valid_mask)[0]
+        triplet_records = [
+            {
+                'i': int(ti[idx]),
+                'j': int(tj[idx]),
+                'k': int(tk[idx]),
+                'genes': f"{geno[ti[idx]]}{geno[tj[idx]]}{geno[tk[idx]]}",
+                'f_triple': float(triplet_fits_list[idx]),
+                'dF_ijk': float(dF_ijk[idx]),
+                'eps1': float(eps1_all[idx]),
+                'eps2': float(eps2_all[idx]),
+            }
+            for idx in valid_indices
+        ]
 
-    # Quantitative sums
-    eps1_triplet_vals = [r['eps1'] for r in triplet_records]
-    eps2_triplet_vals = [r['eps2'] for r in triplet_records]
-
-    sum_raw_triplets_b1 = float(np.sum(eps1_triplet_vals)) if eps1_triplet_vals else 0.0
-    sum_abs_triplets_b1 = float(np.sum(np.abs(eps1_triplet_vals))) if eps1_triplet_vals else 0.0
-
-    sum_raw_triplets_b2 = float(np.sum(eps2_triplet_vals)) if eps2_triplet_vals else 0.0
-    sum_abs_triplets_b2 = float(np.sum(np.abs(eps2_triplet_vals))) if eps2_triplet_vals else 0.0
+        eps1_valid = eps1_all[valid_mask]
+        eps2_valid = eps2_all[valid_mask]
+        sum_raw_triplets_b1 = float(np.sum(eps1_valid)) if len(eps1_valid) else 0.0
+        sum_abs_triplets_b1 = float(np.sum(np.abs(eps1_valid))) if len(eps1_valid) else 0.0
+        sum_raw_triplets_b2 = float(np.sum(eps2_valid)) if len(eps2_valid) else 0.0
+        sum_abs_triplets_b2 = float(np.sum(np.abs(eps2_valid))) if len(eps2_valid) else 0.0
+    else:
+        sum_raw_triplets_b1 = sum_abs_triplets_b1 = 0.0
+        sum_raw_triplets_b2 = sum_abs_triplets_b2 = 0.0
 
     # Full tensor sums (including 1D, 2D diagonals and 6x permutations)
     sum_raw_tensor_b1 = float(np.nansum(tensor_base1))
@@ -215,8 +225,6 @@ def compute_3d_epistasis_for_genotype(
         }
     }
 
-
-RWG_CMAP = LinearSegmentedColormap.from_list('red_white_green', ["#d73027", "#f7f7f7", "#1a9850"], N=256)
 
 BASELINE_DEFS = {
     1: {
@@ -351,16 +359,6 @@ def visualize_3d_heatmaps(
     Renders 3D scatter heatmaps for a single epistasis baseline across tested creatures.
     Can be used standalone to create and save a 1 x k figure, or embedded into an existing
     multi-row figure by passing `fig` and `axes`.
-
-    Parameters:
-      results_list: List of creature epistasis calculation dictionaries.
-      baseline: Baseline selector: 1 (Individual Genes) or 2 (Pairwise Epistasis). Default: 1.
-      fig: Existing matplotlib Figure instance (optional).
-      axes: Existing list of 3D Axes for the creatures (optional).
-      save_path: Path to save figure (optional, only saves if fig was created here).
-      elev: Camera elevation angle in degrees.
-      azim: Camera azimuth angle in degrees.
-      ball_size: Reference ball marker size.
     """
     k = len(results_list)
     if k == 0:
@@ -375,9 +373,15 @@ def visualize_3d_heatmaps(
         axes = [fig.add_subplot(1, k, col_idx + 1, projection='3d') for col_idx in range(k)]
 
     for col_idx, (ax, res) in enumerate(zip(axes, results_list)):
-        plot_creature_3d_heatmap(ax=ax,
-            res=res,baseline=b_num, creature_idx=col_idx + 1,
-            elev=elev,azim=azim,ball_size=ball_size)
+        plot_creature_3d_heatmap(
+            ax=ax,
+            res=res,
+            baseline=b_num,
+            creature_idx=col_idx + 1,
+            elev=elev,
+            azim=azim,
+            ball_size=ball_size
+        )
 
     if created_fig:
         fig.suptitle(cfg['title'], fontsize=12, fontweight='bold', y=0.98)
@@ -417,29 +421,30 @@ def visualize_combined_3d_heatmaps(
         return
 
     # Check that at least one of the first two bits is set
-    b_enabled = bool(mode & 0b01), bool(mode & 0b10)
-    n_rows = sum(b_enabled)
+    b_enabled = (bool(mode & 0b01), bool(mode & 0b10))
     if not any(b_enabled):
-        raise ValueError(f"Invalid mode={mode} (0b{mode:08b}): at least bit 0 (Baseline 1) or bit 1 (Baseline 2) must be set.")
+        raise ValueError(
+            f"Invalid mode={mode} (0b{mode:08b}): at least bit 0 (Baseline 1) or bit 1 (Baseline 2) must be set."
+        )
 
-    active_baselines = []
-    for i,b in enumerate(b_enabled):
-        if b:
-            active_baselines.append(i+1)
-    
-
+    active_baselines = [i + 1 for i, b in enumerate(b_enabled) if b]
+    n_rows = len(active_baselines)
     fig = plt.figure(figsize=(5.6 * k, 5.2 * n_rows))
 
-    # rendering the row
     for row_idx, b_num in enumerate(active_baselines):
         row_axes = [
             fig.add_subplot(n_rows, k, row_idx * k + col_idx + 1, projection='3d')
             for col_idx in range(k)
         ]
+        # Modularity: Reuse visualize_3d_heatmaps for rendering the row
         visualize_3d_heatmaps(
-            results_list=results_list,baseline=b_num,
-            fig=fig,axes=row_axes,
-            elev=elev,azim=azim,ball_size=ball_size
+            results_list=results_list,
+            baseline=b_num,
+            fig=fig,
+            axes=row_axes,
+            elev=elev,
+            azim=azim,
+            ball_size=ball_size
         )
 
     # Suptitles and Layout
@@ -450,7 +455,13 @@ def visualize_combined_3d_heatmaps(
         fig.text(0.5, 0.99, BASELINE_DEFS[1]['title'], ha='center', fontsize=12, fontweight='bold')
         fig.text(0.5, 0.495, BASELINE_DEFS[2]['title'], ha='center', fontsize=12, fontweight='bold')
 
-    plt.subplots_adjust(left=0.04, right=0.96,top=0.93 if n_rows == 1 else 0.95,bottom=0.06,wspace=0.20,hspace=0.30)
+    plt.subplots_adjust(
+        left=0.04, right=0.96,
+        top=0.93 if n_rows == 1 else 0.95,
+        bottom=0.06,
+        wspace=0.20,
+        hspace=0.30
+    )
 
     if save_path:
         os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
@@ -489,38 +500,28 @@ def main():
     parser = argparse.ArgumentParser(description="Estimate and visualize 3D triplet epistasis in Framsticks f9 genotypes.")
     parser.add_argument("--frams-path", default=r"Framsticks55", help="Path to Framsticks installation directory.")
     parser.add_argument("--sim", default="eval-allcriteria.sim;deterministic.sim;sample-period-2.sim;only-body.sim",
-                                    help="Simulation settings files separated by semicolons.")
+                        help="Simulation settings files separated by semicolons.")
     parser.add_argument("--genformat", default="9", help="Genetic format to use (default: 9).")
     parser.add_argument('--opt', default='vertpos', help="Fitness optimization criterion (default: 'vertpos').")
     parser.add_argument("--genotypes", nargs="*", default=None, help="List of genotype strings to evaluate.")
     parser.add_argument("--genotypes-folder", default=r"assignments\Assignment 7 - Epistasis & Gene linkage\selected",
                         help="Folder containing .gen files to evaluate.")
-    parser.add_argument("--mode", type=int, default=3, help="1-byte bitmask for epistasis baselines to visualize: "
-                                        "bit 0 (1) -> Baseline 1; bit 1 (2) -> Baseline 2; 3 -> both. Default: 3.")
-    parser.add_argument("--out", default=None, help="Output image path for 3D epistasis plot. If omitted, saves based on --mode to <outdir>.")
+    parser.add_argument("--mode", type=int, default=3,
+                        help="1-byte bitmask for epistasis baselines to visualize: "
+                             "bit 0 (1) -> Baseline 1; bit 1 (2) -> Baseline 2; 3 -> both. Default: 3.")
+    parser.add_argument("--out", default=None,
+                        help="Output image path for 3D epistasis plot. If omitted, saves based on --mode to <outdir>.")
     parser.add_argument("--outdir", default=r"assignments\Assignment 7 - Epistasis & Gene linkage\results\epistasis",
                         help="Output directory for 3D epistasis plots and summary CSV.")
     args = parser.parse_args()
 
-    # Collect genotypes using reused load_genotypes_from_folder
-    prefix = "/*" + args.genformat + "*/"
-    collected = []
-    seen = set()
-
-    if args.genotypes_folder:
-        folder_items = load_genotypes_from_folder(args.genotypes_folder, genformat=args.genformat)
-        for raw_g, label in folder_items:
-            clean_g = raw_g.replace(prefix, "").strip().upper()
-            if clean_g not in seen:
-                seen.add(clean_g)
-                collected.append({'raw': raw_g, 'clean': clean_g, 'title': label})
-
-    if args.genotypes:
-        for idx, g in enumerate(args.genotypes, 1):
-            clean_g = g.replace(prefix, "").strip().upper()
-            if clean_g not in seen:
-                seen.add(clean_g)
-                collected.append({'raw': g, 'clean': clean_g, 'title': f"Genotype {idx}"})
+    # Collect genotypes using shared collect_genotypes helper
+    prefix = f"/*{args.genformat}*/"
+    collected = collect_genotypes(
+        folder=args.genotypes_folder,
+        genotypes=args.genotypes,
+        genformat=args.genformat
+    )
 
     if not collected:
         raise ValueError("No genotypes provided. Use --genotypes or --genotypes-folder.")
