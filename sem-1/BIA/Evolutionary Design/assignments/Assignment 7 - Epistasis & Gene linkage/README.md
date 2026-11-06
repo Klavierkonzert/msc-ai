@@ -1,7 +1,7 @@
 # Assignment 7: Epistasis & Gene Linkage
 ## Empirical Estimation and 2D Matrix Visualization of Epistasis in Evolutionary Robotics
 
-**Epistasis** - is a phenomenon of interdependence of genes, where the effect of one gene on the phenotype depends on the presence of other genes (non-linear interactions between genes).
+**Epistasis** - is a phenomenon of interdependence of genes, where the effect of one gene on the phenotype depends on the presence of other genes (non-linear interactions between genes). _In the fitness fitness space_, epistasis measures whether a fitness function is _additively separable_. In the case of functions that are bounded from at least one side, the mapping between the genotype and phenotype space is naturally non-linear, and it is not possible to seperate this mapping into a sum of independent gene effects, as will be explored below.
 
 The goal of this work is to investigate this phenomenon in evolutionary robotics, optimizing for _center-of-mass height_ (`vertpos`) in creatures evolved under directional encoding ($f_9$) with the following 6-character directional stick encoding semantics (each indicates a direction towards which the respective stick grows from the parent (last added) stick):
 - `F` - forward
@@ -19,7 +19,7 @@ $$\displaystyle s_2\mathrel{:=}\arg\max_{s \in S^{G}\setminus\{s_1\}} \mathbb{d}
 
 $$\displaystyle s_3\mathrel{:=}\arg\max_{s \in S^{G}\setminus\{s_1, s_2\}} \min{\big(d(s, s_1), d(s, s_2)}\big)$$
 
-where $d(g_1, g_2)$ denotes weighted Normalized Levenshtein Distance and Directional Composition Divergence (see the [script](select_dissimilar.py) for the exact implementation). 
+where $d(g_1, g_2)$ denotes weighted Normalized Levenshtein Distance and Directional Composition Divergence (see the [script](select_dissimilar.py) for the exact implementation).
 
 Secondly, [pairwise epistasis](#pairwise-epistasis) was [estimated](./estimate_epistasis.py) for the selected creatures based on the formula provided below. In the end, [epistasis between triplets of genes](#triple-epistasis) was estimated.
 
@@ -88,9 +88,9 @@ For two genes $i\ne j$, pairwise epistasis $\varepsilon_{i,j}$ measures the inte
 
 $$\varepsilon_{i,j} = \underbrace{\big[F(g \setminus \{i, j\}) - F(g)\big] }_{\Delta F_{ij}}- \big(\Delta F_i + \Delta F_j\big) \equiv F(g \setminus \{i, j\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) + F(g)$$
 
+- $\varepsilon_{i,j} < 0 \implies$ negative epistasis (antagonistic breakdown / synthetic collapse - Red). The damage of loosing two genes is far worse than losing them independently
 - $\varepsilon_{i,j} = 0 \implies$ additive / independent genes (White).
-- $\varepsilon_{i,j} > 0 \implies$ positive epistasis (synergistic cooperation or functional redundancy / buffering - Green).
-- $\varepsilon_{i,j} < 0 \implies$ negative epistasis (antagonistic breakdown / synthetic collapse - Red).
+- $\varepsilon_{i,j} > 0 \implies$ positive epistasis (synergistic cooperation or functional redundancy / buffering - Green). If genes $i$ and $j$ perform similar task, losing both of them is less harmful than sum of individual knockouts.
 
 In the calculated matrices, the diagonal ($i = j$) stores the single-gene knockout effect $\Delta F_i (\equiv \Delta F_{ii})$.
 
@@ -106,7 +106,7 @@ Using[ `select_dissimilar.py`](./select_dissimilar.py) (based on hybrid Levensht
   <img src="./selected/3-selected-creatures.png" width="50%" alt="Selected Creatures"/>
   <br>
 
-_**Figure 3:** Selected creatures (order preserved - left to right). All the creatures feature two main body parts: <u> a plinthed base</u> and a tall, erect <u>spine (chord)</u>. **Center of mass** of each creature (black fat dots) is located above the base. Shaded in dark regions denote <u>convex hulls formed by the support points (base sticks)</u>. **The criterion of static stability**: a projection of the center of mass onto the ground must lie strictly inside this convex hull (projections are indicated by black arrows). 6 arrows on the right indicate directions of stick growth._ 
+_**Figure 3:** Selected creatures (order preserved - left to right). All the creatures feature two main body parts: <u> a plinthed base</u> and a tall, erect <u>spine (chord)</u>. **Center of mass** of each creature (black fat dots) is located above the base. Shaded in dark regions denote <u>convex hulls formed by the support points (base sticks)</u>. **The criterion of static stability**: a projection of the center of mass onto the ground must lie strictly inside this convex hull (projections are indicated by black arrows). 6 arrows on the right indicate directions of stick growth._
 </p>
 
 <a id="fig-epistasis-matrices"></a>
@@ -114,15 +114,15 @@ _**Figure 3:** Selected creatures (order preserved - left to right). All the cre
   <img src="./results/epistasis/epistasis_matrices.png" width="95%" alt="Pairwise Epistasis Matrices"/>
   <br>
 
-_**Figure 4:** Pairwise epistasis matrices for_ $k=3$ _dissimilar tall structures arranged in a grid. Axis labels display gene letter and positional index. Off-diagonal elements show epistatic interaction_ $\varepsilon_{i,j}$, _while diagonal elements show single-gene knockout effects_ $\Delta F_i$ ._
+_**Figure 4:** Pairwise epistasis matrices for_ $k=3$ _dissimilar tall structures arranged in a grid. Axis labels display gene letter and positional index. Off-diagonal elements show epistatic interaction_ $\varepsilon_{i,j}$, _while diagonal elements show single-gene knockout effects_ $\Delta F_i$.
 </p>
 
 ### Interpretation of individual effects and interactions
 <a id="table-epistasis-genes"></a>
 
-|Phenotypic specialization| [Creature 1](./selected/selected_1_HoF-f9-14.gen)<br><code>/\*9\*/</code><code style="color: blue">DDDD</code><code style="color: purple">R</code><code style="color:red">LL</code><code style="color:purple">R</code><code style="color:green">BB</code><code style="color:lime">F</code><code style="color:#00bcd4">UUUU</code> | [Creature 2](./selected/selected_2_HoF-f9-2.gen)<br> <code>/\*9\*/</code><code style="color:lime">F</code><code style="color: red">LL</code><code style="color:purple">R</code><code style="color:lime">F</code><code style="color:green">B</code><code style="color:red">L</code><code style="color:purple">RR</code><code style="color:#00bcd4">UUUU</code><code style="color:red">L</code> | [Creature 3](./selected/selected_3_HoF-f9-6.gen)<br><code>/\*9\*/</code><code style="color: blue">DDD</code><code style="color:#00bcd4">U</code><code style="color:blue">D</code><code style="color:lime">F</code><code style="color:purple">R</code><code style="color:purple">R</code><code style="color:green">B</code><code style="color:#00bcd4">UUU</code><code style="color:blue">D</code><code style="color:#00bcd4">U</code><code style="color:lime">F</code> | 
-|-| ---------- | ---------- | ---------- | 
-|**Spine growth genes**| **0-3, 11-14**. The first 4 `D` and the last 4 `U` genes correspond to the <em><b><span style="color:blue">blue</span></b></em> and <em><b><span style="color:#00bcd4">cyan</span></b></em> _twin-chords_, directly responsible for the **height** of the creature. Having **two (redundant) copies** slightly increases the center of the mass height (`vertpos`). Deleting these letters individually only slightly decreases `vertpos` (rows and columns 0 to 3 and 11 to 14 are mainly zero value). |**9-13**. Since these genes program growth of the spine (`UUUUL`) only (increasing `vertpos`), they do not interact with each other, but their positive (in terms of `vertpos`) effect depends on _base_ genes (_0-3, 5-8_). In contrast to genes _9-12_, gene `L` serves stabilization purpose.|**0-3, 9-14**. Similar to the first (best) creature, there are 2 spines - <em><b><span style="color:blue">blue</span></b></em> and <em><b><span style="color:#00bcd4">cyan</span></b></em>, encoded by the genes at the ends of genome. In contrast to the former creature, 2 genes - `U`<sup>3</sup> and `D`<sup>12</sup> are the **key gene responsble for stability** of the creature, since both decrease long chords lengths (and hence <u>two pairs of genes <`U`<sup>3</sup>, `D`> and <`D`<sup>12</sup>, `U`> cancel out</u> - the same effect described in the second creature) - without them the creature overturns. **4**. The role of the gene `D`<sup>4</sup> is complementary to the gene `U`<sup>3</sup>, making it a **key gene responsible for morphological stability** - without this the <em><b><span style="color:blue">blue</span></b></em> chord would grow below _the base_ level, overturning the creature. 
+|Phenotypic specialization| [Creature 1](./selected/selected_1_HoF-f9-14.gen)<br><code>/\*9\*/</code><code style="color: blue">DDDD</code><code style="color: purple">R</code><code style="color:red">LL</code><code style="color:purple">R</code><code style="color:green">BB</code><code style="color:lime">F</code><code style="color:#00bcd4">UUUU</code> | [Creature 2](./selected/selected_2_HoF-f9-2.gen)<br> <code>/\*9\*/</code><code style="color:lime">F</code><code style="color: red">LL</code><code style="color:purple">R</code><code style="color:lime">F</code><code style="color:green">B</code><code style="color:red">L</code><code style="color:purple">RR</code><code style="color:#00bcd4">UUUU</code><code style="color:red">L</code> | [Creature 3](./selected/selected_3_HoF-f9-6.gen)<br><code>/\*9\*/</code><code style="color: blue">DDD</code><code style="color:#00bcd4">U</code><code style="color:blue">D</code><code style="color:lime">F</code><code style="color:purple">R</code><code style="color:purple">R</code><code style="color:green">B</code><code style="color:#00bcd4">UUU</code><code style="color:blue">D</code><code style="color:#00bcd4">U</code><code style="color:lime">F</code> |
+|-| ---------- | ---------- | ---------- |
+|**Spine growth genes**| **0-3, 11-14**. The first 4 `D` and the last 4 `U` genes correspond to the <em><b><span style="color:blue">blue</span></b></em> and <em><b><span style="color:#00bcd4">cyan</span></b></em> _twin-chords_, directly responsible for the **height** of the creature. Having **two (redundant) copies** slightly increases the center of the mass height (`vertpos`). Deleting these letters individually only slightly decreases `vertpos` (rows and columns 0 to 3 and 11 to 14 are mainly zero value). |**9-13**. Since these genes program growth of the spine (`UUUUL`) only (increasing `vertpos`), they do not interact with each other, but their positive (in terms of `vertpos`) effect depends on _base_ genes (_0-3, 5-8_). In contrast to genes _9-12_, gene `L` serves stabilization purpose.|**0-3, 9-14**. Similar to the first (best) creature, there are 2 spines - <em><b><span style="color:blue">blue</span></b></em> and <em><b><span style="color:#00bcd4">cyan</span></b></em>, encoded by the genes at the ends of genome. In contrast to the former creature, 2 genes - `U`<sup>3</sup> and `D`<sup>12</sup> are the **key gene responsble for stability** of the creature, since both decrease long chords lengths (and hence <u>two pairs of genes <`U`<sup>3</sup>, `D`> and <`D`<sup>12</sup>, `U`> cancel out</u> - the same effect described in the second creature) - without them the creature overturns. **4**. The role of the gene `D`<sup>4</sup> is complementary to the gene `U`<sup>3</sup>, making it a **key gene responsible for morphological stability** - without this the <em><b><span style="color:blue">blue</span></b></em> chord would grow below _the base_ level, overturning the creature.
 |**Plinth genes**|**4**. Gene `R` tells the direction to place the <em><b><span style="color:blue">blue</span></b></em> spine (`DDDD`) in the center of creature's plinth, critical to the stability of the creature - removing this gene places the center of mass allows small physical perturbations to overturn the creature, coloring the 4th row and column into <em style="color:MediumSeaGreen">light green</em> (definitely positive effect). However, removal of just one `D` places the center of mass safely above the base. **5-6**. These genes are responsible for symmetry of a base, and hence are **critical for stability** of the whole creature (interaction with genes _4-10_). Genes encoding _spines_ have little mutual effect with these two genes individually, the relationship will appear on [3D map of epistasis](#3d-epistasis-heatmaps). **7**. Gene `R` here is directly responsible for the symmetry of the base, placing the center of mass directly on the median segment of the base hull, yielding the highest "collaboration rate" (central <em style="color:MediumSeaGreen">light green cross</em> on the matrix). **8-9**. Each of two genes `B` allows <em><b><span style="color:#00bcd4">cyan</span></b></em> chord to be placed - without one of these two genes the second spine disappears and `vertpos` drops noticeably. **10** Gene `F` places the <em><b><span style="color:#00bcd4">cyan</span></b></em> spine towards the center of the base, which is critical for stability (without this gene a creature overturns).| **0-2**. Gene `F` allows for one of the supporting sticks to emerge (**key for stabilization**), genes `LL` move this 'leg' towards the only place, where the position of the creature is stable. **3-4**. These genes alter the base form but in the way that does not affect the stability of the creature, thus these genes show **little epistasis** (~zero rows/colums). **5-8**. These genes influence the shape of _the base_ (`BL`) and position of _the spine_ on it (`RR`), and thus have positive epistasis with spine-genes. Gene <code>L<sup>6</sup></code> specifically has strong interaction with `RR` genes (<em style="color:green">dense green</em>), shortening the base extended by 2 _R_-direction genes, thus **making the base hull compact**. <u>Hence a pair `LR` cancels out (redundant subsequence)</u>|**5-8**. Genes `FRRB` form a U-shaped _base_, placing the center of mass strictly inside _the base hull_. Each gene here has an individual interaction with every other base gene.
 
 #### Specialization of genes extracted from pairwise epistasis matrix
@@ -130,7 +130,7 @@ _**Figure 4:** Pairwise epistasis matrices for_ $k=3$ _dissimilar tall structure
 
 #### Individual effects (red diagonals)
 Individual (diagonal) effects $\Delta F_i$ take negative values since extraction of any gene from the genome leads to a decrease in the fitness depending on the role of the gene:
-- gene encodes _spinal phene_ $\implies$ heigh slightly decreases
+- gene encodes _spinal phene_ $\implies$ height slightly decreases
 - gene encodes a part of _plinth_ $\implies$ creature immediately falls down yielding near-zero fitness.
 
 
@@ -139,7 +139,7 @@ Individual (diagonal) effects $\Delta F_i$ take negative values since extraction
 ### Estimation Formulas
 
 #### Baseline 1
-In the **first-order approach**, the null model $\mathcal{H}_0^1$ assumes independence and additive decomposability of individual fitness effects: 
+In the **first-order approach**, the null model $\mathcal{H}_0^1$ assumes independence and additive decomposability of individual fitness effects:
 
 $$\mathcal{H}_0^1:\quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k$$
 
@@ -148,18 +148,22 @@ The triplet epistasis measures the total interaction deviation from additivity:
 $$\varepsilon_{ijk}^{(1)} \mathrel{:=} \underbrace{\big[F(g \setminus \{i, j, k\}) - F(g)\big]}_{\Delta F_{ijk}} - (\Delta F_i + \Delta F_j + \Delta F_k) \equiv F(g \setminus \{i, j, k\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) - F(g \setminus \{k\}) + 2F(g)$$
 
 #### Baseline 2
-In the **second-order approach**, the null model $\mathcal{H}_0^2$ accounts for both single-gene knockouts $\Delta F_i$ and all pairwise epistatic interactions between the three genes $\varepsilon_{ij}$: 
+In the **second-order approach**, the null model $\mathcal{H}_0^2$ accounts for both single-gene knockouts $\Delta F_i$ and all pairwise epistatic interactions between the three genes $\varepsilon_{ij}$:
 
 $$\mathcal{H}_0^2: \quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k + \underbrace{\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}}_{\text{2nd-order effects}} \equiv \Delta F_{ij} + \Delta F_{ik} + \Delta F_{jk} - (\Delta F_i + \Delta F_j + \Delta F_k)$$
 
+This first expression is analogous to[ the exclusion-inclusion principle](https://en.wikipedia.org/wiki/Inclusion%E2%80%93exclusion_principle), which generalizes the definition of $n$-th order epistasiss $\varepsilon^{(n-1)}$ .
+
 Hence epistasis is calculated as:
 
-$$\varepsilon^{(2)}_{i,j,k} \mathrel{:=} \Delta F_{ijk}- \big(\Delta F_i + \Delta F_j + \Delta F_k + \varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}\big)$$
-
-That is
+$$\varepsilon^{(2)}_{i,j,k} \mathrel{:=} \underbrace{\Delta F_{ijk}- \big(\Delta F_i + \Delta F_j + \Delta F_k\big)}_{\downarrow} - \big(\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}\big)$$
 
 $$\varepsilon^{(2)}_{i,j,k} \equiv \varepsilon^{(1)}_{i,j,k} - (\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk})$$
 
+- $\varepsilon_{i,j,k} = 0 \implies$ pairwise decomposability: the interaction of genes is predictable from pairwise interactions, no higher-order effects.
+- $|\varepsilon_{i,j,k}| > 0 \implies$ gene $k$ modulates interaction between $i$ and $j$.
+
+_**Note:** In case of [Baseline 1](#baseline-1),_ $\varepsilon^{(1)}_{i,j,k} = 0$ _would mean that either the interaction is additive_ $(\varepsilon^{(1)}_{i,j,k}=\Delta F_i+\Delta F_j + \Delta F_k)$ _or pairwise-decomposable_ ($\varepsilon^{(2)}_{i,j,k}=\Delta F_{ijk}$). _Hence the definition of $\varepsilon^{(1)}$ yields less information than of_ $\varepsilon^{(2)}$.
 
 In the calculated 3D tensors $(L \times L \times L)$:
 - The main diagonal ($i = j = k$) stores the single-gene knockout effect $\Delta F_i (\equiv \Delta F_{iii})$.
@@ -172,35 +176,48 @@ In the calculated 3D tensors $(L \times L \times L)$:
   <img src="./results/epistasis/epistasis_3d_combined.png" width="98%" alt="3D Epistasis Heatmaps across Baseline 1 and Baseline 2"/>
   <br>
 
-_**Figure 5:** 3D epistasis heatmaps (balls arranged in a 3D grid) for_ $k=3$ _dissimilar creatures. **Top row:** Baseline 1 (relative to individual genes_ $\varepsilon_{ijk}^{(1)}$). _**Bottom row:** Baseline 2 (relative to pairwise interactions_ $\varepsilon_{ijk}^{(2)}$). _**Colormap:** Green - positive synergy / buffering; Red - negative / synthetic breakdown._
+_**Figure 5:** 3D epistasis heatmaps (balls arranged in a 3D grid) for_ $k=3$ _dissimilar creatures. **Top row:** Baseline 1 (relative to individual genes_ $\varepsilon_{ijk}^{(1)}$). _**Bottom row:** Baseline 2 (relative to pairwise interactions_ $\varepsilon_{ijk}^{(2)}$). _**Colormap:** Green - positive synergy / buffering; Red - negative / synthetic breakdown. The scale of the colormap differs from the one used in 2D-epistatic visualisations._
 </p>
 
 ### Epistasis Matrix Sums Comparison
 
+To better understand the relative contribution of pairwise and triplet epistasis, the following two metrics can be calculated:
+- **Directedness** - ratio of the sum of all triplet epistasis values to the sum of the absolute values of all triplet epistasis values. Values close to $\pm 1$ indicate that the contribution of triplet epistasis is predominantly synergistic/buffering or antagonistic/disruptive, respectively:
+
+$$\text{dir }\varepsilon^{(\cdot)} \mathrel{:=} \frac{\sum \varepsilon^{(\cdot)}}{\sum \lvert\varepsilon^{(\cdot)}\rvert} \in [-1; 1]$$
+
+- **Mean absolute triplet epistasis** (this value should be considered with respect to $\max \Delta F$ which is ommited for simplification):
+
+$$\lvert\bar{\varepsilon}^{(\cdot)}\rvert \mathrel{:=} \frac{1}{\binom{L}{3}} \sum \lvert\varepsilon^{(\cdot)}\rvert$$
+
 <a id="table-3d-epistasis-sums"></a>
 
-| Creature | Genotype | $L$ | Triplet Count $\binom{L}{3}$ | Baseline 1<br>$\sum \varepsilon^{(1)}$ | Baseline 1<br> $\sum \lvert\varepsilon^{(1)}\rvert$ | Baseline 2<br> $\sum \varepsilon^{(2)}$ | Baseline 2 <br> $\sum \lvert\varepsilon^{(2)}\rvert$ |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1** | [`/*9*/DDDDRLLRBBFUUUU`](./selected/selected_1_HoF-f9-14.gen) | 15 | 455 | **+375.02** | 377.74 | **-171.78** | 224.35 |
-| **2** | [`/*9*/FLLRFBLRRUUUUL`](./selected/selected_2_HoF-f9-2.gen) | 14 | 364 | **+344.29** | 344.55 | **-149.80** | 183.42 |
-| **3** | [`/*9*/DDDUDFRRBUUUDUF`](./selected/selected_3_HoF-f9-6.gen) | 15 | 455 | **+274.31** | 276.66 | **-62.25** | 142.43 |
+| Creature | Genotype | $L$ | Triplet Count<br>$\binom{L}{3}$ |<br>$\sum \varepsilon^{(1)}$ | Baseline<br>$\sum \lvert\varepsilon^{(1)}\rvert$ |1<br>$\text{dir}\varepsilon^{(1)}$ |<br>$\lvert\bar{\varepsilon}^{(1)}\rvert$ |<br>$\sum \varepsilon^{(2)}$ | Baseline<br>$\sum \lvert\varepsilon^{(2)}\rvert$ |2<br>$\text{dir}\varepsilon^{(2)}$ |<br>$\lvert\bar{\varepsilon}^{(2)}\rvert$ |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 1 | [`/*9*/DDDDRLLRBBFUUUU`](./selected/selected_1_HoF-f9-14.gen) | 15 | 455 | **+375.02** | **377.74** | <span style="color: #006837;">+0.993</span> | <span style="color: #33815c;">0.830</span> | **-171.78** | 224.35 | <span style="color: #b94251;">-0.766</span> | <span style="color: #c7ccc9;">0.493</span> |
+| 2 | [`/*9*/FLLRFBLRRUUUUL`](./selected/selected_2_HoF-f9-2.gen) | 14 | 364 | +344.29 | 344.55 | <b><span style="color: #006837;">+0.999</span></b> | <b><span style="color: #006837;">0.947</span></b> | -149.80 | 183.42 | <b><span style="color: #b73949;">-0.817</span></b> | <span style="color: #c2c9c6;">0.504</span> |
+| 3 | [`/*9*/DDDUDFRRBUUUDUF`](./selected/selected_3_HoF-f9-6.gen) | 15 | 455 | +274.31 | 276.66 | <span style="color: #026938;">+0.992</span> | <span style="color: #94b2a4;">0.608</span> | -62.25 | **142.43** | <span style="color: #c38088;">-0.437</span> | <b><span style="color: #c69198;">0.313</span></b> |
 
 
 ### Interpretation of 3D Triplet Epistasis
 
-1. **Baseline 1 ($\sum \varepsilon^{(1)} \gg 0$, Strong Positive Buffering)**:
-   - When evaluated against independent single-gene effects, all creatures exhibit overwhelming positive epistasis ($\sum \varepsilon^{(1)} > 0$, nearly all green balls).
-   - This occurs because removing any single base gene (e.g. anchor `R`$^4$, symmetry genes `LL`$^{5-6}$, or stabilizer `F`$^{10}$ in Creature 1) causes the structure to topple over ($\Delta F \approx -1.0$). Summing three such single knockout penalties predicts an impossible fitness penalty of $-3.0$, whereas the simultaneous triple knockout cannot reduce fitness below ground level ($F=0$). Thus, the actual fitness is buffered against cumulative linear collapse ($\Delta F_{ijk} \gg \sum \Delta F$).
+1. **Baseline 1**:
+    - When evaluated against independent single-gene effects, all creatures exhibit overwhelming positive epistasis (nearly all green balls, $\text{dir} \varepsilon^{(1)} \approx + 1$).
+    - This occurs because removing any single _base_ gene (e.g. anchor <code>R<sup>4</sup></code>, symmetry genes <code>LL<sup>5-6</sup></code>, or stabilizer <code>F<sup>10</sup></code> in Creature 1) causes the structure to topple over ($\Delta F \approx -1.0$). _Summing three such single knockout penalties predicts an impossible fitness penalty_ of $-3.0$, whereas the simultaneous triple knockout cannot reduce fitness below ground level ($F=0$). Thus, the actual **fitness is buffered against cumulative linear collapse** ($\Delta F_{ijk} \gg \Delta F_i + \Delta F_j + \Delta F_k$). 
+    - This suggests that even in such simple ($f_9$) creatures the hypothesis about triple linearity $\mathcal{H}^1_0$ (see [Baseline 1](#baseline-1)) does not hold and **this epistatic model is not adequate and yields little information** (excluded pairwise effects, almost constant directedness $\text{dir }\varepsilon^{(1)}\approx 1$) [_in the current setup_](#parameters-setup).
 
 2. **Baseline 2 ($\sum \varepsilon^{(2)} < 0$, Irreducible Negative 3-Way Epistasis)**:
-   - Once all pairwise interactions are accounted for, the total epistasis flips to negative ($\sum \varepsilon^{(2)} < 0$, prominent red clusters).
-   - As predicted in [Task 1](#table-epistasis-genes), base-symmetry genes (e.g. `LL`$^{5-6}$ and `R`$^7$ in Creature 1, or `BL` and `RR`$^{5-8}$ in Creature 2) have strong pairwise collaborations with the spine anchors (`R`$^4$, `F`$^{10}$). When two of these genes are knocked out, the creature has already completely toppled over; knocking out a third gene (such as a spinal segment `UUUU`) produces diminishing marginal damage compared to what the pairwise sum predicts, manifesting as negative third-order interaction.
+   - Once all pairwise interactions are accounted for, the total epistasis flips to negative (prominent red clusters, $\text{dir }\varepsilon^{(2)} \ll 0$).
+   - As predicted in [Task 1](#table-epistasis-genes), base-symmetry genes (e.g. <code>LL/R<sup>5-7</sup></code> in Creature 1, or <code>BL/RR<sup>5-8</sup></code> in Creature 2, see the [Table](#table-epistasis-genes)) have strong pairwise collaborations with the spine anchors (<code>R<sup>4</sup></code>, <code>F<sup>10</sup></code>). When two of these genes are knocked out, the creature has already completely toppled over: knocking out a third gene (such as a spinal segment `UUUU`) produces diminishing marginal damage compared to what the pairwise sum predicts, manifesting as negative third-order interaction.
    - Creature 3 features the lowest magnitude of 3-way epistasis ($|\sum \varepsilon^{(2)}| = 62.25$ vs $171.78$ in Creature 1) because its alternating loops (`DDDUDFRRBUUUDUF`) distribute structural stabilization across several self-canceling sub-segments (`UD`, `DU`), making its higher-order genetic interactions more modular.
-
----
 
 ## How to Run
 ```powershell
+
+#### 0. Activate environment
+cd '.\Evolutionary Design\'  # if running from the BIA folder
+conda activate framsticks
+
 #### 1. Parallel Evolutionary Run (24 Replications on 24 Cores)
 python scripts\run_parallel.py `
     --script scripts\FramsticksEvolutionScheduled.py `

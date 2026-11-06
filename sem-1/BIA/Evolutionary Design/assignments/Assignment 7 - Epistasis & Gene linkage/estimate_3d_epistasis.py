@@ -35,6 +35,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import CenteredNorm
+from matplotlib.gridspec import GridSpec
 
 # Ensure access to sibling scripts and FramsticksLib
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -56,10 +57,8 @@ except ImportError:
 
 # Reuse functions directly from estimate_epistasis
 from estimate_epistasis import (
-    load_genotypes_from_folder,
     collect_genotypes,
     knockout_genes,
-    setstr,
     evaluate_batch_genotypes,
     compute_epistasis_matrix,
     RWG_CMAP,
@@ -111,27 +110,23 @@ def compute_3d_epistasis_for_genotype(
 
     # Step 4: Populate 3D Tensors (Vectorized)
     tensor_base1 = np.full((L, L, L), np.nan)
-    raw_delta_3d = np.full((L, L, L), np.nan)
 
     # 1D Diagonals: (i, i, i) -> single knockout effect dF_i
     v_idx = np.array(valid_genes, dtype=int)
     tensor_base1[v_idx, v_idx, v_idx] = raw_delta_2d[v_idx, v_idx]
-    raw_delta_3d[v_idx, v_idx, v_idx] = raw_delta_2d[v_idx, v_idx]
 
     # 2D Lateral Diagonals: (i, i, j), (i, j, i), (j, i, i) -> pairwise epistasis eps_ij
     pairs = np.array(list(itertools.permutations(valid_genes, 2)), dtype=int)
     if len(pairs) > 0:
         pi, pj = pairs[:, 0], pairs[:, 1]
         eps_pairs = eps_2d[pi, pj]
-        dF_pairs = raw_delta_2d[pi, pj]
         for p1, p2, p3 in [(pi, pi, pj), (pi, pj, pi), (pj, pi, pi)]:
             tensor_base1[p1, p2, p3] = eps_pairs
-            raw_delta_3d[p1, p2, p3] = dF_pairs
 
     tensor_base2 = tensor_base1.copy()
 
     # 3D Triplet entries: Vectorized calculation across all triplets
-    triplet_records = []
+    num_triplets = 0
     if triplet_list:
         triplet_arr = np.array(triplet_list, dtype=int)
         ti, tj, tk = triplet_arr[:, 0], triplet_arr[:, 1], triplet_arr[:, 2]
@@ -170,24 +165,8 @@ def compute_3d_epistasis_for_genotype(
         for p1, p2, p3 in perms:
             tensor_base1[p1, p2, p3] = eps1_all[valid_mask]
             tensor_base2[p1, p2, p3] = eps2_all[valid_mask]
-            raw_delta_3d[p1, p2, p3] = dF_ijk[valid_mask]
 
-        # Build triplet records for scatter plotting
-        valid_indices = np.where(valid_mask)[0]
-        triplet_records = [
-            {
-                'i': int(ti[idx]),
-                'j': int(tj[idx]),
-                'k': int(tk[idx]),
-                'genes': f"{geno[ti[idx]]}{geno[tj[idx]]}{geno[tk[idx]]}",
-                'f_triple': float(triplet_fits_list[idx]),
-                'dF_ijk': float(dF_ijk[idx]),
-                'eps1': float(eps1_all[idx]),
-                'eps2': float(eps2_all[idx]),
-            }
-            for idx in valid_indices
-        ]
-
+        num_triplets = int(np.count_nonzero(valid_mask))
         eps1_valid = eps1_all[valid_mask]
         eps2_valid = eps2_all[valid_mask]
         sum_raw_triplets_b1 = float(np.sum(eps1_valid)) if len(eps1_valid) else 0.0
@@ -216,14 +195,16 @@ def compute_3d_epistasis_for_genotype(
         'valid_genes': valid_genes,
         'tensor_base1': tensor_base1,
         'tensor_base2': tensor_base2,
-        'raw_delta_3d': raw_delta_3d,
-        'triplet_records': triplet_records,
         'stats': {
-            'num_triplets': len(triplet_records),
+            'num_triplets': num_triplets,
             'sum_raw_triplets_b1': sum_raw_triplets_b1,
             'sum_abs_triplets_b1': sum_abs_triplets_b1,
+            'dir_triplets_b1': (sum_raw_triplets_b1 / sum_abs_triplets_b1) if sum_abs_triplets_b1 != 0 else 0.0,
+            'mean_abs_triplets_b1': (sum_abs_triplets_b1 / num_triplets) if num_triplets else 0.0,
             'sum_raw_triplets_b2': sum_raw_triplets_b2,
             'sum_abs_triplets_b2': sum_abs_triplets_b2,
+            'dir_triplets_b2': (sum_raw_triplets_b2 / sum_abs_triplets_b2) if sum_abs_triplets_b2 != 0 else 0.0,
+            'mean_abs_triplets_b2': (sum_abs_triplets_b2 / num_triplets) if num_triplets else 0.0,
             'sum_raw_tensor_b1': sum_raw_tensor_b1,
             'sum_abs_tensor_b1': sum_abs_tensor_b1,
             'sum_raw_tensor_b2': sum_raw_tensor_b2,
@@ -233,18 +214,12 @@ def compute_3d_epistasis_for_genotype(
 
 
 BASELINE_DEFS = {
-    1: {
-        'tensor_key': 'tensor_base1',
-        'eps_key': 'eps1',
-        'stat_suffix': 'b1',
-        'title': 'Baseline 1: Individual Genes (1st-Order Null Model)'
-    },
-    2: {
-        'tensor_key': 'tensor_base2',
-        'eps_key': 'eps2',
-        'stat_suffix': 'b2',
-        'title': 'Baseline 2: Pairwise Epistasis (2nd-Order Null Model)'
-    }
+    i: {
+        'tensor_key': f'tensor_base{i}',
+        'eps_key': f'eps{i}',
+        'stat_suffix': f'b{i}',
+        'title': f'Baseline {i}: Individual Genes ('+ ('1st' if i==1 else '2nd')+ '-Order Null Model)'
+    } for i in (1,2)
 }
 
 
@@ -257,32 +232,105 @@ def _resolve_baseline_config(baseline: Any) -> Tuple[int, Dict[str, str]]:
     return b_num, BASELINE_DEFS[b_num]
 
 
+def extract_plotted_points(res: Dict[str, Any], baseline: int = 1,
+    include_lateral: bool = True, include_diagonal: bool = True, opposite_corner: bool = True,
+) -> Tuple[List[int], List[int], List[int], np.ndarray]:
+    """
+    Extracts (xs, ys, zs, vals) for a single creature and baseline.
+    Tetrahedron structure:
+      When opposite_corner=True (default):
+        Places the tetrahedron on the opposite corner of the ji-plane:
+        - Base triangle on k=0: corner at (L-1, L-1, 0), hypotenuse between (0, L-1, 0) and (L-1, 0, 0)
+        - Vertical wall on i=L-1: (L-1, L-1, 0) - (L-1, 0, 0) - (L-1, L-1, L-1)
+        - Vertical wall on j=L-1: (L-1, L-1, 0) - (0, L-1, 0) - (L-1, L-1, L-1)
+        - Apex at (L-1, L-1, L-1)
+      When opposite_corner=False:
+        - Base triangle on k=0: (0, 0, 0) - (L-1, 0, 0) - (0, L-1, 0)
+        - Vertical wall on i=0: (0, 0, 0) - (0, L-1, 0) - (0, 0, L-1)
+        - Vertical wall on j=0: (0, 0, 0) - (L-1, 0, 0) - (0, 0, L-1)
+        - Apex at (0, 0, L-1)
+
+    Domain:
+      0 <= k < L
+      0 <= j <= L - 1 - k
+      0 <= i <= L - 1 - k - j
+      (i.e. i >= 0, j >= 0, k >= 0, i + j + k <= L - 1)
+    Mapped sorted gene indices:
+      a = i
+      b = i + j
+      c = i + j + k
+    where 0 <= a <= b <= c < L:
+      - Strict triplets: a < b < c (i >= 0, j > 0, k > 0)
+      - Lateral pairs: (a == b < c, i.e. j == 0, k > 0) or (a < b == c, i.e. j > 0, k == 0)
+      - Diagonal single knockouts: a == b == c (j == 0, k == 0)
+    """
+    geno = res['geno']
+    L = len(geno)
+    b_num, cfg = _resolve_baseline_config(baseline)
+    tensor_key = cfg['tensor_key']
+    tensor = res.get(tensor_key)
+    if tensor is None:
+        return [], [], [], np.array([], dtype=float)
+
+    xs, ys, zs, vals = [], [], [], []
+    for k in range(L):
+        for j in range(L - k):
+            for i in range(L - k - j):
+                a = i
+                b = i + j
+                c = i + j + k
+                if not include_lateral and (a == b or b == c):
+                    continue
+                if not include_diagonal and (a == b == c):
+                    continue
+                val = tensor[a, b, c]
+                if not np.isnan(val):
+                    if opposite_corner:
+                        xs.append(L - 1 - i)
+                        ys.append(L - 1 - j)
+                    else:
+                        xs.append(i)
+                        ys.append(j)
+                    zs.append(k)
+                    vals.append(val)
+
+    return xs, ys, zs, np.array(vals, dtype=float)
+
+
 def plot_creature_3d_heatmap(ax: Axes3D,
     res: Dict[str, Any], baseline: int = 1, creature_idx: Optional[int] = None,
-    elev: float = 24, azim: float = 48, ball_size: float = 32.0, cmap: Optional[Any] = None,
-    norm: Optional[Any] = None, show_cbar: bool = True
+    elev: float = 24, azim: float = -8, ball_size: float = 32.0,
+    cmap: Optional[Any] = None, norm: Optional[Any] = None, show_cbar: bool = True,
+    include_lateral: bool = True, include_diagonal: bool = True, invert_i: bool = True,  opposite_corner: bool = True,
+    stretch_k: float = 2.0, stretch_xy: float = 1.5,
 ) -> Optional[Any]:
     """
     Renders a single 3D scatter heatmap subplot ("small balls arranged in a 3D grid")
     for one creature on the provided 3D Axes.
+
+    :param include_lateral: If True (default), includes lateral pairwise epistasis entries.
+    :param include_diagonal: If True (default), includes single knockout diagonal entries.
+    :param invert_i: If True (default), inverts the i-axis direction.
+    :param opposite_corner: If True (default), places the pyramid on the opposite corner of the ji-plane.
+    :param stretch_k: Stretch factor for the k (vertical) axis (default: 2.0).
+    :param stretch_xy: Stretch factor for the i and j (horizontal) axes (default: 1.5).
     """
     b_num, cfg = _resolve_baseline_config(baseline)
-    eps_key = cfg['eps_key']
     b_suffix = cfg['stat_suffix']
 
     geno = res['geno']
     L = len(geno)
-    triplets = res.get('triplet_records', [])
+    xs, ys, zs, vals = extract_plotted_points(
+        res, baseline=baseline,
+        include_lateral=include_lateral, include_diagonal=include_diagonal,
+        opposite_corner=opposite_corner,
+    )
 
-    if not triplets:
-        prefix_lbl = f"Creature {creature_idx}: " if creature_idx is not None else ""
-        ax.set_title(f"{prefix_lbl}{geno}\nNo data", fontsize=10)
+    if len(vals) == 0:
+        prefix_lbl = f"Creature {creature_idx}: " if creature_idx is not None else geno
+        ax.set_title(f"{prefix_lbl}\nNo data",#f"{prefix_lbl}{geno}\nNo data", 
+                    fontsize=10)
         return None
-
-    xs = [r['i'] for r in triplets]
-    ys = [r['j'] for r in triplets]
-    zs = [r['k'] for r in triplets]
-    vals = np.array([r[eps_key] for r in triplets])
 
     if norm is None:
         vmax = np.nanmax(np.abs(vals)) if len(vals) > 0 and np.nanmax(np.abs(vals)) > 0 else 1.0
@@ -292,32 +340,24 @@ def plot_creature_3d_heatmap(ax: Axes3D,
     ref_max = norm.halfrange if (hasattr(norm, 'halfrange') and norm.halfrange is not None and norm.halfrange > 0) else (np.nanmax(abs_vals) if len(abs_vals) > 0 and np.nanmax(abs_vals) > 0 else 1.0)
     sizes = ball_size * (0.6 + 0.8 * (abs_vals / ref_max))
 
-    sc = ax.scatter(
-        xs, ys, zs,
-        c=vals,
-        cmap=cmap or RWG_CMAP,
-        norm=norm,
-        s=sizes,
-        alpha=0.85,
-        edgecolors='k',
-        linewidth=0.2,
-        depthshade=True
-    )
+    sc = ax.scatter(xs, ys, zs,
+                    c=vals, cmap=cmap or RWG_CMAP, norm=norm,
+                    s=sizes, alpha=0.88, edgecolors='k', linewidth=0.2, depthshade=True
+                )
 
     ax.view_init(elev=elev, azim=azim)
+    ax.dist = 8.5
+    ax.set_box_aspect((stretch_xy, stretch_xy, stretch_k))
 
-    stat = res.get('stats', {})
-    raw_s = stat.get(f'sum_raw_triplets_{b_suffix}', 0.0)
-    abs_s = stat.get(f'sum_abs_triplets_{b_suffix}', 0.0)
+    # Clean panes: eliminate distracting empty cube background fills
+    ax.xaxis.pane.fill = ax.yaxis.pane.fill = ax.zaxis.pane.fill = False
+    ax.xaxis.pane.set_edgecolor('none'), ax.yaxis.pane.set_edgecolor('none'), ax.zaxis.pane.set_edgecolor('none')
+
+    #stat = res.get('stats', {})
+    #raw_s, abs_s = stat.get(f'sum_raw_triplets_{b_suffix}', 0.0), stat.get(f'sum_abs_triplets_{b_suffix}', 0.0)
 
     prefix_lbl = f"Creature {creature_idx}: " if creature_idx is not None else ""
-    ax.set_title(
-        f"{prefix_lbl}{geno}\n"
-        rf"$\Sigma\varepsilon^{{({b_num})}}={raw_s:+.3f}$, $\Sigma|\varepsilon^{{({b_num})}}|={abs_s:.3f}$",
-        fontsize=9.5,
-        fontweight='bold',
-        pad=8
-    )
+    ax.set_title(f"{prefix_lbl}{geno}", fontsize=9.5, fontweight='bold', pad=8)
 
     step = max(1, L // 5)
     tick_locs = list(range(0, L, step))
@@ -326,19 +366,35 @@ def plot_creature_3d_heatmap(ax: Axes3D,
     tick_labels = [f"{geno[p]}({p})" for p in tick_locs]
 
     ax.set_xticks(tick_locs)
-    ax.set_xticklabels(tick_labels, fontsize=6.5)
-    ax.set_yticks(tick_locs)
-    ax.set_yticklabels(tick_labels, fontsize=6.5)
-    ax.set_zticks(tick_locs)
-    ax.set_zticklabels(tick_labels, fontsize=6.5)
+    ax.set_xticklabels(tick_labels, fontsize=6.5, rotation=-azim//2, ha='right', va='center')
+    
+    yang = 90-azim//2
+    ytick_locs = list(range(0, L, int(round(90/yang))))
+    ytick_labels = [f"{geno[p]}({p})" for p in ytick_locs]
+    ax.set_yticks(ytick_locs)
+    ax.set_yticklabels(ytick_labels, fontsize=6.5, rotation=yang, ha='left', va='center')
 
-    ax.set_xlabel("i", fontsize=8, labelpad=2)
-    ax.set_ylabel("j", fontsize=8, labelpad=2)
+    z_tick_locs = range(0, L, 1)
+    z_tick_labels = [f"{geno[p]}({p})" for p in z_tick_locs]
+    ax.set_zticks(z_tick_locs)
+    ax.set_zticklabels(z_tick_labels, fontsize=6.5)
+
+    # Decouple x-axis (i) ticks from vertical z-displacement so i labels stay higher on screen
+    ax.xaxis._axmask = lambda: [False, True, False]
+    ax.tick_params(axis='x', pad=-2.0)
+    ax.tick_params(axis='y', pad=-1.5)
+
+    ax.set_xlabel("i", fontsize=8, labelpad=0)
+    ax.set_ylabel("j", fontsize=8, labelpad=1)
     ax.set_zlabel("k", fontsize=8, labelpad=2)
 
-    ax.set_xlim(-0.5, L - 0.5)
+    if invert_i:
+        ax.set_xlim(L - 0.5, -0.5)
+    else:
+        ax.set_xlim(-0.5, L - 0.5)
+
     ax.set_ylim(-0.5, L - 0.5)
-    ax.set_zlim(-0.5, L - 0.5)
+    ax.set_zlim(-0.1, L - 0.5)
 
     if show_cbar:
         cbar = ax.figure.colorbar(sc, ax=ax, fraction=0.035, pad=0.08, shrink=0.7)
@@ -348,19 +404,12 @@ def plot_creature_3d_heatmap(ax: Axes3D,
     return sc
 
 
-def visualize_3d_heatmaps(
-    results_list: List[Dict[str, Any]],
-    baseline: int = 1,
-    fig: Optional[plt.Figure] = None,
-    axes: Optional[List[Axes3D]] = None,
-    save_path: Optional[str] = None,
-    elev: float = 24,
-    azim: float = 48,
-    ball_size: float = 32.0,
-    same_scale: bool = True,
-    shared_norm: Optional[Any] = None,
-    show_row_cbar: bool = True,
-    cax: Optional[plt.Axes] = None
+def visualize_3d_heatmaps(results_list: List[Dict[str, Any]], baseline: int = 1,
+    fig: Optional[plt.Figure] = None, axes: Optional[List[Axes3D]] = None, save_path: Optional[str] = None,
+    elev: float = 24, azim: float = -8, ball_size: float = 32.0,
+    same_scale: bool = True, shared_norm: Optional[Any] = None, show_row_cbar: bool = True, cax: Optional[plt.Axes] = None,
+    include_lateral: bool = True, include_diagonal: bool = True, invert_i: bool = True, opposite_corner: bool = True,
+    stretch_k: float = 2.0, stretch_xy: float = 1.5,
 ) -> Tuple[Optional[plt.Figure], Optional[List[Axes3D]]]:
     """
     Renders 3D scatter heatmaps for a single epistasis baseline across tested creatures.
@@ -375,41 +424,36 @@ def visualize_3d_heatmaps(
     created_fig = False
 
     if same_scale and shared_norm is None:
-        eps_key = cfg['eps_key']
-        b_vals = [
-            r[eps_key] for res in results_list
-            for r in res.get('triplet_records', [])
-            if not np.isnan(r.get(eps_key, np.nan))
-        ]
-        vmax = float(np.nanmax(np.abs(b_vals))) if len(b_vals) > 0 and np.nanmax(np.abs(b_vals)) > 0 else 1.0
+        all_vals = []
+        for res in results_list:
+            _, _, _, vals = extract_plotted_points(
+                res, baseline=baseline, include_lateral=include_lateral, include_diagonal=include_diagonal,
+                opposite_corner=opposite_corner
+            )
+            all_vals.extend(vals.tolist())
+        vmax = float(np.nanmax(np.abs(all_vals))) if len(all_vals) > 0 and np.nanmax(np.abs(all_vals)) > 0 else 1.0
         shared_norm = CenteredNorm(vcenter=0.0, halfrange=vmax)
 
     if fig is None or axes is None:
         created_fig = True
         if same_scale:
-            from matplotlib.gridspec import GridSpec
-            fig = plt.figure(figsize=(5.6 * k + 1.2, 5.2))
+            fig = plt.figure(figsize=(5.4 * k + 1.2, 6.0))
             gs = GridSpec(1, k + 1, figure=fig, width_ratios=[1.0] * k + [0.035],
-                          wspace=0.25, left=0.04, right=0.93, top=0.93, bottom=0.06)
+                          wspace=0.08, left=0.03, right=0.94, top=0.93, bottom=0.05)
             axes = [fig.add_subplot(gs[0, col_idx], projection='3d') for col_idx in range(k)]
             cax = fig.add_subplot(gs[0, k])
         else:
-            fig = plt.figure(figsize=(5.6 * k, 5.2))
+            fig = plt.figure(figsize=(5.4 * k, 6.0))
             axes = [fig.add_subplot(1, k, col_idx + 1, projection='3d') for col_idx in range(k)]
 
     last_sc = None
     for col_idx, (ax, res) in enumerate(zip(axes, results_list)):
-        sc = plot_creature_3d_heatmap(
-            ax=ax,
-            res=res,
-            baseline=b_num,
-            creature_idx=col_idx + 1,
-            elev=elev,
-            azim=azim,
-            ball_size=ball_size,
-            norm=shared_norm if same_scale else None,
-            show_cbar=(not same_scale)
-        )
+        sc = plot_creature_3d_heatmap(ax=ax, res=res, baseline=b_num, creature_idx=col_idx + 1,
+                        elev=elev, azim=azim, ball_size=ball_size,
+                        norm=shared_norm if same_scale else None, show_cbar=(not same_scale),
+                        include_lateral=include_lateral, include_diagonal=include_diagonal, invert_i=invert_i,
+                        opposite_corner=opposite_corner, stretch_k=stretch_k, stretch_xy=stretch_xy,
+                    )
         if sc is not None:
             last_sc = sc
 
@@ -436,9 +480,11 @@ def visualize_3d_heatmaps(
     return fig, axes
 
 
-def visualize_combined_3d_heatmaps(results_list: List[Dict[str, Any]], mode: int = 3,
-    save_path: Optional[str] = None, elev: float = 24, azim: float = 48, ball_size: float = 32.0,
-    same_scale: bool = True
+def visualize_combined_3d_heatmaps(results_list: List[Dict[str, Any]], mode: int = 3, save_path: Optional[str] = None,
+                                    elev:           float = 24,   azim:           float = -8,   ball_size:      float = 32.0,
+                                    same_scale:     bool  = True, include_lateral: bool = True, include_diagonal: bool = True,
+                                    invert_i:       bool  = True, opposite_corner: bool = True, stretch_k:      float = 2.0,
+                                    stretch_xy:     float = 1.5,
 ):
     """
     Renders 3D scatter subplots ("small balls arranged in a 3D grid")
@@ -452,6 +498,12 @@ def visualize_combined_3d_heatmaps(results_list: List[Dict[str, Any]], mode: int
 
     :param same_scale: If True (default), uses the same colorbar scale for all plots
                        (even across both baselines) and renders one colorbar per row.
+    :param include_lateral: If True (default), includes lateral pairwise epistasis entries.
+    :param include_diagonal: If True (default), includes diagonal single knockout entries.
+    :param invert_i: If True (default), inverts i-axis direction.
+    :param opposite_corner: If True (default), places the pyramid on the opposite corner of the ji-plane.
+    :param stretch_k: Stretch factor for the k (vertical) axis (default: 2.0).
+    :param stretch_xy: Stretch factor for the i and j (horizontal) axes (default: 1.5).
     """
     k = len(results_list)
     if k == 0:
@@ -460,76 +512,46 @@ def visualize_combined_3d_heatmaps(results_list: List[Dict[str, Any]], mode: int
     # Check that at least one of the first two bits is set
     b_enabled = (bool(mode & 0b01), bool(mode & 0b10))
     if not any(b_enabled):
-        raise ValueError(
-            f"Invalid mode={mode} (0b{mode:08b}): at least bit 0 (Baseline 1) or bit 1 (Baseline 2) must be set."
-        )
+        raise ValueError(f"Invalid mode={mode} (0b{mode:08b}): at least bit 0 (Baseline 1) or bit 1 (Baseline 2) must be set.")
 
     active_baselines = [i + 1 for i, b in enumerate(b_enabled) if b]
     n_rows = len(active_baselines)
 
     if same_scale:
-        from matplotlib.gridspec import GridSpec
         all_vals = []
         for b_num in active_baselines:
-            cfg = BASELINE_DEFS[b_num]
-            eps_key = cfg['eps_key']
             for res in results_list:
-                for r in res.get('triplet_records', []):
-                    val = r.get(eps_key, np.nan)
-                    if not np.isnan(val):
-                        all_vals.append(val)
+                _, _, _, vals = extract_plotted_points(
+                    res, baseline=b_num, include_lateral=include_lateral, include_diagonal=include_diagonal,
+                    opposite_corner=opposite_corner
+                )
+                all_vals.extend(vals.tolist())
         vmax = float(np.nanmax(np.abs(all_vals))) if len(all_vals) > 0 and np.nanmax(np.abs(all_vals)) > 0 else 1.0
         shared_norm = CenteredNorm(vcenter=0.0, halfrange=vmax)
 
-        fig = plt.figure(figsize=(5.6 * k + 1.2, 5.2 * n_rows))
+        fig = plt.figure(figsize=(5.4 * k + 1.2, 5.8 * n_rows))
         gs = GridSpec(n_rows, k + 1, figure=fig, width_ratios=[1.0] * k + [0.035],
-                      wspace=0.25, hspace=0.32, left=0.04, right=0.93,
-                      top=0.93 if n_rows == 1 else 0.94, bottom=0.06)
+                      wspace=0.08, hspace=0.18, left=0.03, right=0.94,
+                      top=0.94 if n_rows == 1 else 0.95, bottom=0.05)
 
         for row_idx, b_num in enumerate(active_baselines):
-            row_axes = [
-                fig.add_subplot(gs[row_idx, col_idx], projection='3d')
-                for col_idx in range(k)
-            ]
+            row_axes = [fig.add_subplot(gs[row_idx, col_idx], projection='3d')  for col_idx in range(k)]
             row_cax = fig.add_subplot(gs[row_idx, k])
-            visualize_3d_heatmaps(
-                results_list=results_list,
-                baseline=b_num,
-                fig=fig,
-                axes=row_axes,
-                elev=elev,
-                azim=azim,
-                ball_size=ball_size,
-                same_scale=same_scale,
-                shared_norm=shared_norm,
-                show_row_cbar=True,
-                cax=row_cax
+            visualize_3d_heatmaps(results_list=results_list, baseline=b_num, fig=fig, axes=row_axes, elev=elev, azim=azim,
+                ball_size=ball_size, same_scale=same_scale, shared_norm=shared_norm, show_row_cbar=True, cax=row_cax,
+                include_lateral=include_lateral, include_diagonal=include_diagonal, invert_i=invert_i, opposite_corner=opposite_corner,
+                stretch_k=stretch_k, stretch_xy=stretch_xy,
             )
     else:
-        fig = plt.figure(figsize=(5.6 * k, 5.2 * n_rows))
+        fig = plt.figure(figsize=(5.4 * k, 5.8 * n_rows))
         for row_idx, b_num in enumerate(active_baselines):
-            row_axes = [
-                fig.add_subplot(n_rows, k, row_idx * k + col_idx + 1, projection='3d')
-                for col_idx in range(k)
-            ]
-            visualize_3d_heatmaps(
-                results_list=results_list,
-                baseline=b_num,
-                fig=fig,
-                axes=row_axes,
-                elev=elev,
-                azim=azim,
-                ball_size=ball_size,
-                same_scale=False,
-                show_row_cbar=False
+            row_axes = [fig.add_subplot(n_rows, k, row_idx * k + col_idx + 1, projection='3d') for col_idx in range(k)]
+            visualize_3d_heatmaps(results_list=results_list, baseline=b_num, fig=fig, axes=row_axes, elev=elev, azim=azim,
+                ball_size=ball_size, same_scale=False, show_row_cbar=False,
+                include_lateral=include_lateral, include_diagonal=include_diagonal, invert_i=invert_i, opposite_corner=opposite_corner,
+                stretch_k=stretch_k, stretch_xy=stretch_xy,
             )
-        plt.subplots_adjust(
-            left=0.04, right=0.96,
-            top=0.93 if n_rows == 1 else 0.95,
-            bottom=0.06,
-            wspace=0.20,
-            hspace=0.30
-        )
+        plt.subplots_adjust(left=0.03, right=0.97, top=0.93 if n_rows == 1 else 0.95, bottom=0.05, wspace=0.08, hspace=0.22)
 
     # Suptitles
     if n_rows == 1:
@@ -550,13 +572,15 @@ def visualize_combined_3d_heatmaps(results_list: List[Dict[str, Any]], mode: int
 
 def save_summary_table_csv(results_list: List[Dict[str, Any]], csv_path: str):
     """
-    Saves quantitative epistasis sums across baselines and genotypes to CSV.
+    Saves quantitative epistasis sums and derived metrics across baselines and genotypes to CSV.
     """
     os.makedirs(os.path.dirname(os.path.abspath(csv_path)), exist_ok=True)
     with open(csv_path, "w", encoding="utf-8") as f:
         f.write("Creature,Genotype,Length,WildFitness,NumTriplets,"
-                "SumRaw_Triplets_B1,SumAbs_Triplets_B1,SumRaw_Tensor_B1,SumAbs_Tensor_B1,"
-                "SumRaw_Triplets_B2,SumAbs_Triplets_B2,SumRaw_Tensor_B2,SumAbs_Tensor_B2\n")
+                "SumRaw_Triplets_B1,SumAbs_Triplets_B1,Dir_Triplets_B1,MeanAbs_Triplets_B1,"
+                "SumRaw_Tensor_B1,SumAbs_Tensor_B1,"
+                "SumRaw_Triplets_B2,SumAbs_Triplets_B2,Dir_Triplets_B2,MeanAbs_Triplets_B2,"
+                "SumRaw_Tensor_B2,SumAbs_Tensor_B2\n")
         for idx, res in enumerate(results_list, 1):
             g = res['geno']
             L = len(g)
@@ -565,12 +589,91 @@ def save_summary_table_csv(results_list: List[Dict[str, Any]], csv_path: str):
             f.write(
                 f"Creature {idx},{g},{L},{fit:.5f},{s['num_triplets']},"
                 f"{s['sum_raw_triplets_b1']:.5f},{s['sum_abs_triplets_b1']:.5f},"
+                f"{s['dir_triplets_b1']:.5f},{s['mean_abs_triplets_b1']:.5f},"
                 f"{s['sum_raw_tensor_b1']:.5f},{s['sum_abs_tensor_b1']:.5f},"
                 f"{s['sum_raw_triplets_b2']:.5f},{s['sum_abs_triplets_b2']:.5f},"
+                f"{s['dir_triplets_b2']:.5f},{s['mean_abs_triplets_b2']:.5f},"
                 f"{s['sum_raw_tensor_b2']:.5f},{s['sum_abs_tensor_b2']:.5f}\n"
             )
     print(f"[CSV] Saved epistasis comparison table to: {csv_path}")
 
+
+def format_markdown_summary_table(results_or_csv: Any, selected_dir: Optional[str] = None,
+                                    bold_mode: str = "all-baselines", max_val: Optional[float] = None) -> str:
+    """
+    Formats the 3D triplet epistasis summary table by delegating to print_epistasis_table.
+    Accepts either a results_list, a CSV file path string, or a pandas DataFrame.
+    """
+    import pandas as pd
+    from print_epistasis_table import generate_markdown_table
+
+    if isinstance(results_or_csv, str):
+        df = pd.read_csv(results_or_csv)
+    elif isinstance(results_or_csv, pd.DataFrame):
+        df = results_or_csv
+    elif isinstance(results_or_csv, list):
+        rows = []
+        for idx, res in enumerate(results_or_csv, 1):
+            s = res.get('stats', {})
+            row = {
+                'Creature': f"Creature {idx}", 'Genotype': res['geno'], 'Length': len(res['geno']),
+                'WildFitness': res.get('wild_fit', 0.0), 'NumTriplets': s.get('num_triplets', 0),
+            }
+            for i in (1, 2):
+                row.update({
+                    f'SumRaw_Triplets_B{i}':    s.get(f'sum_raw_triplets_b{i}', 0.0),
+                    f'SumAbs_Triplets_B{i}':    s.get(f'sum_abs_triplets_b{i}', 0.0),
+                    f'Dir_Triplets_B{i}':       s.get(f'dir_triplets_b{i}',     0.0),
+                    f'MeanAbs_Triplets_B{i}':   s.get(f'mean_abs_triplets_b{i}', 0.0),
+                    f'SumRaw_Tensor_B{i}':      s.get(f'sum_raw_tensor_b{i}',   0.0),
+                    f'SumAbs_Tensor_B{i}':      s.get(f'sum_abs_tensor_b{i}',   0.0),
+                })
+            rows.append(row)
+        df = pd.DataFrame(rows)
+    else:
+        raise TypeError(f"Unsupported results type for table formatting: {type(results_or_csv)}")
+
+    return generate_markdown_table(df, selected_dir=selected_dir, max_val=max_val, bold_mode=bold_mode)
+
+
+def _worker_compute_creature_epistasis(creature_idx: int, geno_clean: str, prefix: str,
+                                        opt: str,frams_path: str, sim_settings: str) -> Tuple[int, Dict[str, Any]]:
+    """
+    Worker process: initializes an isolated FramsticksLib instance and computes 3D epistasis
+    for a single creature.
+    """
+    if FramsticksLib is None:
+        raise RuntimeError("Could not import FramsticksLib from framspy-download.")
+    frams_lib = FramsticksLib(frams_path, None, sim_settings) # it's necessary to instantiate a FramsticksLib instance due to (1) Unpicklable Ctypes Objects in FramsticksLib and (2) C Library Global State Isolation
+    res = compute_3d_epistasis_for_genotype(frams_lib, geno_clean, prefix=prefix, fitness_metric=opt)
+    return creature_idx, res
+
+def  compute_epistasis_parallel(genotypes: List[Dict[str, Any]],num_workers: int,prefix: str,opt: str,frams_path: str,sim: str):
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+
+    indexed_results = {}
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        futures = {
+                executor.submit(
+                    _worker_compute_creature_epistasis,
+                    idx,
+                    c['clean'], prefix, opt, frams_path, sim,
+                ): idx
+            for idx, c in enumerate(genotypes)
+        }
+        for fut in as_completed(futures):
+            idx, res = fut.result()
+            indexed_results[idx] = res
+
+    return [indexed_results[i] for i in range(len(genotypes))]
+def compute_epistasis_sequentially(genotypes: List[Dict[str, Any]],prefix: str,opt: str,frams_path: str,sim: str):
+    
+    if FramsticksLib is None:
+            raise RuntimeError("Could not import FramsticksLib from framspy-download.")
+    frams_lib = FramsticksLib(frams_path, None, sim)
+    results = [compute_3d_epistasis_for_genotype(frams_lib, c['clean'], prefix, opt)
+                for c in genotypes]
+    return results
 
 def main():
     parser = argparse.ArgumentParser(description="Estimate and visualize 3D triplet epistasis in Framsticks f9 genotypes.")
@@ -582,6 +685,8 @@ def main():
     parser.add_argument("--genotypes", nargs="*", default=None, help="List of genotype strings to evaluate.")
     parser.add_argument("--genotypes-folder", default=r"assignments\Assignment 7 - Epistasis & Gene linkage\selected",
                         help="Folder containing .gen files to evaluate.")
+    parser.add_argument("--workers", type=int, default=None,
+                        help="Number of parallel worker processes for creature evaluation (default: min(number of genotypes, CPU count)).")
     parser.add_argument("--mode", type=int, default=3,
                         help="1-byte bitmask for epistasis baselines to visualize: "
                              "bit 0 (1) -> Baseline 1; bit 1 (2) -> Baseline 2; 3 -> both. Default: 3.")
@@ -589,17 +694,28 @@ def main():
                         help="Output image path for 3D epistasis plot. If omitted, saves based on --mode to <outdir>.")
     parser.add_argument("--outdir", default=r"assignments\Assignment 7 - Epistasis & Gene linkage\results\epistasis",
                         help="Output directory for 3D epistasis plots and summary CSV.")
+
+    ############################ Geometry arguments ##################################################
     parser.add_argument("--no-same-scale", "--independent-scale", dest="same_scale", action="store_false", default=True,
                         help="Use independent colorbar scales for each subplot instead of a unified row colorbar scale.")
+    parser.add_argument("--lateral", "--include-lateral", dest="include_lateral", action=argparse.BooleanOptionalAction,
+                        default=True, help="Include lateral pairwise epistasis entries (default: True).")
+    parser.add_argument("--diagonal", "--include-diagonal", dest="include_diagonal", action=argparse.BooleanOptionalAction,
+                        default=True, help="Include diagonal single knockout entries (default: True).")
+    parser.add_argument("--invert-i", dest="invert_i", action=argparse.BooleanOptionalAction,
+                        default=True, help="Invert i-axis direction (default: True).")
+    parser.add_argument("--opposite-corner", dest="opposite_corner", action=argparse.BooleanOptionalAction,
+                        default=True, help="Place the pyramid on the opposite corner of the ji-plane (default: True).")
+    parser.add_argument("--stretch-k", type=float, default=2.5, help="Box aspect stretch factor for the k (vertical) axis (default: 2.0).")
+    parser.add_argument("--stretch-xy", type=float, default=2, help="Box aspect stretch factor for the i and j (horizontal) axes (default: 1.5).")
+    parser.add_argument("--elev", type=float, default=8.0, help="3D camera elevation angle in degrees (default: 8).")
+    parser.add_argument("--azim", type=float, default=-10, help="3D camera azimuth angle in degrees (default: 15).")
+
     args = parser.parse_args()
 
     # Collect genotypes using shared collect_genotypes helper
     prefix = f"/*{args.genformat}*/"
-    collected = collect_genotypes(
-        folder=args.genotypes_folder,
-        genotypes=args.genotypes,
-        genformat=args.genformat
-    )
+    collected = collect_genotypes(folder=args.genotypes_folder, genotypes=args.genotypes, genformat=args.genformat)
 
     if not collected:
         raise ValueError("No genotypes provided. Use --genotypes or --genotypes-folder.")
@@ -608,16 +724,19 @@ def main():
     for idx, c in enumerate(collected, 1):
         print(f" [{idx}] {c['title']} : {c['raw']}")
 
-    # Initialize FramsticksLib
-    if FramsticksLib is None:
-        raise RuntimeError("Could not import FramsticksLib from framspy-download.")
-    frams_lib = FramsticksLib(args.frams_path, None, args.sim)
+    # Compute 3D epistasis for each creature (sequential or parallel)
+    k_creatures = len(collected)
+    num_workers = max(1, args.workers) if args.workers is not None else min(k_creatures, os.cpu_count() or 4)
 
-    # Compute 3D epistasis for each creature
     results_list = []
-    for c in collected:
-        res = compute_3d_epistasis_for_genotype(frams_lib, c['clean'], prefix, args.opt)
-        results_list.append(res)
+    if num_workers <= 1 or k_creatures <= 1:
+        # Sequential execution
+        print("\nEvaluating creatures sequentially (single worker)...")
+        results_list = compute_epistasis_sequentially(collected, prefix, args.opt, args.frams_path, args.sim)
+    else:
+        # Parallel execution across worker processes
+        print(f"\nEvaluating {k_creatures} creatures in parallel across {num_workers} worker processes...")
+        results_list = compute_epistasis_parallel(collected,num_workers,prefix,args.opt,args.frams_path,args.sim)
 
     # Generate Visualizations
     outdir = args.outdir
@@ -628,15 +747,21 @@ def main():
     if args.out:
         out_plot = args.out
     else:
-        if args.mode == 1:
-            out_plot = os.path.join(outdir, "epistasis_3d_baseline1.png")
-        elif args.mode == 2:
-            out_plot = os.path.join(outdir, "epistasis_3d_baseline2.png")
+        if args.mode in (1,2):
+            out_plot = os.path.join(outdir, f"epistasis_3d_baseline{args.mode}.png")
         else:
             out_plot = os.path.join(outdir, "epistasis_3d_combined.png")
+    visualize_combined_3d_heatmaps(results_list, mode=args.mode, save_path=out_plot,
+                elev=args.elev, azim=args.azim, same_scale=args.same_scale,
+                include_lateral=args.include_lateral, include_diagonal=args.include_diagonal,
+                invert_i=args.invert_i, opposite_corner=args.opposite_corner, stretch_k=args.stretch_k,
+                stretch_xy=args.stretch_xy,
+            )
 
-    visualize_combined_3d_heatmaps(results_list, mode=args.mode, save_path=out_plot, same_scale=args.same_scale)
-
+    print("\n--- 3D Triplet Epistasis Summary Table ---")
+    md_table = format_markdown_summary_table(results_list, selected_dir=args.genotypes_folder)
+    print(md_table)
+    print("------------------------------------------\n")
     print("\n[Done] All 3D triplet epistasis analyses and visualizations complete!")
 
 
