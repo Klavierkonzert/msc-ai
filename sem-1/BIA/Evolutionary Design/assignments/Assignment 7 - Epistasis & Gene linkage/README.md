@@ -13,11 +13,17 @@ The goal of this work is to investigate this phenomenon in evolutionary robotics
 
 Firstly, [evolutionary optimization](#evolutionary-performance) is run under the following [parameters](#parameters-setup). Then 3 dissimilar individuals $s_1, s_2, s_3$ are selected from the final population $S^{G}, G=300$ of evolved creatures as follows:
 
-$$\displaystyle s_1\mathrel{:=}\arg\max_{s \in S^{G}} \text{vertpos}$$
+$$
+\displaystyle s_1\mathrel{:=}\arg\max_{s \in S^{G}} \text{vertpos}
+$$
 
-$$\displaystyle s_2\mathrel{:=}\arg\max_{s \in S^{G}\setminus\{s_1\}} d(s, s_1)$$
+$$
+\displaystyle s_2\mathrel{:=}\arg\max_{s \in S^{G}\setminus\{s_1\}} d(s, s_1)
+$$
 
-$$\displaystyle s_3\mathrel{:=}\arg\max_{s \in S^{G}\setminus\{s_1, s_2\}} \min{\big(d(s, s_1), d(s, s_2)}\big)$$
+$$
+\displaystyle s_3\mathrel{:=}\arg\max_{s \in S^{G}\setminus\{s_1, s_2\}} \min\bigl(d(s, s_1), d(s, s_2)\bigr)
+$$
 
 where $d(g_1, g_2)$ denotes weighted Normalized Levenshtein Distance and Directional Composition Divergence (see the [script](select_dissimilar.py) for the exact implementation).
 
@@ -80,13 +86,17 @@ For an intact genotype $g$ of length $L$ with baseline fitness $F(g)$:
 - $F(g \setminus \{j\})$ -  fitness after disabling gene $j$.
 - $F(g \setminus \{i, j\})$ - fitness after simultaneously disabling both genes $i$ and $j$.
 
-The additive null model  $\mathcal{H}_0^1$ predicts the joint knockout effect to be the sum of independent single knockouts (this holds iff genes are independent) $ {\Delta F_{ij}}\equiv \Delta F_{i} + \Delta F_{j}$ , where:
+The additive null model $\mathcal{H}_{0}^{1}$ predicts the joint knockout effect to be the sum of independent single knockouts (this holds iff genes are independent) $\Delta F_{ij} \equiv \Delta F_i + \Delta F_j$, where:
 
-$$\Delta F_i = F(g \setminus \{i\}) - F(g), \qquad \Delta F_j = F(g \setminus \{j\}) - F(g)$$
+$$
+\Delta F_i = F(g \setminus \{i\}) - F(g), \qquad \Delta F_j = F(g \setminus \{j\}) - F(g)
+$$
 
 For two genes $i\ne j$, pairwise epistasis $\varepsilon_{i,j}$ measures the interaction deviation from additivity:
 
-$$\varepsilon_{i,j} = \underbrace{\big[F(g \setminus \{i, j\}) - F(g)\big] }_{\Delta F_{ij}}- \big(\Delta F_i + \Delta F_j\big) \equiv F(g \setminus \{i, j\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) + F(g)$$
+$$
+\varepsilon_{i,j} = \underbrace{\big[F(g \setminus \{i, j\}) - F(g)\big] }_{\Delta F_{ij}}- \big(\Delta F_i + \Delta F_j\big) \equiv F(g \setminus \{i, j\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) + F(g)
+$$
 
 - $\varepsilon_{i,j} < 0 \implies$ negative epistasis (antagonistic breakdown / synthetic collapse - Red). The damage of losing two genes is far worse than losing them independently
 - $\varepsilon_{i,j} = 0 \implies$ additive / independent genes (White).
@@ -140,7 +150,9 @@ Individual (diagonal) effects $\Delta F_i$ take negative values since extraction
 
 Since removing any _base_ gene overturns the creature, near-zero epistasis between _base_ and _spinal_ genes can be explained by individual effect of knocking out a base gene $b$
 
-$$ \varepsilon_{b, s} \approx 0 \iff \Delta F_{b,s} \approx \Delta F_b + \Delta F_s \approx \Delta F_b$$
+$$
+\varepsilon_{b, s} \approx 0 \iff \Delta F_{b,s} \approx \Delta F_b + \Delta F_s \approx \Delta F_b
+$$
 
 In rare cases (base gene `7` in Creature 1, green cross on [Figure 4](#fig-epistasis-matrices)) base and spinal genes strongly interact with each other.
 
@@ -152,31 +164,41 @@ In rare cases (base gene `7` in Creature 1, green cross on [Figure 4](#fig-epist
 ### Estimation Formulas
 
 #### Baseline 1
-In the **first-order approach**, the null model $\mathcal{H}_0^1$ assumes independence and additive decomposability of individual fitness effects:
+In the **first-order approach**, the null model $\mathcal{H}_{0}^{1}$ assumes independence and additive decomposability of individual fitness effects:
 
-$$\mathcal{H}_0^1:\quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k$$
+$$
+\mathcal{H}_{0}^{1}:\quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k
+$$
 
 The triplet epistasis measures the total interaction deviation from additivity:
 
-$$\varepsilon_{ijk}^{(1)} \mathrel{:=} \underbrace{\big[F(g \setminus \{i, j, k\}) - F(g)\big]}_{\Delta F_{ijk}} - (\Delta F_i + \Delta F_j + \Delta F_k) \equiv F(g \setminus \{i, j, k\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) - F(g \setminus \{k\}) + 2F(g)$$
+$$
+\varepsilon_{ijk}^{(1)} \mathrel{:=} \underbrace{\big[F(g \setminus \{i, j, k\}) - F(g)\big]}_{\Delta F_{ijk}} - (\Delta F_i + \Delta F_j + \Delta F_k) \equiv F(g \setminus \{i, j, k\}) - F(g \setminus \{i\}) - F(g \setminus \{j\}) - F(g \setminus \{k\}) + 2F(g)
+$$
 
 #### Baseline 2
-In the **second-order approach**, the null model $\mathcal{H}_0^2$ accounts for both single-gene knockouts $\Delta F_i$ and all pairwise epistatic interactions between the three genes $\varepsilon_{ij}$:
+In the **second-order approach**, the null model $\mathcal{H}_{0}^{2}$ accounts for both single-gene knockouts $\Delta F_i$ and all pairwise epistatic interactions between the three genes $\varepsilon_{ij}$:
 
-$$\mathcal{H}_0^2: \quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k + \underbrace{\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}}_{\text{2nd-order effects}} \equiv \Delta F_{ij} + \Delta F_{ik} + \Delta F_{jk} - (\Delta F_i + \Delta F_j + \Delta F_k)$$
+$$
+\mathcal{H}_{0}^{2}:\quad \Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k + \underbrace{\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}}_{\text{2nd-order effects}} \equiv \Delta F_{ij} + \Delta F_{ik} + \Delta F_{jk} - (\Delta F_i + \Delta F_j + \Delta F_k)
+$$
 
-This first expression is analogous to[ the exclusion-inclusion principle](https://en.wikipedia.org/wiki/Inclusion%E2%80%93exclusion_principle), which generalizes the definition of $n$-th order epistasis $\varepsilon^{(n-1)}$.
+This first expression is analogous to [the inclusion-exclusion principle](https://en.wikipedia.org/wiki/Inclusion%E2%80%93exclusion_principle), which generalizes the definition of $n$-th order epistasis $\varepsilon^{(n-1)}$.
 
 Hence epistasis is calculated as:
 
-$$\varepsilon^{(2)}_{i,j,k} \mathrel{:=} \underbrace{\Delta F_{ijk}- \big(\Delta F_i + \Delta F_j + \Delta F_k\big)}_{\downarrow} - \big(\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}\big)$$
+$$
+\varepsilon^{(2)}_{i,j,k} \mathrel{:=} \underbrace{\Delta F_{ijk}- \big(\Delta F_i + \Delta F_j + \Delta F_k\big)}_{\downarrow} - \big(\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}\big)
+$$
 
-$$\varepsilon^{(2)}_{i,j,k} \equiv \varepsilon^{(1)}_{i,j,k} - (\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk})$$
+$$
+\varepsilon^{(2)}_{i,j,k} \equiv \varepsilon^{(1)}_{i,j,k} - (\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk})
+$$
 
 - $\varepsilon^{(2)}_{i,j,k} = 0 \implies$ pairwise decomposability: the interaction of genes is predictable from pairwise interactions, no higher-order effects.
 - $|\varepsilon^{(2)}_{i,j,k}| > 0 \implies$ gene $k$ modulates interaction between $i$ and $j$.
 
-_**Note:** In case of [Baseline 1](#baseline-1),_ $\varepsilon^{(1)}_{i,j,k} = 0$ _would mean either that the interaction is strictly additive_ $(\Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k)$ _or that unaccounted higher-order effects cancel out existing pairwise ones_ $(\varepsilon^{(2)}_{i,j,k} = - (\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}))$. _Hence, the definition of $\varepsilon^{(1)}$ yields less distinct information than $\varepsilon^{(2)}$. In terms of **new** information, Baseline 2 explicitly factors out known pairwise effects, while Baseline 1 leaves them entangled with possible triplet effects._
+> **Note:** In case of [Baseline 1](#baseline-1), $\varepsilon_{i,j,k}^{(1)} = 0$ would mean either that the interaction is strictly additive $(\Delta F_{ijk} = \Delta F_i + \Delta F_j + \Delta F_k)$ or that unaccounted higher-order effects cancel out existing pairwise ones $(\varepsilon_{i,j,k}^{(2)} = -(\varepsilon_{ij} + \varepsilon_{ik} + \varepsilon_{jk}))$. Hence, the definition of $\varepsilon^{(1)}$ yields less distinct information than $\varepsilon^{(2)}$. In terms of **new** information, Baseline 2 explicitly factors out known pairwise effects, while Baseline 1 leaves them entangled with possible triplet effects.
 
 In the calculated 3D tensors $(L \times L \times L)$ and [Figure 5](#3d-epistasis-heatmaps):
 - The main diagonal ($i = j = k$) stores the single-gene knockout effect $\Delta F_i (\equiv \Delta F_{iii})$.
@@ -197,11 +219,15 @@ _**Figure 5:** 3D epistasis heatmaps (balls arranged in a 3D grid) for_ $k=3$ _d
 To better understand the relative contribution of pairwise and triplet epistasis, the following two metrics can be calculated:
 - **Directedness** - ratio of the sum of all triplet epistasis values to the sum of the absolute values of all triplet epistasis values. Values close to $\pm 1$ indicate that the contribution of triplet epistasis is predominantly synergistic/buffering or antagonistic/disruptive, respectively:
 
-$$\text{dir }\varepsilon^{(\cdot)} \mathrel{:=} \frac{\sum \varepsilon^{(\cdot)}}{\sum \lvert\varepsilon^{(\cdot)}\rvert} \in [-1; 1]$$
+$$
+\text{dir }\varepsilon^{(\cdot)} \mathrel{:=} \frac{\sum \varepsilon^{(\cdot)}}{\sum \lvert\varepsilon^{(\cdot)}\rvert} \in [-1; 1]
+$$
 
 - **Mean absolute triplet epistasis** (this value should be considered with respect to $\max \Delta F$ which is ommited for simplification):
 
-$$\lvert\bar{\varepsilon}^{(\cdot)}\rvert \mathrel{:=} \frac{1}{\binom{L}{3}} \sum \lvert\varepsilon^{(\cdot)}\rvert$$
+$$
+\lvert\bar{\varepsilon}^{(\cdot)}\rvert \mathrel{:=} \frac{1}{\binom{L}{3}} \sum \lvert\varepsilon^{(\cdot)}\rvert
+$$
 
 <a id="table-3d-epistasis-sums"></a>
 
@@ -216,11 +242,11 @@ $$\lvert\bar{\varepsilon}^{(\cdot)}\rvert \mathrel{:=} \frac{1}{\binom{L}{3}} \s
 
 1. **Baseline 1 vs Baseline 2**:
     - <u><b>Baseline 2</b> turned out to be distinctly more useful for discovering new higher-order information regarding gene triplets.</u>
-    - Under **Baseline 1**, the null model $\mathcal{H}_0^1$ assumes pure additivity from single-gene knockouts. When evaluated against independent single-gene effects, all creatures exhibit overwhelming positive epistasis (nearly all green balls, $\text{dir} \varepsilon^{(1)} \approx + 1$).
+    - Under **Baseline 1**, the null model $\mathcal{H}_{0}^{1}$ assumes pure additivity from single-gene knockouts. When evaluated against independent single-gene effects, all creatures exhibit overwhelming positive epistasis (nearly all green balls, $\text{dir } \varepsilon^{(1)} \approx + 1$).
     - This occurs because removing any single _base_ gene (e.g. anchor <code>R<sup>4</sup></code>, symmetry genes <code>LL<sup>5-6</sup></code>, or stabilizer <code>F<sup>10</sup></code> in Creature 1) causes the structure to topple over ($\Delta F \approx -1.0$). _Summing three such single knockout penalties predicts an impossible fitness penalty_ of $-3.0$, whereas the simultaneous triple knockout cannot reduce fitness below ground level ($F=0$). Thus, the actual **fitness is buffered against cumulative linear collapse** ($\Delta F_{ijk} \gg \Delta F_i + \Delta F_j + \Delta F_k$). 
-    - This suggests that even in such simple ($f_9$) creatures the hypothesis about triple linearity $\mathcal{H}^1_0$ (see [Baseline 1](#baseline-1)) does not hold and **Baseline 1 model is not adequate and yields little information** (excluded pairwise effects, almost constant directedness $\text{dir }\varepsilon^{(1)}\approx 1$) [_in the current setup_](#parameters-setup).
+    - This suggests that even in such simple ($f_9$) creatures the hypothesis about triple linearity $\mathcal{H}_{0}^{1}$ (see [Baseline 1](#baseline-1)) does not hold and **the Baseline 1 model is not adequate and yields little information** (excluded pairwise effects, almost constant directedness $\text{dir }\varepsilon^{(1)} \approx 1$) [in the current setup](#parameters-setup).
 
-2. **Baseline 2 Mechanics** in Creatures 1 and 2:
+2. **Baseline 2 mechanics in Creatures 1 and 2**:
    - Once all pairwise interactions are accounted for, the total epistasis flips to negative (prominent red clusters, $\text{dir }\varepsilon^{(2)} \ll 0$).
    - As established in [Task 1](#base-spine-specialization), **_base_ genes have strong pairwise collaborations** with each other and intermediate collaboration with the _spine_ encoding genes. When one of _base_ genes $b$ is knocked out, in most cases creature topples over and the further effects can be investigated across several regimes:
       - **+ 2 spinal genes** (knockout triplet $b, s_1, s_2$): no additional damage beyond initial toppling (main terms in the epistasis formula are $\Delta F_{b,s_1, s_2} -\Delta F_{b}\approx 0 \implies $ white/neutral bars on 3D map); 
@@ -286,4 +312,3 @@ python "assignments\Assignment 7 - Epistasis & Gene linkage\estimate_3d_epistasi
     --frams-path Framsticks55 `
     --genotypes-folder "assignments\Assignment 7 - Epistasis & Gene linkage\selected"
 ```
-
