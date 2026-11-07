@@ -233,36 +233,17 @@ def _resolve_baseline_config(baseline: Any) -> Tuple[int, Dict[str, str]]:
 
 
 def extract_plotted_points(res: Dict[str, Any], baseline: int = 1,
-    include_lateral: bool = True, include_diagonal: bool = True, opposite_corner: bool = True,
+    include_lateral: bool = True, include_diagonal: bool = True, opposite_corner: bool = False,
 ) -> Tuple[List[int], List[int], List[int], np.ndarray]:
     """
-    Extracts (xs, ys, zs, vals) for a single creature and baseline.
-    Tetrahedron structure:
-      When opposite_corner=True (default):
-        Places the tetrahedron on the opposite corner of the ji-plane:
-        - Base triangle on k=0: corner at (L-1, L-1, 0), hypotenuse between (0, L-1, 0) and (L-1, 0, 0)
-        - Vertical wall on i=L-1: (L-1, L-1, 0) - (L-1, 0, 0) - (L-1, L-1, L-1)
-        - Vertical wall on j=L-1: (L-1, L-1, 0) - (0, L-1, 0) - (L-1, L-1, L-1)
-        - Apex at (L-1, L-1, L-1)
-      When opposite_corner=False:
-        - Base triangle on k=0: (0, 0, 0) - (L-1, 0, 0) - (0, L-1, 0)
-        - Vertical wall on i=0: (0, 0, 0) - (0, L-1, 0) - (0, 0, L-1)
-        - Vertical wall on j=0: (0, 0, 0) - (L-1, 0, 0) - (0, 0, L-1)
-        - Apex at (0, 0, L-1)
+    Extracts (xs, ys, zs, vals) for a single creature and baseline where
+    coordinates directly correspond 1-to-1 via identity to gene indices:
+    x = gene i, y = gene j, z = gene k, and val = tensor[i, j, k].
 
-    Domain:
-      0 <= k < L
-      0 <= j <= L - 1 - k
-      0 <= i <= L - 1 - k - j
-      (i.e. i >= 0, j >= 0, k >= 0, i + j + k <= L - 1)
-    Mapped sorted gene indices:
-      a = i
-      b = i + j
-      c = i + j + k
-    where 0 <= a <= b <= c < L:
-      - Strict triplets: a < b < c (i >= 0, j > 0, k > 0)
-      - Lateral pairs: (a == b < c, i.e. j == 0, k > 0) or (a < b == c, i.e. j > 0, k == 0)
-      - Diagonal single knockouts: a == b == c (j == 0, k == 0)
+    Canonical triplets domain: 0 <= i <= j <= k < L:
+    - Strict triplets: i < j < k (canonical ordered combinations, C(L, 3))
+    - Lateral pairwise epistasis: (i == j < k) or (i < j == k)
+    - Diagonal single knockouts: i == j == k (spatial diagonal)
     """
     geno = res['geno']
     L = len(geno)
@@ -273,24 +254,19 @@ def extract_plotted_points(res: Dict[str, Any], baseline: int = 1,
         return [], [], [], np.array([], dtype=float)
 
     xs, ys, zs, vals = [], [], [], []
-    for k in range(L):
-        for j in range(L - k):
-            for i in range(L - k - j):
-                a = i
-                b = i + j
-                c = i + j + k
-                if not include_lateral and (a == b or b == c):
+    for i in range(L):
+        for j in range(i, L):
+            for k in range(j, L):
+                is_diag = (i == j == k)
+                is_lat = (i == j or j == k) and not is_diag
+                if not include_diagonal and is_diag:
                     continue
-                if not include_diagonal and (a == b == c):
+                if not include_lateral and is_lat:
                     continue
-                val = tensor[a, b, c]
+                val = tensor[i, j, k]
                 if not np.isnan(val):
-                    if opposite_corner:
-                        xs.append(L - 1 - i)
-                        ys.append(L - 1 - j)
-                    else:
-                        xs.append(i)
-                        ys.append(j)
+                    xs.append(i)
+                    ys.append(j)
                     zs.append(k)
                     vals.append(val)
 
@@ -350,7 +326,7 @@ def plot_creature_3d_heatmap(ax: Axes3D,
     ax.set_box_aspect((stretch_xy, stretch_xy, stretch_k))
 
     # Clean panes: eliminate distracting empty cube background fills
-    ax.xaxis.pane.fill = ax.yaxis.pane.fill = ax.zaxis.pane.fill = False
+    # ax.xaxis.pane.fill = ax.yaxis.pane.fill = ax.zaxis.pane.fill = False
     ax.xaxis.pane.set_edgecolor('none'), ax.yaxis.pane.set_edgecolor('none'), ax.zaxis.pane.set_edgecolor('none')
 
     #stat = res.get('stats', {})
@@ -359,16 +335,19 @@ def plot_creature_3d_heatmap(ax: Axes3D,
     prefix_lbl = f"Creature {creature_idx}: " if creature_idx is not None else ""
     ax.set_title(f"{prefix_lbl}{geno}", fontsize=9.5, fontweight='bold', pad=8)
 
-    step = max(1, L // 5)
+    step = max(1, L // 3)
     tick_locs = list(range(0, L, step))
     if (L - 1) not in tick_locs:
         tick_locs.append(L - 1)
+        if L-1 - tick_locs[-2]<step//2:
+            tick_locs.pop(-2)     
+
     tick_labels = [f"{geno[p]}({p})" for p in tick_locs]
 
     ax.set_xticks(tick_locs)
-    ax.set_xticklabels(tick_labels, fontsize=6.5, rotation=-azim//2, ha='right', va='center')
+    ax.set_xticklabels(tick_labels, fontsize=6.5, rotation=0, ha='right', va='center')
     
-    yang = 90-azim//2
+    yang = 90
     ytick_locs = list(range(0, L, int(round(90/yang))))
     ytick_labels = [f"{geno[p]}({p})" for p in ytick_locs]
     ax.set_yticks(ytick_locs)
@@ -381,12 +360,27 @@ def plot_creature_3d_heatmap(ax: Axes3D,
 
     # Decouple x-axis (i) ticks from vertical z-displacement so i labels stay higher on screen
     ax.xaxis._axmask = lambda: [False, True, False]
-    ax.tick_params(axis='x', pad=-2.0)
+    ax.tick_params(axis='x', pad=0)
     ax.tick_params(axis='y', pad=-1.5)
 
-    ax.set_xlabel("i", fontsize=8, labelpad=0)
-    ax.set_ylabel("j", fontsize=8, labelpad=1)
+    ax.set_xlabel("i", fontsize=8, labelpad=20)
+    ax.set_ylabel("j", fontsize=8, labelpad=2, y=0.5)
     ax.set_zlabel("k", fontsize=8, labelpad=2)
+
+    # place ticks/axes on the opposite corners to match the pyramide's edges
+    ax.xaxis._axinfo['juggled'] = (2,2,2)
+    ax.yaxis._axinfo['juggled'] = (2,2,2)
+    ax.zaxis._axinfo['juggled'] = (1,1,1)
+
+    #desaturating redundant coordinate planes:
+    ax.xaxis.set_pane_color((1, 1, 1, 0.2))  # yz-plane
+    ax.yaxis.set_pane_color((1, 1, 1, 0.2))  # xz-plane
+    # Leave ax.zaxis pane unchanged for xy-plane
+
+    # Desaturate background gridlines across all 3D axes
+    for axis in [ax.xaxis, ax.yaxis, ax.zaxis]:
+        axis._axinfo['grid']['color'] = (0.75, 0.75, 0.75, 0.35)
+        axis._axinfo['grid']['linewidth'] = 0.4
 
     if invert_i:
         ax.set_xlim(L - 0.5, -0.5)
@@ -709,7 +703,7 @@ def main():
     parser.add_argument("--stretch-k", type=float, default=2.5, help="Box aspect stretch factor for the k (vertical) axis (default: 2.0).")
     parser.add_argument("--stretch-xy", type=float, default=2, help="Box aspect stretch factor for the i and j (horizontal) axes (default: 1.5).")
     parser.add_argument("--elev", type=float, default=8.0, help="3D camera elevation angle in degrees (default: 8).")
-    parser.add_argument("--azim", type=float, default=-10, help="3D camera azimuth angle in degrees (default: 15).")
+    parser.add_argument("--azim", type=float, default=-170, help="3D camera azimuth angle in degrees (default: 15).")
 
     args = parser.parse_args()
 
