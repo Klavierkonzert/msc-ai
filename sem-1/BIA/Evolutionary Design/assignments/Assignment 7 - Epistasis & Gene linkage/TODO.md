@@ -10,6 +10,9 @@
     - **Positive $\varepsilon^{(2)} > 0$ (Green)**: Genuine 3-way synergistic buffering (knocking out 3 genes retains/restores stability better than predicted from pairwise breakdowns).
     - **Negative $\varepsilon^{(2)} < 0$ (Red)**: Modularity / functional bottleneck saturation (the 3rd knockout adds diminishing structural damage compared to pairwise expectations).
 
+[Me; the problem is that there is no diminishing damage, the damage is almost always identical once a base gene 
+b is sybstracted: dF_ijb \approx dF_jb \approx dF_b. That is there is no triple effects once a base gene is knocked our]
+
 - [ ] **Fix Mathematical Notations & Typos in Lines 221-226**:
   - Fix notation in line 222: replace mixed $F_{b,b',s} - \Delta F_b$ with consistent fitness differences $\Delta F_{b, s_1, s_2} - \Delta F_b$ (or explicit $F(g \setminus \dots)$ expressions).
   - Fix typo in line 223: `pproduces` -> `produces`.
