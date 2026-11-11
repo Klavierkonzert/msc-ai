@@ -1,0 +1,6 @@
+!*/
+external
+.venv
+
+!README.md
+!CMakeLists.txt

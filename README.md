@@ -1,36 +1,94 @@
-# msc-ai
-Lab assignments and projects from my MSc in Artificial Intelligence at PUT.
+# M.Sc. in AI @ PUT
 
-## Master's Course Curriculum
-### Semester 1
-- Process Mining
-- Biologically-inspired Algorithms and Models
-- Machine Perception
-- Program Synthesis
-- Multivariate Statistics
-- Multiobjective Optimization
-- Machine Learning Theory
-- Applications of Artificial Intelligence in IT
-- Communication in English / Polish
-- Basic health and safety training
-### Semester 2
-- Selected Topics in Natural Language 
-Processing
-- _Elective courses_: Artificial Intelligence in Cryptography / Information Theory Methods in Data Analysis
-- Automated Machine Learning
-- Introduction to Quantum Information and Quantum Machine Learning
-- _Elective courses_: Machine Learning Operations (MLOps) / Advanced Topics in Dimensionality Reduction
-- Mobile Application Development with AI Elements
-- Research Lab
-- Knowledge Extraction
-- Scientific and Technical Writing
-- Pre-diploma Seminar
-### Semester 3
-- Diploma Seminar
-- Artificial Intelligence in Biomedical Informatics
-- Interpersonal Communication
-- Master’s Thesis Preparation
-- _Elective courses_: Introduction to Cognitive Science / IT innovations and humanity
-- Neuro-symbolic Integration
-- _Elective courses_: Machine Learning with Graphs / Constraint Programming
-- _Elective courses_: Data science and machine learning for e-commerce / AI in Games
+This directory contains the primary codebases, term projects, and experimental studies developed during the first semester of the Master's program.
+> **Note**: Some specialized research projects are maintained in dedicated standalone repositories (forks).
+
+## [Semester 1](./sem-1/)
+### Core Engineering Projects & Modules
+
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 18%;">Course Module / Link</th>
+      <th style="width: 18%;">Project Domain</th>
+      <th style="width: 15%;">Tech Stack</th>
+      <th style="width: 37%;">Project Focus & Key Deliverables</th>
+      <th style="width: 12%;">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Process Mining (3 rows) -->
+    <tr>
+      <td rowspan="3">
+        <a href="./sem-1/PM/"><strong>Process Mining (PM)</strong></a>
+      </td>
+      <td><strong><a href="./sem-1/PM/Projects/Project%201%20-%20Business%20Process%20Modeling%20-%20The%20Witcher%20Quest">Business Process Modeling/Workflow Systems</a></strong></td>
+      <td><code>jBPM 7</code><br><code>BPMN 2.0</code><br><code>Java</code></td>
+      <td>Executable BPMN 2.0 narrative workflow modeling the "Ghosts of the Past" quest from <em>The Witcher 3</em> with embedded sub-processes, complex gateways, and stateful task forms.</td>
+      <td><code>[OK]</code></td>
+    </tr>
+    <tr>
+      <td><strong><a href="./sem-1/PM/Projects/Project%202%20-%20Event%20Log%20-%20Process%20Mining#project-2-event-log-and-process-model-discovery">Event Log, Process Discovery & Conformance</a></strong></td>
+      <td><code>PM4Py</code><br><code>Python</code><br><code>Disco</code></td>
+      <td>Hospital ERP audit on 1,050 suspected sepsis traces; multi-tier abstraction, Process Tree discovery, and Woflan Petri net soundness verification.</td>
+      <td><code>[TODO: fix]</code></td>
+    </tr>
+    <tr>
+      <td><strong><a href="./sem-1/PM/Projects/Project%203%20-%20Mathematical%20Modeling">Mathematical Modeling / MILP</a></strong></td>
+      <td><code>MiniZinc</code></td>
+      <td>Microgrid dispatch optimization model minimizing daily operating costs under dynamic pricing and battery degradation.</td>
+      <td><code>[TODO: fix]</code></td>
+    </tr>
+    <!-- Bio-Inspired Algorithms (2 rows) -->
+    <tr>
+      <td rowspan="2">
+        <a href="./sem-1/BIA/"><strong>Bio-Inspired Algorithms (BIA)</strong></a>
+      </td>
+      <td><strong><a href="sem-1/BIA/Combinatorial%20Optimization/">Combinatorial Optimization</a></strong></td>
+      <td><code>C++20</code><br><code>OpenMP</code><br><a href="https://github.com/lava/matplotlib-cpp"><code>matplotlib</code></a></td>
+      <td>High-performance multi-start Local Search, Tabu Search, and Simulated Annealing for QAP with statistical budget scaling.</td>
+      <td><code>[OK]</code></td>
+    </tr>
+    <tr>
+      <td><strong><a href="./sem-1/BIA/Evolutionary%20Design">Evolutionary Design & Optimization</a></strong></td>
+      <td><code>Python</code><br><a href="https://github.com/DEAP/deap"><code>DEAP</code></a><br><a href="https://www.framsticks.com/"><code>Framsticks</code></a></td>
+      <td>Morphological evolution of 3D autonomous creatures in Framsticks; empirical investigation into how genetic representations, operator dynamics, and fitness landscape topology govern the evolvability and locomotion of embodied agents.</td>
+      <td><code>[4/5 Complete]</code></td>
+    </tr>
+    <!-- Program Synthesis (1 row) -->
+    <tr>
+      <td>
+        <strong>Program Synthesis</strong><br>
+        <a href="https://github.com/Klavierkonzert/SymRegEML"><code>/SymRegEML</code></a>
+      </td>
+      <td><strong>Symbolic Regression</strong></td>
+      <td><code>Python</code><br><code>RJMCMC</code><br><code>SymPy</code></td>
+      <td><em>Bayesian Symbolic Regression on EML-Trees</em> - evaluated <em>the single-operator + const</em> functional basis in BSR; analyzed theoretical connections to Kolmogorov-Arnold representations, multi-tree MCMC proposal dynamics, and mitigated exponential numerical instability via domain restriction and simulated annealing.</td>
+      <td><code>[OK]</code></td>
+    </tr>
+    <!-- Machine Perception (1 row) -->
+    <tr>
+      <td>
+        <strong>Machine Perception</strong><br>
+        <a href="https://github.com/Klavierkonzert/dppo"><code>/dppo</code></a>
+      </td>
+      <td><strong>Reinforcement Learning & Robotics</strong></td>
+      <td><code>PyTorch</code><br><code>MuJoCo</code><br><code>Gym</code></td>
+      <td><em>Diffusion Policy Policy Optimization (DPPO)</em> - fine-tuned continuous diffusion control policies on the Franka Kitchen robotic benchmark; surpassed the standard 5-skill baseline to successfully achieve <strong>7 sequential manipulation tasks</strong>.</td>
+      <td><code>[TODO: report]</code></td>
+    </tr>
+  </tbody>
+</table>
+
+### Theoretical & Analytical Coursework
+* **Multivariate Statistics**: High-dimensional hypothesis testing (MANOVA, multivariate normality), covariance structures, PCA, and discriminant analysis.
+* **Machine Learning Theory**: PAC learning framework, Empirical Risk Minimization (ERM), surrogate loss functions, uniform convergence, and Vapnik–Chervonenkis (VC) dimension bounds.
+* **Multiobjective Optimization (MOO)**: Pareto optimality foundations and evolutionary multi-objective algorithms (NSGA-II, NSGA-III).
+  
+## [Semester 2](https://github.com/Klavierkonzert/msc-ai/tree/sem-2) `[In Development]`
+
+### Theoretical & Analytical Coursework
+...
+## Curriculum
+For the complete 3-semester official syllabus and lecture catalog across the entire degree program, see **[curriculum.md](./curriculum.md)**
