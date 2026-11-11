@@ -1,0 +1,52 @@
+# Ignore everything
+*
+
+# Allow directories traversal
+!*/
+
+# Allow folders
+!src/
+!external/
+!assignments/
+!QAP data/
+
+
+# Allow external libraries
+!external/**
+
+# Allow CMakeLists.txt and README.md
+!CMakeLists.txt
+!README.md
+
+# Allow C++ source/header files
+!src/**/*.cpp
+!src/**/*.h
+
+# Allow QAP files
+!QAP data/*.md
+
+# except these files
+!.gitignore
+!CMakeLists.txt
+
+#Final report
+!final_report.pdf
+# Allow assignments folder and its contents (reports)
+!assignments/**/*.pdf
+!assignments/**/*.txt
+!assignment*.cpp
+!assignment*.h
+!assignment*.exe
+
+
+# allow CMakeLists.txt and README.md
+!CMakeLists.txt
+!README.md
+
+
+# Track gitignore itself
+!.gitignore
+
+# allow VS C++ config
+!.vscode/launch.json
+!.vscode/tasks.json

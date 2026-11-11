@@ -1,0 +1,11 @@
+sim_params:
+f1_smX:1
+f1_smJunct:1
+f1_smComma:1
+f1_smModif:1
+f1_smModifiers:LlRrCcQqFfMm
+f1_nmNeu:1
+f1_nmConn:1
+f1_nmProp:1
+f1_nmWei:1
+f1_nmVal:1
