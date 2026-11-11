@@ -20,7 +20,7 @@
   - Topics in Evolutionary multiple-objective optimization (e.g. NSGA-II, III)
   - [Lab assignments](./MOO/)
 - **Machine Learning Theory**
-  - Topics include probability, classification, regression, probability losses, plug‑in classifiers and surrogate losses, ERM, bounds and uniform convergence, and Vapnik–Chervonenkis dimension.
+  - Topics include classification, regression, probability losses, plug‑in classifiers and surrogate losses, ERM, bounds and uniform convergence, and Vapnik–Chervonenkis dimension.
   - Labs
 - **Applications of AI**
   - A series of lectures delivered by prominent practitioners from leading industry
