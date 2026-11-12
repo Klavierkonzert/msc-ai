@@ -1,7 +1,8 @@
 # M.Sc. in AI @ PUT
 
-This directory contains the primary codebases, term projects, and experimental studies developed during the first semester of the Master's program.
-> **Note**: Some specialized research projects are maintained in dedicated standalone repositories (forks).
+This directory contains the primary codebases, term projects, and experimental studies developed during the first and the second (current) semesters of the Master's program. Projects combine algorithm development, experimental evaluation, data analysis and mathematical methods.
+> Some specialized research projects are maintained in dedicated standalone repositories (forks).
+> The repository is continuously updated as the programm progresses.
 
 ## [Semester 1](./sem-1/)
 ### Core Engineering Projects & Modules
@@ -26,35 +27,35 @@ This directory contains the primary codebases, term projects, and experimental s
       <td><strong><a href="./sem-1/PM/Projects/Project%201%20-%20Business%20Process%20Modeling%20-%20The%20Witcher%20Quest">Business Process Modeling/Workflow Systems</a></strong></td>
       <td><code>jBPM 7</code><br><code>BPMN 2.0</code><br><code>Java</code></td>
       <td>Executable BPMN 2.0 narrative workflow modeling the "Ghosts of the Past" quest from <em>The Witcher 3</em> with embedded sub-processes, complex gateways, and stateful task forms.</td>
-      <td><code>[OK]</code></td>
+      <td><code>Completed</code></td>
     </tr>
     <tr>
       <td><strong><a href="./sem-1/PM/Projects/Project%202%20-%20Event%20Log%20-%20Process%20Mining#project-2-event-log-and-process-model-discovery">Event Log, Process Discovery & Conformance</a></strong></td>
       <td><code>PM4Py</code><br><code>Python</code><br><code>Disco</code></td>
       <td>Hospital ERP audit on 1,050 suspected sepsis traces; multi-tier abstraction, Process Tree discovery, and Woflan Petri net soundness verification.</td>
-      <td><code>[TODO: fix]</code></td>
+      <td><code>Needs revision</code></td>
     </tr>
     <tr>
       <td><strong><a href="./sem-1/PM/Projects/Project%203%20-%20Mathematical%20Modeling">Mathematical Modeling / MILP</a></strong></td>
       <td><code>MiniZinc</code></td>
       <td>Microgrid dispatch optimization model minimizing daily operating costs under dynamic pricing and battery degradation.</td>
-      <td><code>[TODO: fix]</code></td>
+      <td><code>Needs revision</code></td>
     </tr>
     <!-- Bio-Inspired Algorithms (2 rows) -->
     <tr>
       <td rowspan="2">
         <a href="./sem-1/BIA/"><strong>Bio-Inspired Algorithms (BIA)</strong></a>
       </td>
-      <td><strong><a href="sem-1/BIA/Combinatorial%20Optimization/">Combinatorial Optimization</a></strong></td>
+      <td><strong><a href="./sem-1/BIA/Combinatorial%20Optimization/">Combinatorial Optimization</a></strong></td>
       <td><code>C++20</code><br><code>OpenMP</code><br><a href="https://github.com/lava/matplotlib-cpp"><code>matplotlib</code></a></td>
-      <td>High-performance multi-start Local Search, Tabu Search, and Simulated Annealing for QAP with statistical budget scaling.</td>
-      <td><code>[OK]</code></td>
+      <td>High-performance multi-start Local Search, Tabu Search, and Simulated Annealing for QAP with statistical budget scaling.  [<a href="./sem-1/BIA/Combinatorial%20Optimization/assignment_12_tasks.cpp">code</a>] [<a href="./sem-1/BIA/Combinatorial%20Optimization/src/">src</a>] [<a href="./sem-1/BIA/Combinatorial%20Optimization/assignments/Assignment%202%20-%20SA%20+TS%20in%20QAP/QAP_extended_report.pdf">report</a>]</td>
+      <td><code>Completed</code></td>
     </tr>
     <tr>
       <td><strong><a href="./sem-1/BIA/Evolutionary%20Design">Evolutionary Design & Optimization</a></strong></td>
       <td><code>Python</code><br><a href="https://github.com/DEAP/deap"><code>DEAP</code></a><br><a href="https://www.framsticks.com/"><code>Framsticks</code></a></td>
       <td>Morphological evolution of 3D autonomous creatures in Framsticks; empirical investigation into how genetic representations, operator dynamics, and fitness landscape topology govern the evolvability and locomotion of embodied agents.</td>
-      <td><code>[4/5 Complete]</code></td>
+      <td><code>Pending</code></td>
     </tr>
     <!-- Program Synthesis (1 row) -->
     <tr>
@@ -64,8 +65,8 @@ This directory contains the primary codebases, term projects, and experimental s
       </td>
       <td><strong>Symbolic Regression</strong></td>
       <td><code>Python</code><br><code>RJMCMC</code><br><code>SymPy</code></td>
-      <td><em>Bayesian Symbolic Regression on EML-Trees</em> - evaluated <em>the single-operator + const</em> functional basis in BSR; analyzed theoretical connections to Kolmogorov-Arnold representations, multi-tree MCMC proposal dynamics, and mitigated exponential numerical instability via domain restriction and simulated annealing.</td>
-      <td><code>[OK]</code></td>
+      <td><em>Bayesian Symbolic Regression on EML-Trees</em> - evaluated <em>the single-operator + const</em> functional basis in BSR; analyzed theoretical connections to Kolmogorov-Arnold representations, multi-tree MCMC proposal dynamics, and mitigated exponential numerical instability via domain restriction and simulated annealing. [<a href="https://github.com/Klavierkonzert/SymRegEML/codes/">code</a>] [<a href="https://github.com/Klavierkonzert/SymRegEML/README.md/">report</a>]</td>
+      <td><code>Completed</code></td>
     </tr>
     <!-- Machine Perception (1 row) -->
     <tr>
@@ -76,7 +77,7 @@ This directory contains the primary codebases, term projects, and experimental s
       <td><strong>Reinforcement Learning & Robotics</strong></td>
       <td><code>PyTorch</code><br><code>MuJoCo</code><br><code>Gym</code></td>
       <td><em>Diffusion Policy Policy Optimization (DPPO)</em> - fine-tuned continuous diffusion control policies on the Franka Kitchen robotic benchmark; surpassed the standard 5-skill baseline to successfully achieve <strong>7 sequential manipulation tasks</strong>.</td>
-      <td><code>[TODO: report]</code></td>
+      <td><code>Needs revision</code></td>
     </tr>
   </tbody>
 </table>
