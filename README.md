@@ -65,7 +65,7 @@ This directory contains the primary codebases, term projects, and experimental s
       </td>
       <td><strong>Symbolic Regression</strong></td>
       <td><code>Python</code><br><code>RJMCMC</code><br><code>SymPy</code></td>
-      <td><em>Bayesian Symbolic Regression on EML-Trees</em> - evaluated <em>the single-operator + const</em> functional basis in BSR; analyzed theoretical connections to Kolmogorov-Arnold representations, multi-tree MCMC proposal dynamics, and mitigated exponential numerical instability via domain restriction and simulated annealing. [<a href="https://github.com/Klavierkonzert/SymRegEML/codes/">code</a>] [<a href="https://github.com/Klavierkonzert/SymRegEML/README.md/">report</a>]</td>
+      <td><em>Bayesian Symbolic Regression on EML-Trees</em> - evaluated <em>the single-operator + const</em> functional basis in BSR; analyzed theoretical connections to Kolmogorov-Arnold representations, multi-tree MCMC proposal dynamics, and mitigated exponential numerical instability via domain restriction and simulated annealing. [<a href="https://github.com/Klavierkonzert/SymRegEML/tree/master/codes/">code</a>] [<a href="https://github.com/Klavierkonzert/SymRegEML/tree/master/codes">report</a>]</td>
       <td><code>Completed</code></td>
     </tr>
     <!-- Machine Perception (1 row) -->
