@@ -1,0 +1,21 @@
+TODO - Project 3: Mathematical Modeling (Linear Programming)
+=============================================================
+
+1. Fix Variable Domain in MiniZinc Model:
+   - Issue: In the variable declaration:
+       var 0.0..soc_max: production;
+     The upper bound erroneously couples PV production to battery capacity (`soc_max = 15.67`). Even though `soc_max` did not artificially clip production in this instance, it is semantically incorrect to bound generation with storage capacity.
+   - Action: Replace `soc_max` with a proper, realistic upper bound for solar production (e.g., maximum forecasted production or an appropriate physical panel rating).
+
+2. Re-solve to Global Optimality (Address Suboptimal Schedule):
+   - Issue: The solution presented in the report is far from optimal; it resembles an early/initial feasible solver solution rather than the converged global optimum. In particular, it charges the battery from the grid in the initial period rather than exploiting PV production and negative electricity market prices.
+   - Action:
+     * Check solver configuration, parameters, and time limits to ensure the solver converges to the true global optimum (`OPTIMAL_SOLUTION`).
+     * Verify that the model behavior leverages negative electricity buy/sell price periods to recharge storage from PV or opportunistically from the grid at negative costs, avoiding unnecessary initial grid charging.
+
+-----------------------------------------------------
+Instructor Feedback:
+"The domain declaration in the below variable is wrong, as it limits production using battery capacity:
+var 0.0..soc_max: production;
+Rather than soc_max, it is better to set here some reasonable upper limit. As soc_max in your instance is 15.67, it did not limit actual production, but still, using soc_max is semantically wrong here.
+Except that, the model is correct, but the solution presented on pages 6-14 is not optimal. Actually, it is far from optimality. It looks more or less like the initial solution the solver found rather than the final one. It actually does not use the PV production for charging battery when prices are negative; instead it charges battery from the grid at the very initial period."

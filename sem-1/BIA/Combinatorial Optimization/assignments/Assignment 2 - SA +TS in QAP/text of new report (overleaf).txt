@@ -1,0 +1,617 @@
+\documentclass{article}
+
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+\usepackage{subcaption,lipsum}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+
+
+%\documentclass[letterpaper,10pt]{article}
+\usepackage[style=numeric, sorting=none]{biblatex} %Imports biblatex package
+\addbibresource{sample.bib} %Import the bibliography file
+
+
+
+\title{Quadratic Assignment Problem -- Local Search and Random Methods}
+\author{Aliaksandr Kladneu, Master's student, PUT}
+
+\begin{document}
+\maketitle
+\section{Introduction}
+
+The quadratic assignment problem (QAP) is one of the fundamental combinatorial optimization problems in optimization and operations research. 
+
+It can be described as follows: given a set of $n$ facilities and $n$ locations, minimize the sum of distances multiplied by flow between facilities (cost function), by assigning facilities to a dedicated location. Mathematically this can be represented as \cite{MK}:
+
+\[
+\min_\pi \xleftarrow{}{ c(\pi) := \sum{a_{ij} b_{\pi(i)\pi(j)}}}\] 
+where $A=(a_{ij})\ge0$ -- matrix of distances between locations and $B_\pi=(b_{\pi(i)\pi(j)})$ -- is a permutation $\pi$ of rows and columns of matrix of flows between facilities $B=(b_{ij})\ge 0$, and $c(\pi)$ is the cost of permutation $\pi$, i.e. the value of the objective function for the corresponding assignment. 
+
+This is an \textbf{NP-hard} problem since the solution space has $n!$ permutations, and even small changes to an assignment affect many terms in the objective value, thus yielding a lot of local optima. Thus it's usually not feasible to find an optimal solution for large $n$.
+
+The applications of the problem include circuit design (placing interconnected electronic components onto a printed circuit board) and flow problems (optimization of flows between facilities) \cite{Wiki}. QAP also generalizes TSP and many other standard combinatorial optimization problems.
+
+\subsection{QAP instances}
+The following instances were chosen, which are available in \cite{QAPLIB}:
+
+\textbf{With known optimal solution:}
+\begin{itemize}
+\item esc16d
+\item bur26h
+\item esc32e
+\item lipa40a
+\item lipa80b
+\end{itemize}
+
+\textbf{With best solution found using heuristics (gap between known lower bound and best cost \%):}
+\begin{itemize}
+\item tai80b (12.28\%)
+\item wil100 (3.15\%), tai100b (10.78\%)
+\item tai150b (11.45\%), tho150 (6.3\%)
+\item tai256c (2.03\%)
+\end{itemize}
+
+The problems of different sizes were chosen to investigate the impact of problem size $n$ on the quality of solutions and performance of algorithms. Additionally, ``twin" problems were added to investigate how a problem's structure influences these characteristics. 
+
+Worth noticing that two of these problems appeared to be ``flat", that is sparse or mostly constant, which means one of two things: it's very easy to construct almost an ideal solution (minimal cost, \textit{esc32e}) or it's unfeasible or impossible to decrease the cost (\textit{lipa40}). More detailed list of the properties of the selected problems is given in the \textit{Appendix}.
+
+\subsubsection{Description of the problems}
+\begin{itemize}
+    \item \textit{esc-x} problems correspond to the circuit testing problem.
+    \item \textit{tai-b} are uniformly generated random problems,\textit{ tai-c} is found in analysis of grey patterns.
+    \item \textit{lipa-x} are generated asymetric problems with known optimal solutions.
+    \item \textit{bur-x} problem represents the time and distance of typing on a keyboard.
+    \item \textit{tho-x} and \textit{wil-x} problems have rectangular distances.
+\end{itemize}
+
+\subsection{Implementation}
+The implementation is in C++ (20) and is modular: data loading, problem representation, permutation operations, cost/delta evaluation, search algorithms, quality metrics, matrices, statistics, and plotting are separated into dedicated components. 
+
+Several methods are implemented and compared: heuristic local search (\textbf{H}), steepest local search (\textbf{S}), greedy local search (\textbf{G}), random search (\textbf{RS}), and random walk (\textbf{RW}); simulated annealing (with geometric schedule - \textbf{SA}, and with Lam schedule - adaptive simulated annealing - \textbf{LAMSA}), tabu search (\textbf{TS}). For convenience, these methods will be referred according to the provided abbreviations. All these methods, excluding \textbf{RS}, reuse information from the current neighbourhood, and thus will be referred to as \textit{local methods}  if mentioned together. 
+
+Thorough characterization of the heuristic algorithm is given in the Section \ref{sec:heuristic}, simulated annealing and tabu search are described in the section \ref{sec:SATS}.
+
+10 runs of each method were executed in parallel on 10 threads of machine with 32 logical processors, using OpenMP library. Each thread executes the problems in the same order, with random generators independent for each thread. Thus corresponding ``wall-clock" timing function from the library is used to measure the``practical" time of the execution as opposed to measuring cpu time.
+
+Methods in \textit{statistics.cpp} module aggregate data from multiple experiments, while module \textit{plotting.cpp} provides functions for plotting using a \textit{Matplotlib} wrapper \cite{MPLCPP}.
+
+In the new version of the current report, calculating change in cost (`delta cost') in the module \textit{cost.cpp} was significantly accelerated by reusing calculated row and column pointers for fastest indexing across scattered matrix rows and columns. This change dramatically decreased overall running time.
+\clearpage
+
+\section{Neighbourhood}
+Neighbourhood operator used in all the \textit{local methods}  -- pairwise $swap(i,j)$ on a permutation. A neighbor is obtained by selecting two positions i and j and exchanging the assigned locations/facilities at those positions. 
+
+The neighbourhood size is the number of possible swaps -- number of unique unordered pairs, which is calculated as:
+\[|N(x)|=C^N_2 = \frac{n(n-1)}{2}\]
+Neighbor cost calculation in \textit{local methods} is done using a delta update: instead of recomputing the full QAP objective for each neighbor, one computes the change in objective after swapping i and j using a delta formula \cite{TLS}.
+If $\pi$ is the current solution and $\pi'$ is the solution after $swap(i,j)$, then
+
+\[c(\pi') = c(\pi) + \Delta_{ij}\]
+
+where \(\Delta_{ij}\) is computed from terms involving rows/columns $i, j$ and $\forall k \neq i,j$.
+This reduces one neighbor evaluation from full objective recomputation to an incremental update, making local-search iterations significantly faster (especially for larger n).
+
+\section{Comparison of the performance of the algorithms on all problem instances}
+\label{sec:comparison}
+\subsubsection{Reporting results and statistical considerations}
+The comparison of algorithms is mainly done using box-plots for different methods and problems. 
+Since for some statistics ($time, norm\_cost$) distributions can't have negative values and high deviations in the results are expected, the median value with IQRs are reported as box-plots instead of reporting mean values with confidence intervals.
+
+When providing the plots, the results are sorted by the size of the problem, if not specified otherwise.
+
+\subsection{Quality}
+The first quality metric for comparison of the algorithms is the \textit{relative cost} defined as
+\[ rel\_cost(\pi) := \frac{c(\pi) - c_{best}}{c_{best}} \in [0; +\infty)\]
+where $\pi$ is a solution found by an algorithm, $c_{best}$ is the best cost -- cost of the best known solution $\pi_{best}$. One can interpret this metric as a (percentage) gap between the cost of found solution and the best known cost: the lower the value the better the quality of the solution regarding to the best known cost.
+
+The objective function $c(\pi)$ can be thought of as Frobenious scalar product of matrices $A$ and $B_\pi$, which following Cauchy-Bunyakovsky-Schwarz inequality, should yield the following definition of the secondary quality metric --\textit{ normalized cost}:
+\[norm\_cost(\pi) := \frac{c(\pi)}{\|A\|_F \|B_\pi\|_F} \equiv
+\frac{\langle A,B_\pi \rangle_F}{\|A\|_F \|B_\pi\|_F} \equiv  \frac{\langle A,B_\pi \rangle_F}{\|A\|_F \|B\|_F} \in [0;1]\ \ (\forall A, B\ge 0)\]
+This is referred to as \textit{cos quality} in the code since it's equal to the cosine of the angle between matrices in Frobenius terms. This is useful metric since it does not require the ``ground truth" optimal value for comparison and allows direct comparison of different problems, keeping values below $1$.
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_1_3.pdf}
+    \caption{(truncated) Relative cost }
+    \label{fig:RelCostBoxplots}
+\end{figure}
+
+%\clearpage
+
+Visual examination of the Figures \ref{fig:RelCostBoxplots} and \ref{fig:NormCostBoxplots} reveals significant superiority of \textbf{G} , \textbf{S}, \textbf{SA}, \textbf{LAMSA}, and \textbf{TS} to solve the problem against proposed simple heuristic \textbf{H} and random algorithms \textbf{RW}, \textbf{RS}. In all of the given problem instances but one (\textit{lipa80b}) the former algorithms achieve best known solution with less than 10\% precision (Figure \ref{fig:RelCostBoxplots}), where \textbf{G} in many cases demonstrates slightly better quality values probably due to better exploration properties. 
+At the same times, though unstably, \textbf{SA} achieves the best cost (\textit{tai80b, tai100b, will100, tai150b, tho150}) in some runs (though median quality is usually higher than one of \textbf{G}).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_2.pdf}
+    \caption{Normalized cost}
+    \label{fig:NormCostBoxplots}
+\end{figure}
+\clearpage
+ \subsection{Running time}
+
+Figure \ref{fig:RunningTime} demonstrates, as expected, that time taken by \textbf{H} is the lowest one, while \textbf{S} requires the most time to thoroughly examine all the solutions in the neighbourhood, and \textbf{G} balances quality and time consumption. Random methods and \textbf{SA}, \textbf{LAMSA}, and \textbf{TS} were given mean time of the runs of \textbf{G} and \textbf{S}.
+
+
+%running time boxplots
+ \begin{figure}
+     \centering
+     \includegraphics[width=1\linewidth]{Figure_6_a.pdf}
+     \caption{Running time}
+     \label{fig:RunningTime}
+\end{figure}
+
+
+\subsection{Efficiency}
+\label{sec:eff}
+I introduce two metrics of efficiency which both characterize how fast an algorithm can reduce relative or normalized cost over time. This characteristic -- the relative or normalized difference between costs at two consecutive timepoints -- over time, should be then calculated as a single number, which is area under the curve divided by time. To visualise the use of this characteristic, one can compare the simple heuristic algorithm which can immediately decrease the cost in much shorter time against a random algorithm, which decrease-time curve would look more like noisy straight line. 
+
+
+\[rel\_eff_T := \frac{1}{T}\sum_{i=0}^{L}{[t_{i+1} - t_{i}] \cdot rel\_cost(\pi_{i})} \equiv \frac{1}{T \cdot c_{best}}\sum_{i=0}^{L}{[t_{i+1} - t_{i}] \cdot c(\pi_{i})} -1 \]
+The formula for \textit{normalized efficiency} is similar but subtracts normalized best cost
+\[norm\_eff_T := \frac{1}{T}\sum_{i=0}^{L}{[t_{i+1} - t_{i}] \cdot norm\_cost(\pi_{t_i}) - norm\_cost(\pi_{best})} \equiv \]
+\[ \equiv \frac{1}{T \cdot \|A\|_F \|B\|_F} \sum_{i=0}^{L}{[t_{i+1} - t_{i}]\cdot c(\pi_{i})} - \frac{c_{best}}{\|A\|_F \|B\|_F}\]
+
+where $\pi_i$ is a solution (permutation) found and accepted at time $t_i$;  $t_0=0$,  $c(\pi_{0})$ -- cost of the initial (random) permutation, $T=\sum_{i=0}^{L+1}[t_i - t_{i-1}]\equiv t_{L+1}$ -- time interval between the beginning and the end of a single experiment (run) of an algorithm for a given problem instance, and $t_i$ is a time moment when the cost changes (and this change is accepted), $L$ -- number of such changes during the experiment, $t_L$ -- time of the last cost change, $t_{L+1} \equiv T$ -- time of the end of an experiment (or time budget).
+Since both metric indicate how fast the cost decreases, \textit{the lower the value of these metrics the better}.
+
+It should be noted that this metric allows comparison only when time intervals are identical or very close, and thus time budgets should be the same for such comparison. Below are results for different time budgets determined based on running time of \textbf{H}, \textbf{G} and \textbf{S} respectively.
+
+For visual comparison the second metric is more suitable since it keeps plots strictly below $1$ on $y$ axis.
+
+Figures \ref{fig:RelEffMin}, \ref{fig:NormEffMin}, \ref{fig:RelEffMax} and \ref{fig:NormEffMax} compare efficiency of all the 5 algorithms given ``strict" (determined by running time of \textbf{H}) and ``generous" (determined by running time of \textbf{S}) time budgets. In the second efficiency analysis \textbf{H} is given for reference only, and excluded from analysis because the proposed efficiency metrics require an algorithm to operate on the whole time interval, while \textbf{H} always terminates early and cannot show further improvements, while demonstrating inferior results almost always. 
+
+The figures demonstrate superiority of \textbf{G} over the rest of the algorithms in both time budget settings, even though ``strict" time budget is determined by running time of \textbf{H}, and ``generous" time budget is determined by running time of \textbf{S}, making these conditions sub-optimal for \textbf{G} and favourable for \textbf{S}.
+
+One can compare efficiency in strict time budget setting against generous setting. We can schematically conclude, that in general efficiency of algorithms follows the following logic (the lower the better the efficiency):
+\begin{itemize}
+    \item Strict time budget: \textbf{LAMSA \textless \ SA \textless \ TS}
+    \item Generous time budget: \textbf{G \textless   \ TS \textless \ S \textless \ SA \textless \ LAMSA}
+\end{itemize}
+\clearpage
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_7_c.pdf}
+    \caption{(truncated) Relative Efficiency for minimal time budgets}
+    \label{fig:RelEffMin}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_8.pdf}
+    \caption{Normalized Efficiency for minimal time budgets}
+    \label{fig:NormEffMin}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_15_b.pdf}
+    \caption{(truncated) Relative Efficiency for generous time budgets}
+    \label{fig:RelEffMax}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_16.pdf}
+    \caption{Normalized Efficiency for generous time budgets}
+    \label{fig:NormEffMax}
+\end{figure}
+
+\clearpage
+
+\subsection{Total number of algorithm steps}
+The \textbf{step} is determined as a swap of two elements in the current solution (permutation). 
+
+Figure \ref{fig:TotSwaps} shows that \textbf{G} performs much more swaps than \textbf{S}, and thus shows that exploratory behaviour (driven by choices that are not necessarily locally optimal) is beneficial when solving all the problems, given the fact that \textbf{G} also showed superior quality. 
+Figure \ref{fig:TotSwaps2} illustrates that \textbf{SA} and \textbf{LAMSA} behave surprisingly similar to \textbf{RW}, while \textbf{TS} performs similar to \textbf{S} number of swaps: unlike \textbf{G}, both \textbf{TS} and \textbf{S} tend to carefully examine all the neighbours and execute either the most or enough promising moves.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_20.pdf}
+    \caption{Total number of swaps - greedy and steepest local search}
+    \label{fig:TotSwaps}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_21.pdf}
+    \caption{Total number of swaps -- random walk, simulated annealing and tabu search}
+    \label{fig:TotSwaps2}
+\end{figure}
+\subsection{Total number of evaluated solutions}
+An evaluated (fully or partially) solution is a solution (permutation) for which a cost value were obtained. 
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{Figure_24.pdf}
+    \caption{Number of evaluated solutions}
+    \label{fig:EvalNum}
+\end{figure}
+
+As illustrated in Figure \ref{fig:EvalNum}, despite the visual discrepancy between total number of evaluated solutions between \textbf{S} and \textbf{G}, the former evaluates all of the solutions in a current neighbourhood, while \textbf{G} evaluates solutions on a much more distant scale given the same processing time, though in more stochastic manner. 
+At the same time \textbf{G} and \textbf{SA}, \textbf{LAMSA}, \textbf{TS} seem to have evaluated the same number of solutions (starting from the problem size 80 - \textit{lipa80b}) (while the time spent by \textbf{G} is lower, which aligns well with the observations from efficiency plots).
+\textbf{RS} seems to evaluate orders of magnitude lower solutions due to the costly full evaluations of the objective function (cost) of each random solution. 
+
+\clearpage
+\subsection{Conclusions}
+Given all the evidence demonstrated so far, one can conclude the following:
+\begin{enumerate}
+    \item Exploratory behaviour is beneficial when solving QAP.
+    \item Prior information should be utilized to make exploration more efficient: pure \textbf{RS} is absolutely inefficient in solving QAP.
+    \item Surprisingly, \textbf{SA} outperforms \textbf{LAMSA}, which could be possibly explained by the fact that my implementation of \textbf{SA} tends to discover as many available ``temperature-tiers" as possible, based on the given time budget, compared against \textbf{LAMSA} which spends most of its time with acceptance rate $\approx 0.44$.
+    \item \textbf{TS} outperforms \textbf{SA} in terms of efficiency, while \textbf{SA} in total yields better quality of solutions. Probably, this can be explained by the fact that former one utilizes memory to store promising moves 
+    \item Essentially, \textbf{G} and \textbf{TS, SA, LAMSA} perform silimar number of solution evaluations.
+    \item \textbf{TS} behaves extremely similar to \textbf{S}, while \textbf{SA} and \textbf{LAMSA} - to \textbf{RW}. This follows not only from the observations, but also from the way these algorithms are defined. 
+    \item \textbf{In many problems} \textbf{SA} sometimes (few times out of 10 runs) tends to find the best among all the other algorithms solutions.  (see Figures \ref{fig:RelCostBoxplots, fig:NormCostBoxplots}). Thus running this algorithm multiple times in parallel is a highly efficient strategy to solve many problems.
+    \item     \textbf{In general}, greedy strategy \textbf{G} outperforms all the other algorithms in terms of efficiency, and almost always finds the best solution compared to its competitors. It utilizes time, spent by complex metaheuristics (\textbf{SA}, \textbf{LAMSA}, \textbf{TS}), which tend to optimize the walk across the space, to research new and new solutions. These metaheuristics are not able to utilize geometry of solution spaces any better than a simple greedy choice. One can think of this as follows: in all the problems examined, the best strategy is ``don't think much, just move". \textit{Note: Probably, \textit{tai256c} is the only problem, where another approach is more beneficial if time budget is strict. }
+    \item Probably, more careful hyperparameter tuning in \textbf{SA}, \textbf{LAMSA} and \textbf{TS} would dramatically improve their performance and final costs of solutions, compared to \textbf{G}, but the idea behind my implemenation of these algorithms is to avoid thorough tuning of hyperparameters for each single problem. Looking for a unified strategy for hyperparameters definitions, which would yield much more better results, requires careful examination of additional statistical and topological properties of QAP instances on the whole, which is out of scope of the current work.
+    \item Size of a problem matters. Many findings are mostly valid for ``big" problems (with size $\ge 80$). For small problems different algorithms show slightly more variability probably due to noticeable difference in operational costs or concentrically lesser difficulty of ``small'' problems.
+\end{enumerate}
+\clearpage
+
+
+\section{Discovering the structure of the search space and the optimized function}
+The following instances were chosen for the analysis:
+\begin{enumerate}
+    \item \textit{lipa80b}, since all the methods demonstrated sub-optimal solutions compared to the optimal solution (which is equal to the identity permutation).
+    \item \textit{tai100b}, due to noticeable variability in relative cost. 
+\end{enumerate}
+The other problems are not very interesting due to the lack of variability in final quality metrics. 
+1000 independent runs were performed of \textbf{G} and \textbf{S} for each of the problems above.
+
+The following Figures \ref{fig:NormInitFinalCost} and \ref{fig:RelInitFinalCost} demonstrate relationships between initial and final quality. For this purpose \textit{relative} and \textit{normalised} cost can be used interchangeably when analyzing particular problems since every point on one plot can be linearly translated to the other plot. \textit{This rule doesn't hold when points for multiple problems are plotted on the same graph}. 
+
+Figure \ref{fig:RelInitFinalCost} demonstrates both clusters corresponding to these two problems, together. Figure\ref{fig:NormInitFinalCost} shows the same clusters in \textit{normalized cost} terms. Spearman correlations are provided per each method and per each instance.
+
+
+In both cases clouds of points were obtained without any visible structure. There is an isolated point (\textit{outlier}) in \textit{lipa80b} problem, which is equal to the optimal solution. This happened few times when thousands of runs were performed. 
+The distinct feature of these clouds is that the cloud corresponding to \textbf{G} lies consistently lower, which supports the earlier conclusions that \textbf{G} performs better than \textbf{S}.
+Spearman correlations show close to 0 values (i.e. within $(-0.05; 0.05)$ interval), meaning that there is no direct, monotonic ``better in the beginning -- better at the end" relationship between initial and final costs. 
+Local search can map very different starts to very similar final costs. So runs with bad initial ranks and good initial ranks end up mixed in final ranks. Possible explanations of the observed low Spearman correlation are determined by landscape of the problems:
+\begin{enumerate}
+    \item Multiple local minima/basins with different depths.
+    \item Large basins around some minima.
+    \item Plateaus or many near-ties in final quality.
+\end{enumerate}
+
+
+\clearpage
+\begin{figure}
+\centering
+    \includegraphics[width=1\linewidth]{task3_Figure_2.pdf}
+    \caption{Initial vs Final Relative cost of 1000 runs of \textbf{G} and \textbf{S}}
+    \label{fig:RelInitFinalCost}
+\end{figure}
+\begin{figure}[h]
+
+\begin{subfigure}{.5\textwidth}
+\includegraphics[width=0.9\linewidth, height=6cm]{task3_Figure_4.pdf} 
+\caption{\textit{lipa80b} (truncated, top cluster)}
+\label{fig:fig:NormInitFinalCostLipa80b}
+\end{subfigure}
+\begin{subfigure}{.5\textwidth}
+\includegraphics[width=0.9\linewidth, height=6cm]{task3_Figure_6.pdf}
+\caption{\textit{tai100b} (bottom cluster)}
+\label{fig:NormInitFinalCostTai100b}
+\end{subfigure}
+
+\caption{Initial vs Final Normalized cost of 1000 runs of \textbf{G} and \textbf{S}}
+\label{fig:NormInitFinalCost}
+\end{figure}
+ \clearpage 
+
+\section{Discovering the preferred number of repetitions of LS. }
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{task4_Figure_7.pdf}
+    \caption{Best and Average relative cost plot for 1000 independent runs}
+    \label{fig:BestAvgRelCost}
+\end{figure}
+In this experiment, the horizontal axis in Figure \ref{fig:BestAvgRelCost} is the number of independent starts \textit{k=0..1000}, and for each \textit{k} two values are plotted: \textit{best-so-far relative cost quality} and\textit{ average-so-far relative cost quality} over the first \textit{k} starts. 
+
+As was mentioned before, \textit{lipa80b} has a significant improvement in the cost once during a few thousands (sometimes more often) restarts, and thus it makes sense to repeat \textbf{S} few thousands times (then the algorithm will find an optimal solution).
+At the same time \textit{tai100b} demonstrates better improvement during one to few hundreds starts. Based on the visual characteristics of the \textbf{G} curve, it's better to stop early at $t=150$ as plateau-based practical cutoff.
+
+Hence, repeating LS is worthwhile, but the preferred number of restarts is instance- and algorithm-dependent: moderate budget is proposed for\textit{ tai100b}, and larger budget for \textit{lipa80b} when chasing rare best-case gains.
+
+\section{Objective assessment of the similarity of locally optimal solutions found }
+
+\textbf{Cayley similarity} between two permutations $\pi_1$ and $\pi_2$ is defined through \textit{Cayley distance} which is the minimum number of swaps necessary to obtain $\pi_2$ from $\pi_1$:
+\[ Cayley\_sim(\pi_1, \pi_2) := 1 - Normalized\ Cayley\ distance (\pi_1, \pi_2) =\]
+\[= 1 - \frac{1}{N-1} min|\{k:\ s_k=swap_{i_kj_k},\ \pi_2 = (\prod_ks_k) \cdot \pi_1 \}|
+\]
+This similarity measure is proposed due to the natural definition of a metric on the space of permutations of length $N$ (\textit{permutohedron}) as it reflects how far are two permutations in the solutions space.
+
+\textit{As a valid alternative, another possible metric could be used to introduce similarity between permutations -- Hamming distance.}
+
+Since both \textit{Cayley and Hamming distances} are valid mathematical metrics, these similarity functions, for a given problem size $N$, naturally map distances into similarities.
+
+\clearpage
+The following two graphs demonstrate relationship between Cayley similarity and \textit{relative cost} (as it is more informative for multiple problems plots): 
+\begin{enumerate}
+\item Figure \ref{fig:CayleySimVsRelCostNoOutlier}: data without an outlier, obtained by new 1000 restarts of algorithms. The plot demonstrates two clusters of points which correspond to \textit{lipa80b} and \textit{tai100b} problems. The same clusters, obtained during another round of experiments with outliers in \textit{lipa80b}, are depicted on the next figure.
+
+    \item Figure \ref{fig:CayleySimVsRelCostOutlier}: data with a found outlier in \textit{lipa80b}. 
+\end{enumerate}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{task5_Figure_13.pdf}
+    \caption{Cayley similarity vs. Relative Cost on data without outlier in \textit{lipa80b}}
+    \label{fig:CayleySimVsRelCostNoOutlier}
+\end{figure}
+\begin{figure}[h]
+
+\begin{subfigure}{.5\textwidth}
+\includegraphics[width=0.9\linewidth, height=6cm]{task5_Figure_15_a.pdf} 
+\caption{\textit{lipa80b} (outliers truncated, top cluster)}
+\label{fig:fig:NormInitFinalCostLipa80b}
+\end{subfigure}
+\begin{subfigure}{.5\textwidth}
+\includegraphics[width=0.9\linewidth, height=6cm]{task5_Figure_17_a.pdf}
+\caption{\textit{tai100b} (bottom cluster)}
+\label{fig:NormInitFinalCostTai100b}
+\end{subfigure}
+\caption{Cayley similarity vs. Relative Cost on data with outliers in \textit{lipa80b}}
+\label{fig:CayleySimVsRelCostOutlier}
+\end{figure}
+
+
+The figures demonstrate that there is from \textit{moderate to strong linear relationship} between the similarity of a found solution (local optima) and the quality in \textit{tai100b} problem. However, no such conclusion can be made in the case of \textit{lipa80b} as this artificial problem has only one distinct global optima (isolated point on the plot \ref{fig:RelInitFinalCost}, which corresponds to the identity permutation). At the same time \textit{tai100b} seems to have a lot of local optima with cost close to the best known one, and the closer these local optima to the best known solution, the lower the cost.
+
+The following heatmaps show relationships between separate positions, matched with the positions of the best known solution, and the quality of the solution (same for both \textit{relative cost} and \textit{normalized cost} quality metrics).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{task5_Figure_19.pdf}
+    \caption{\textit{lipa80b}: Dependency of position-matches with the best known solution and the quality of solutions}
+    \label{fig:lipa80bHeatmap}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{task5_Figure_20.pdf}
+    \caption{\textit{tai100b}: Dependency of position-matches with the best known solution and the quality of solutions}
+    \label{fig:tai100b}
+\end{figure}
+
+Hence \textit{lipa80b} has no particular position in the solution which would be responsible for a significant cost reduction, however there are few such positions in \textit{tai100b} (namely, almost all the positions from 1 to 31 have low negative correlation with the cost, and positions 27,29, 30, and 100 have moderate negative correlation with the cost).
+
+\textit{\textbf{Note: } The best-known solutions from .sln files use 1-based indices, which were converted to 0-based before computing similarity -- when loading data into  Problem class, and then passing the solution into  Permutation structure.}
+
+\clearpage
+\section{Heuristic algorithm for QAP}
+\label{sec:heuristic}
+
+The heuristic algorithm (\textbf{H}) is defined as follows:
+\begin{enumerate}
+    \item For the current row, find the largest element in the first matrix and the smallest element in the second matrix.
+    \item Swap the permutation indices corresponding to the columns containing these elements, but only if the swap improves the objective value.
+    \item Move to the next row and repeat the search starting from the diagonal element of that row, i.e. ignoring columns that have already been considered. This restricts later swaps from using earlier column indices and helps preserve previously matched positions.
+    \item Repeat steps \textbf{1--3} until all rows except the last one have been processed.
+    \item Repeat steps \textbf{1--4} until no improving moves are found, or until the imposed iteration or time limit is reached.
+\end{enumerate}
+
+The complexity of one outer pass is $O(n^2)$. For each of the $n-1$ rows, the algorithm searches linearly through the remaining part of the row and evaluates the candidate swap using the incremental cost function, whose complexity is $O(n)$. Therefore, if the number of outer passes is denoted by $I$, the total complexity is $O(I \cdot n^2)$.
+
+If a maximum number of iterations $M$ is imposed, then $I \leq M$ and the complexity becomes $O(M \cdot n^2)$. Without such a limit, the algorithm still terminates because every accepted swap strictly decreases the objective value and the number of permutations is finite. A loose worst-case bound is therefore factorial, although this bound is not usually observed in practice.
+
+An important property of this heuristic is that the candidate swaps are fixed by the input matrices. Since the matrices do not change during the search, the indices of the selected largest and smallest elements are the same in every outer pass. Thus, the algorithm repeatedly considers at most $n-1$ different swap types, instead of the full neighbourhood of $\frac{n(n-1)}{2}$ possible swaps. These pairs can be cached, which reduces redundant computation and improves the constant factor, although the asymptotic complexity of one pass remains $O(n^2)$ because of the incremental cost evaluations.
+
+The algorithm could be further extended by matching whole rows or columns rather than individual matrix elements.
+\clearpage
+\section{Simulated Annealing and Tabu Search}
+\label{sec:SATS} % Assign a label to this section
+This section describes implementation of \textit{Simulated Annealing} (\textbf{SA, LAMSA}) and\textit{ Tabu Search} (\textbf{TS}) added to the second version of the report. As in the case of random methods (\textbf{RS, RW}), these methods were provided the same time budgets in the corresponding experiments in Section \ref{sec:comparison}. 
+
+\subsection{Simulated Annealing}
+Simulated annealing is a \textit{local search based metaheuristic}, specifically designed to escape local optima by accepting worse moves with a probability which decreases over time.
+The algorithm consists of the following steps:
+\begin{enumerate}
+    \item Start with initial solution (permutation) $\pi=\pi_0,\ t=0$
+    \item Generate a new random solution $\pi'$ from the neighbourhood $N(\pi_t)$
+    \item Accept $\pi'$ if $c(\pi')\le c(\pi_t)$ and update the best cost and solution, if necessary. Otherwise accept with the probability (\textit{acceptance rate}):
+\[p^t_{accept} = \exp\left(\frac{-\Delta c}{T_t}\right) \] where $\Delta c := c(\pi') - c(\pi_t)$
+\item $\pi_{t+1} := \pi'$
+\item Recalculate temperature $T_t$ according to the \textit{cooling schedule} $\rightarrow{T_{t+1}}$
+\item Timestamp update: $t:=t+1$. Repeat from the step \textbf{2} until stopping criteria is met (that is time elapsed or no improvements condition is met).
+
+\end{enumerate}
+
+\subsubsection{Stopping criterion}
+Algorithm terminates if running time exceeds the specified limit or number of steps in the cooling schedule exceeded.
+
+\subsubsection{Hyperparameters}
+Simulated annealing requires the following hyperparameters to be defined:
+\begin{itemize}
+    \item Initial temperature, $T_0$
+    \item Cooling rate, $\alpha$
+    \item Length of Markov chain, \textit{L}
+    \item Number of steps of the cooling schedule, $N_{steps}$
+\end{itemize}
+
+The following values were used: $L:=|N(\pi)|$, i.e. the size of the neighbourhood of $\pi$, where  $\pi$ is the current solution (permutation); cooling rate is determined adaptively in \textbf{LAMSA}, initial cooling rate $\alpha_0$ is set to $0.85$ for \textbf{SA}; number of steps $N_{steps}$ is defined as \textit{time budget devided by average time necessary to complete one cooling schedule step} (one step is exactly \textit{L} iterations simulated annealing, during which temperature is constant) - recalculated every \textit{L} steps for better precision; initial temperature is determined by the following formula:
+\[ T_0 := \frac{-\bar{\Delta c}_{worse}}{\ln p^0_{accept}}=\frac{-\bar{\Delta c}_{worse}}{\ln 0.95}\]
+where $p^0_{accept}$ is initial \textit{acceptance rate of a deteriorating move} set to $0.95$.
+ 
+\subsubsection{Geometric schedule}
+For a fixed initial temperature $T_0$ and Markov chain factor \textit{L}, temperature is updated is follows
+\[T_{t+1} := T_0 \cdot \alpha^{[t/L]}\]
+That is, temperature is decreased by factor $\alpha$ each \textit{L} steps. 
+
+Since for different problems acceptance rate was decreasing either too fast (final acceptance rate drops below $1\mathrm{e}{-5}$) or too slow (final acceptance rate $\approx p^0_{accept}$), cooling rate was recalculated each \textit{L} steps based on the formula:
+
+\[ \alpha' := \sqrt[N_{steps}-1]{\frac{\bar{\Delta c}_{worse}}{T_0 \ln \frac{p^0_{accept}}{p_{target}} + \bar{\Delta c}_{worse}}} = \sqrt[N_{steps}-1]{\frac{\bar{\Delta c}_{worse}}{\frac{-\bar{\Delta c}_{worse}}{\ln 0.95}\ln 1000 + \bar{\Delta c}_{worse}}} = \sqrt[N_{steps}-1]{\frac{1}{\frac{-\ln 1000}{\ln 0.95} + 1}}  
+\]
+where $p_{target}$ is \textit{target acceptance rate}, set to be exactly \textit{1000} times smaller than $p_{accept}^0$ . Pay attention, that the only variable in this formula is $N_{steps}$, and thus $\alpha'$ is rather a periodically updated estimate of the hyperparameter $\alpha$. 
+
+\textit{Note: The derivation of this formula is trivial and is left as an exercise for the reader, as it follows immediately from the desired 1000-fold decrease in the acceptance rate:}
+
+\[\frac{p_{accept}^0}{p_{target}} := 1000\]
+
+
+In the formulas above, $\bar{\Delta c}_{worse}$ is an average cost increase of sampled \textit{deteriorating} moves from the initial permutation, estimated at the beginning of an algorithm.
+
+The idea behind this \textit{alpha-schedule} is to allow simulated annealing to perform evaluation of possible solutions on different levels of temperature, reliably moving from exploratory to exploitative behaviour, which is difficult to achieve with fixed cooling rate. Defining alpha in this way, the two extreme yet common issues in the temperature scheduling are resolved: temperature drops either too slowly (if time budget is too strict for the given problem) or too fast (if time budget is generous).
+
+Thus, if time budget is stringent and only few cooling schedule steps will be performed (e.g. $N_{steps}<15$), cooling rate $\alpha$ can drop below $0.75$ -- in my experiments, this is usually the case for the problems of small size. On the contrary, if time budget is generous, number of steps can be big enough to keep cooling rate $\alpha \approx 0.95$ (which is much higher than the initial estimate of $\alpha := \alpha_0 \equiv 0.85$) , hence fostering exploration 
+
+An alternative approach to recalculate $\alpha'$ could be to to set $T_0$ to the temperature during previous stage of the schedule and use estimated number of remaining steps instead of $N_{steps}$, but the dynamic of the cooling schedule would look more stochastic.
+
+\subsubsection{Lam schedule}
+\textbf{LAMSA} is an adaptive simulated annealing approach that dynamically adjusts the temperature based on the measured acceptance rate of deteriorating moves, acting much like a thermostat to maintain thermal equilibrium. Unlike standard geometric schedule, it follows a specific `Lam Curve' for target probabilities: 
+\begin{enumerate}
+\item first 15\% of iterations: fast drop from 1.0 to 0.44;
+    \item next 50\% of time: the ``plateau" - stay at probability of 0.44, for efficient optimization;
+    \item  final 35\%: quick cooling down to 0.0 probability.
+\end{enumerate}
+The algorithm utilizes a  `proportional controller' at the end of each Markov chain to adjust the temperature up or down based on the actual rate of acceptance of bad moves, ensuring the search remains at the target probability even as the ruggedness of the fitness landscape changes.
+
+Precise description of simulated annealing with Lam schedule is given in \cite{BOYAN} and pseudocode can be found in \cite{MKLAM}. 
+
+\subsection{Tabu Search}
+Tabu search (\textbf{TS}) is a \textit{local search based metaheuristic}, which intelligently explores the solution space by utilizing memory. The following features define the architecture of \textbf{TS}:
+\begin{itemize}
+    \item \textbf{Tabu list} - is a recency-based memory structure that stores recently executed moves. It forbids the algorithm from selecting the exact same pair of indices $(i, j)$ for a specified number of iterations (\textbf{tabu tenure}), thereby preventing the search trajectory from immediately reversing its previous steps and getting trapped in a 2-cycles.
+    \item \textbf{Worsening moves} are allowed if all improving moves are tabu.
+    \item \textbf{Aspiration criteria} - rules that allow the algorithm to temporarily override tabu restrictions if a forbidden move leads to a highly promising solution. The simplest and widely used aspiration criterion was used - \textit{if a move is tabu but improves the best cost achieved so far, it is accepted}.
+\end{itemize}
+
+\subsubsection{Elite candidate list}
+This is short-term-memory-like structure which defines moves of a high quality that are considered to be executed during the course of the algorithm. 
+The list of elite moves is constructed by examining all the moves in the neighbourhood of the current solution (permutation \textit{p}) \cite{TS}. Next at each subsequent iteration the best non-tabu move is chosen from the list and executed. This procedure is repeated until quality of such moves falls below a predefined \textit{threshold} or a given number of iterations elapsed (elite candidate list \textit{lifespan}). Then the list is rebuild anew.
+
+Constructing such a structure aims to avoid expensive computations by defining promising moves in advance \cite{MKTS}. But this idea relies on the fact that quality of elite moves will not change much during the lifespan of this list. However, this assumption fails in the case where cost function landscape is heavily rugged and cost burden is distributed uniformly over all the nodes (facilities) in both matrices. And conversely, this assumption holds when many pairs behave independently, and the elite moves do not involve highly scored intermediate interconnections. These considerations convey the suggestion that \textit{problem skewness} (which can be defined as maximum skewness of data in both problem's matrices, by absolute value) directly correlates with the reliability of this assumption. 
+
+A further improvement of this idea could be to dynamically adjust the list size \textit{sz} based on the rate of invalidated moves once the quality of the moves drops beyond a threshold. For example, if \textbf{TS} reconstructs the list almost every iteration as this happens in the problem \textit{tai256c}, the list size, set to 6, could be halved. 
+
+\subsubsection{Hyperparameters}
+\textbf{TS} requires the following hyperparameters to be defined:
+\begin{itemize}
+    \item Elite candidate list lifespan, \textit{Lf}
+    \item Elite candidate list size, \textit{sz}
+    \item Tabu tenure, $\tau$ 
+    \item delta drift relative threshold, \textit{th}
+\end{itemize}
+
+\textit{Lf} defines the number of iterations elite candidate list is considered to be valid. 
+
+Since the lifespan highly depends on ruggedness and uniformity of the data in the problem matrices, in order to properly set this value, \textit{Lf} was heuristically defined as scaling proportionally with the problem skewness' absolute value $|\gamma|$ and hard-capped by $N^{2/3}$:
+
+\[Lf: = \max(1, \lfloor f_L \cdot \min(N^{2/3}, \lceil|\gamma|\rceil) \rfloor)\] where scaling factor $f_L := 1.25$.
+
+The number of the candidates in the list is set heuristically as $sz := 2 \cdot Lf$. 
+Delta drift relative threshold, set to $th := 0.75 $  defines how far an actual delta cost can drift from its stale estimate (computed when the elite list was formed) before forcing an early list rebuild. This an optional hyperparameter (since it's assumed defining elite candidate list lifespan \textit{Lf}  would be sufficient), which serves as an alternative to \textit{Lf} in indicating whether the elite candidate list should be rebuilt -- by triggering the following condition:
+\[ \Delta_{updated} - \Delta_{stale} > th \cdot |\Delta_{stale}|\] Tabu tenure -- the number of iterations an accepted move (a swap) is banned -- is defined heuristically as $\tau := \sqrt{N}$.
+
+\subsubsection{Stopping criteria}
+\textbf{TS} stops execution once one of these conditions is satisfied:
+\begin{itemize}
+    \item The total elapsed execution time exceeds the specified limit  (time budget).
+    \item Stagnation is detected - the global best solution fails to improve for a consecutive number of iterations, defined heuristically as $2 \cdot N$, where $N$ is the problem size.
+\end{itemize}
+
+\subsubsection{The algorithm}
+The algorithm operates via two nested loops. At each ``step" of the outer loop, a fresh elite candidate list is generated based on the current solution (permutation \verb|p|). 
+
+Elite candidates are stored in an automatically sorted container with a limited number of elements \textit{sz} (wrapping \verb|std::multimap| $: \Delta c \rightarrow move$ with \textit{O(1)} complexity of finding the best move and removing a move, and $O(\log(sz))\equiv O(\log N^{2/3})$ complexity of inserting a new entry). This container automatically drops moves of worse quality when maximum number of elements \textit{sz} is reached and a new, better entry is inserted.
+
+The inner loop sequentially evaluates these candidates. If the top candidate is non-tabu, tabu-expired, or satisfies the aspiration criterion (i.e., strictly improves upon the best cost achieved so far), it is executed, placed to the tabu list and dropped from the elite candidate list. Otherwise, the next elite candidate move is evaluated in the same fashion.
+
+\textit{\textbf{Note}: Tabu status is updated by increasing a timestamp of a move in the tabu list by value $\tau$. Thus moves are not explicitly removed from the tabu list container,  rather they lose tabu-status once the current iteration clock is at least $\tau$ greater than the initial timestamp}.
+
+If the actual delta of an elite move drifts too far from the stale delta calculated when the list was formed (e.g., exceeding a configured relative threshold \textit{th}), the elite list will immediately be invalidated and reconstructed.
+
+More precisely, the execution sequence is formalized as follows: 
+\begin{enumerate}
+    \item Start with initial solution (permutation) $\pi=\pi_0,\ t=0$
+    \item Inspect all the moves in the neighbourhood $N(\pi_t)$ of the current solution $\pi_t$, and populate a pre-emptied container \textit{E} of elite candidate moves using $\Delta c$ as a key. Bad moves will be discarded automatically upon inserting if maximum number of elements \textit{sz} reached.
+    \item Extract the first (the next available) move from \textit{E}, if available and lifespan \textit{Lf} of the container \textit{E} is not exceeded. Otherwise go to step 2 to trigger a scheduled rebuild.
+    \item If actual $\Delta' c$ of the move $\pi'$ drifted too much from its stale estimate, go to step 2. 
+    \item Accept $\pi'$ if $c(\pi')\le c_{best}^t$ (\textit{aspiration criterion}) or tabu-status of the move expired, and update the best cost and solution, if necessary.  If the condition fails, go to step 3 -- evaluate the next move in \textit{E}.
+    \item Assign $\pi_{t +1} := \pi'$, drop the move from \textit{E} and place it in the tabu list to update its tabu expiration timestamp.
+\item Timestamp update: $t:=t+1$.
+\item  Evaluate the next move in \textit{E} - repeat steps starting from 3.
+\item Repeat from step \textbf{2} until stopping criteria is met (that is, time elapsed or the best solution has not improved for a specified number of iterations).
+\end{enumerate}
+
+ \clearpage
+\section{Conclusions}
+\subsection{General}
+\begin{itemize}
+    \item \textbf{QAP is NP-hard} with a \textbf{rugged landscape}. Stochastic methods without local guidance (\textbf{RS}) or memory (\textbf{RW}) are insufficient to find competitive solutions even for moderate-sized instances. 
+    \item \textbf{Problem structure matters}: it strongly influences algorithm behaviour. ``Flat" instances (\textit{lipa40a, esc32e}) are degenerate cases where either a near-optimal solution is trivial to construct or cost improvement is structurally infeasible. 
+\end{itemize}
+\subsection{Specific}
+\begin{itemize}
+    \item \textbf{Algorithm ranking:} Local search methods (\textbf{G, S}) significantly outperform \textbf{H, RS, RW} on solution quality across all instances. \textbf{G} outperforms \textbf{S} in both quality and efficiency under all tested time budgets, attributed to its exploratory behaviour enabling broader landscape coverage per unit time. 
+    \item \textbf{Initial solution irrelevance}: Near-zero Spearman correlation between initial and final cost (within $\pm 0.05$) across 1000 runs confirms that initial solution quality does not predict final quality, which is consistent with a landscape of many basins of varying depth. This justifies the use of \textbf{multi-start strategy} over complex single-trajectory heuristics (especially \textbf{SA}).
+    \item \textbf{Multi-start strategy}: Repeating LS is worthwhile but the optimal restart budget is instance-dependent:
+    \begin{itemize}
+        \item around 200 restarts suffice for G on \textit{tai100b}; 
+        \item several thousand are needed for S on \textit{lipa80b} to encounter the rare optimal basin.
+    \end{itemize}
+    \item \textbf{Search space structure (similarity analysis):} 
+    \begin{itemize}
+        \item \textit{tai100b} exhibits a structured central-masif-like landscape where closer local optima (higher Cayley similarity to the best known) have  lower cost (Pearson correlation $<-0.6$)
+        \item \textit{lipa80b} has a near-flat landscape with a single isolated global optimum (identity permutation - \textit{needle in a haystack}), with no such correlation. Specific positions 27–30 in \textit{tai100b} account for disproportionate cost reductions.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Metaheuristic Analysis}
+Precise definition of the three metaheuristics algorithms -- \textbf{SA}, \textbf{LAMSA}, and \textbf{TS} -- is given in the Section \ref{sec:SATS}.
+\begin{itemize}
+    \item Geometric schedule outperforms the adaptive Lam schedule in my experiments. The budget-aware derivation of cooling rate $\alpha$ effectively forced the search through a complete spectrum of ``temperature tiers'', ensuring a transition from high-mobility exploration to greedy quenching. In contrast, \textbf{LAMSA}’s focus on the ``0.44 plateau'' might have resulted in the search spending too much of a limited time budget at a single mobility level, potentially missing deeper basins in rugged QAP landscapes.
+    \item \textbf{TS} and \textbf{S} represent an exploitative class of algorithms that carefully examines neighborhoods to execute high-influence moves. Conversely, \textbf{SA, LAMSA}, and \textbf{RW} form a more stochastic class.
+    \item \textbf{TS}'s efficiency is tied to problem skewness. The ``elite move" assumption -- that a good move remains good for several iterations -- holds only in skewed or sparse problems where dominant flow-distance linkages (tectonic plates) define the landscape, and in practice invalidates very fast. In uniform problems, \textbf{TS} behaves mostly like \textbf{S} since problem's ruggedness dictates an elite candidates list to be of unit size.
+    \item While these complex metaheuristics aim to optimize the search path through the search space, \textbf{G}'s strategy ``don't think much, just move" is often superior in \textit{efficiency} [Section \ref{sec:eff}]. By reducing ``thinking time'' per swap, \textbf{G} uses computational budget most efficiently for many QAP instances.
+\end{itemize}
+\clearpage
+\section{Challenges encountered}
+\begin{enumerate}
+\item Debugging \textit{Matplotlib-cpp} errors in C++ was difficult and time-consuming.
+\item Containerization and dependency setup (C++/Python/plotting) required significant effort.
+\item Refactoring core structures introduced temporary performance regressions.
+\item \textit{int} overflow caused invalid results (e.g., negative costs), so wider integer types (\textit{int\_64t, double} ) were introduced.
+\item Parallelization improved speed but complicated fair benchmarking and determinism.
+\item Final figures (with low number of restarts) required strict reproducibility settings (single-core runs, fixed seeds).
+\item Randomness quality of \textit{reshuffle} and \textit{get\_random\_pair} had to be validated; two Fisher-Yates passes worked better in practice.
+\item Repeated evaluation of each algorithm to work properly on each problem instance and with each class and method in the \textit{\textbf{src/}} package.
+\item Optimization of \textit{Matrix} class and introduction of statistical metrics.
+\item Optimization of delta cost calculations to speedup performance manyfold.
+\item Thorough evaluation of possible heuristics to unify definition of hyperparameters of different algorithms for all the problems. For example, derivation of $\alpha$ and number of cooling schedule steps in \textbf{SA}, and examination of problems' properties to define elite candidate list lifespan in \textbf{TS}.
+\item Implementation of \textbf{SA} and \textbf{TS} in general wasn't very straightforward, and required additional research (\cite{BOYAN}, \cite{TS}).
+\end{enumerate}
+
+\section{Justification and Future Improvements}
+
+\textbf{Justification.}
+The introduced improvements were necessary to make results valid, comparable, and efficient:
+\begin{enumerate}
+\item Fixed arithmetic issues (overflow) to avoid invalid objective values.
+\item Improved reproducibility (fixed seeds, controlled runs) for fair method comparison.
+\item Improved random operators quality, which stabilized multi-start behavior.
+\item Optimized core implementation to run larger experiments in the same time.
+\item Additional caching in cost/delta-cost loops \textit{for} faster iterations was implemented and showed significant speedup in running time of the experiments.
+\end{enumerate}
+
+\textbf{Future improvements and expected effects:}
+\begin{enumerate}
+\item Better initialization heuristic (instead of matching single elements rows or columns with the highest/lowest norms can be matched) \textit{for} better starting solutions.
+\item Adaptive restart budget instead of fixed restarts \textit{for} better time-quality trade-off.
+\item Hybrid methods (e.g., LS + diversification/perturbation) \textit{for} better escape from local minima.
+\item Parallel independent restarts \textit{for} lower wall-clock time. 
+\end{enumerate}
+
+\printbibliography %Prints bibliography
+\end{document}
