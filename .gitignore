@@ -1,0 +1,13 @@
+/*
+!.gitignore
+!sem-2/
+sem-2/*
+!sem-2/PKE/
+
+#not tracking datasets
+*.csv.gz
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
